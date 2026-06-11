@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --sti-gold: #FDB913;
+  --sti-navy: #002F6C;
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -8,15 +10,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-sti-gold: var(--sti-gold);
+  --color-sti-navy: var(--sti-navy);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

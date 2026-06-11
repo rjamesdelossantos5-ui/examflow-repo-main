@@ -1,0 +1,51 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+const ROLE_HOME: Record<string, string> = {
+  admin: '/admin',
+  registrar: '/registrar',
+  subject_teacher: '/teacher',
+  program_head: '/program-head',
+  student: '/student',
+}
+
+export async function login(formData: FormData) {
+  const supabase = await createClient()
+
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const password = String(formData.get('password') ?? '')
+
+  if (!email || !password) {
+    return redirect('/login?error=Please+fill+in+all+fields')
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error || !data.user) {
+    return redirect('/login?error=Invalid+email+or+password')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, is_active')
+    .eq('id', data.user.id)
+    .single()
+
+  if (!profile || !profile.is_active) {
+    await supabase.auth.signOut()
+    return redirect('/login?error=Account+is+inactive')
+  }
+
+  revalidatePath('/', 'layout')
+  redirect(ROLE_HOME[profile.role] ?? '/login')
+}
+
+export async function logout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  revalidatePath('/', 'layout')
+  redirect('/login')
+}
