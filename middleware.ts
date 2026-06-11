@@ -13,10 +13,10 @@ export async function middleware(request: NextRequest) {
   // Bail out early if env vars are not configured yet
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     const { pathname } = request.nextUrl
-    if (pathname !== '/login') {
-      return NextResponse.redirect(new URL('/login', request.url))
+    if (pathname === '/' || pathname === '/login') {
+      return NextResponse.next({ request })
     }
-    return NextResponse.next({ request })
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   let supabaseResponse = NextResponse.next({ request })
