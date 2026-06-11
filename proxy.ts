@@ -9,7 +9,7 @@ const ROLE_HOME: Record<string, string> = {
   student: '/student',
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Bail out early if env vars are not configured yet
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     const { pathname } = request.nextUrl
@@ -47,7 +47,6 @@ export async function middleware(request: NextRequest) {
   // Public routes that don't need auth
   if (pathname === '/login' || pathname === '/') {
     if (user) {
-      // Redirect logged-in users to their dashboard
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
