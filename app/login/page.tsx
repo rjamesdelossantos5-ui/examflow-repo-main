@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { login } from './actions'
 
 export const metadata = { title: 'EXAMFLOW — Login' }
@@ -78,6 +79,11 @@ export default async function LoginPage({
 
         <p className="text-center text-xs text-gray-400 mt-6">
           STI College · Special Exam Request System
+        </p>
+        <p className="text-center mt-3">
+          <Link href="/" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            ← Back to Home
+          </Link>
         </p>
       </div>
     </div>
