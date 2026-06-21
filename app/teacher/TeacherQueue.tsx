@@ -75,6 +75,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
               onVerify={approveRequest}
               onReject={rejectTeacherRequest}
               verifyLabel="Approve & Forward to Program Head"
+              actionableStatus="verified_by_registrar"
             />
           </div>
         )}

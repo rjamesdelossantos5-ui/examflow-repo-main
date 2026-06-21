@@ -27,6 +27,8 @@ interface Props {
   onVerify?: (id: string) => Promise<{ error: string | null }>
   onReject?: (id: string, reason: string) => Promise<{ error: string | null }>
   verifyLabel?: string
+  /** The status at which THIS reviewer can act. Registrar = 'submitted', Teacher = 'verified_by_registrar'. */
+  actionableStatus?: RequestStatus
   showRejectedBy?: string
 }
 
@@ -44,7 +46,9 @@ export default function RequestReviewPanel({
   onVerify,
   onReject,
   verifyLabel = 'Verify & Forward',
+  actionableStatus = 'submitted',
 }: Props) {
+  const isActionable = status === actionableStatus
   const [rejectMode, setRejectMode] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -146,7 +150,7 @@ export default function RequestReviewPanel({
           </div>
         )}
 
-        {onVerify && status === 'submitted' && !rejectMode && (
+        {onVerify && isActionable && !rejectMode && (
           <button
             onClick={handleVerify}
             disabled={isPending}
@@ -157,7 +161,7 @@ export default function RequestReviewPanel({
           </button>
         )}
 
-        {onReject && !rejectMode && (
+        {onReject && isActionable && !rejectMode && (
           <button
             onClick={() => setRejectMode(true)}
             className="w-full py-3 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50"
@@ -188,7 +192,7 @@ export default function RequestReviewPanel({
           </div>
         )}
 
-        {status === 'verified_by_registrar' && (
+        {status === 'verified_by_registrar' && actionableStatus === 'submitted' && (
           <div className="rounded-lg bg-purple-50 border border-purple-200 px-4 py-3 text-sm text-purple-700">
             ✓ Verified — forwarded to Subject Teacher
           </div>

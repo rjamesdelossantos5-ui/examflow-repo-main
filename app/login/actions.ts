@@ -13,6 +13,10 @@ const ROLE_HOME: Record<string, string> = {
 }
 
 export async function login(formData: FormData) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return redirect('/login?error=Server+is+not+configured.+Supabase+environment+variables+are+missing.')
+  }
+
   const supabase = await createClient()
 
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
