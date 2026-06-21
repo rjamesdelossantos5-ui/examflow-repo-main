@@ -181,9 +181,12 @@ returns user_role language sql security definer stable as $$
 $$;
 
 -- ── profiles ──────────────────────────────────
--- Users can read their own profile; admin can read all
-create policy "profiles_select_own" on profiles
-  for select using (id = auth.uid() or current_user_role() = 'admin');
+-- Users can read their own profile; staff can read all (needed for joins)
+create policy "profiles_select" on profiles
+  for select using (
+    id = auth.uid() or
+    current_user_role() in ('admin', 'registrar', 'subject_teacher', 'program_head')
+  );
 
 -- Admin can insert/update/delete any profile
 create policy "profiles_admin_all" on profiles
