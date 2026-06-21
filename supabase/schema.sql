@@ -251,6 +251,12 @@ create policy "requests_student_update_own" on special_exam_requests
     student_id = auth.uid() and current_user_role() = 'student'
   );
 
+-- Students can delete their own submitted requests (used to roll back failed uploads)
+create policy "requests_student_delete_own" on special_exam_requests
+  for delete using (
+    student_id = auth.uid() and status = 'submitted' and current_user_role() = 'student'
+  );
+
 -- ── application_media ─────────────────────────
 create policy "media_select" on application_media
   for select using (
