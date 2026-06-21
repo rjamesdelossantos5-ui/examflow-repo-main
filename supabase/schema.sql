@@ -142,7 +142,7 @@ for each row execute function set_updated_at();
 
 -- Auto-create profile on signup
 create or replace function handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into profiles (id, full_name, email, role)
   values (
@@ -150,7 +150,10 @@ begin
     coalesce(new.raw_user_meta_data->>'full_name', new.email),
     new.email,
     coalesce((new.raw_user_meta_data->>'role')::user_role, 'student')
-  );
+  )
+  on conflict (id) do nothing;
+  return new;
+exception when others then
   return new;
 end;
 $$;
