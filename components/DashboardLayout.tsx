@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import UserMenu from './UserMenu'
 import NotificationBell, { type NotificationItem } from './NotificationBell'
+import LiveRefresh from './LiveRefresh'
 import { Icon, type IconName } from './Icon'
 import { ROLE_HOME } from '@/lib/nav'
 import type { UserRole } from '@/lib/supabase/types'
@@ -35,6 +36,7 @@ export default function DashboardLayout({ role, userName, email, navItems, notif
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
+      <LiveRefresh />
       {/* Brand bar */}
       <header className="relative z-50" style={{ backgroundColor: 'var(--header)' }}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -47,8 +49,6 @@ export default function DashboardLayout({ role, userName, email, navItems, notif
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <NotificationBell items={notifications} />
-            {/* Divider separates the notification (utility) zone from the account zone */}
-            <span className="w-px h-6 bg-white/20" aria-hidden />
             <UserMenu userName={userName} email={email} role={role} />
           </div>
         </div>
