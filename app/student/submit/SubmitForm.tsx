@@ -14,6 +14,19 @@ const REASONS = [
   { value: 'other', label: 'Other', icon: '📄', desc: 'Another valid reason', doc: 'Supporting Document' },
 ] as const
 
+// Course catalog — sections depend on the chosen course (no free typing).
+const COURSES: { code: string; name: string; sections: string[] }[] = [
+  { code: 'BSIT', name: 'BS Information Technology', sections: ['A', 'B', 'C', 'D'] },
+  { code: 'BSCS', name: 'BS Computer Science', sections: ['A', 'B', 'C'] },
+  { code: 'BSCpE', name: 'BS Computer Engineering', sections: ['A', 'B'] },
+  { code: 'BSIS', name: 'BS Information Systems', sections: ['A', 'B'] },
+  { code: 'BSBA', name: 'BS Business Administration', sections: ['A', 'B', 'C', 'D'] },
+  { code: 'BSHM', name: 'BS Hospitality Management', sections: ['A', 'B', 'C'] },
+  { code: 'BSTM', name: 'BS Tourism Management', sections: ['A', 'B'] },
+  { code: 'BSA', name: 'BS Accountancy', sections: ['A', 'B'] },
+]
+const YEARS = [1, 2, 3, 4]
+
 interface ProfileInfo {
   full_name: string
   student_number: string
@@ -25,17 +38,23 @@ interface ProfileInfo {
 export default function SubmitForm({ subjects, profile, error }: { subjects: Subject[]; profile: ProfileInfo; error?: string }) {
   const [examType, setExamType] = useState<'paid' | 'excused'>('paid')
   const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>('')
+  const [course, setCourse] = useState(COURSES.some((c) => c.code === profile.course) ? profile.course : '')
+  const [section, setSection] = useState(profile.section ?? '')
   const [confirming, setConfirming] = useState(false)
+
   const formRef = useRef<HTMLFormElement>(null)
 
+  const sectionsForCourse = COURSES.find((c) => c.code === course)?.sections ?? []
+
   function openConfirm() {
-    // Run native required/format validation before showing the confirm dialog
     if (formRef.current?.reportValidity()) setConfirming(true)
   }
 
   const docLabel = REASONS.find((r) => r.value === reason)?.doc ?? 'Supporting Document'
   const inputClass =
     'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent'
+  const selectClass = `${inputClass} appearance-none pr-9 cursor-pointer`
+  const selectStyle = { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' } as React.CSSProperties
 
   return (
     <div className="max-w-xl">
@@ -62,16 +81,51 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
               <input name="student_number" defaultValue={profile.student_number} className={inputClass} placeholder="2024-00001" />
             </div>
             <div>
-              <label className="block text-sm font-medium ef-muted mb-1">Course</label>
-              <input name="course" defaultValue={profile.course} className={inputClass} placeholder="BSIT" />
+              <label className="block text-sm font-medium ef-muted mb-1">Course *</label>
+              <div className="relative">
+                <select
+                  name="course"
+                  required
+                  value={course}
+                  onChange={(e) => { setCourse(e.target.value); setSection('') }}
+                  className={selectClass}
+                  style={selectStyle}
+                >
+                  <option value="">— Select course —</option>
+                  {COURSES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
+                  ))}
+                </select>
+                <Chevron />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium ef-muted mb-1">Year level</label>
-              <input name="year_level" type="number" min={1} max={6} defaultValue={profile.year_level ?? ''} className={inputClass} placeholder="1-6" />
+              <label className="block text-sm font-medium ef-muted mb-1">Year level *</label>
+              <div className="relative">
+                <select name="year_level" required defaultValue={profile.year_level ?? ''} className={selectClass} style={selectStyle}>
+                  <option value="">— Select year —</option>
+                  {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
+                </select>
+                <Chevron />
+              </div>
             </div>
             <div>
-              <label className="block text-sm font-medium ef-muted mb-1">Section</label>
-              <input name="section" defaultValue={profile.section} className={inputClass} placeholder="A" />
+              <label className="block text-sm font-medium ef-muted mb-1">Section *</label>
+              <div className="relative">
+                <select
+                  name="section"
+                  required
+                  value={section}
+                  onChange={(e) => setSection(e.target.value)}
+                  disabled={!course}
+                  className={`${selectClass} disabled:opacity-50`}
+                  style={selectStyle}
+                >
+                  <option value="">{course ? '— Select section —' : 'Select a course first'}</option>
+                  {sectionsForCourse.map((s) => <option key={s} value={s}>Section {s}</option>)}
+                </select>
+                <Chevron />
+              </div>
             </div>
           </div>
         </div>
@@ -102,20 +156,13 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
         <div>
           <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
           <div className="relative">
-            <select
-              name="subject_id"
-              required
-              className={`${inputClass} appearance-none pr-9 cursor-pointer`}
-              style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
-            >
+            <select name="subject_id" required className={selectClass} style={selectStyle}>
               <option value="">— Select a subject —</option>
               {subjects.map((s) => (
                 <option key={s.id} value={s.id}>{s.subject_code} — {s.subject_name}</option>
               ))}
             </select>
-            <svg className="w-4 h-4 ef-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <Chevron />
           </div>
         </div>
 
@@ -150,8 +197,12 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
         )}
 
         {/* Parent documents */}
-        <FileField name="parent_id" label="Parent/Guardian Valid ID *" hint="JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
-        <FileField name="parent_signature" label="Parent Signature *" hint="JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
+        <div className="space-y-4 pt-2 border-t ef-border">
+          <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Parent / Guardian Documents</h2>
+          <FileField name="parent_id" label="Valid ID — Front *" hint="Clear photo of the ID front · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
+          <FileField name="parent_id_back" label="Valid ID — Back *" hint="Photo of the ID back · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
+          <FileField name="parent_signature" label="Parent/Guardian Signature *" hint="Signed consent · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
+        </div>
 
         {/* Reason-specific supporting document */}
         {examType === 'excused' && reason && (
@@ -176,10 +227,7 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
         {/* Confirmation dialog — the real submit lives here */}
         {confirming && (
           <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirming(false)}>
-            <div
-              className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
               <div className="text-3xl mb-2">📋</div>
               <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Submit this request?</h3>
               <p className="text-sm ef-muted mt-1 mb-5">
@@ -207,6 +255,14 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
         )}
       </form>
     </div>
+  )
+}
+
+function Chevron() {
+  return (
+    <svg className="w-4 h-4 ef-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
   )
 }
 

@@ -44,6 +44,7 @@
 html {
   /* smooth theme transitions without flashing on first paint */
   color-scheme: light;
+  scroll-behavior: smooth;
 }
 html.dark {
   color-scheme: dark;
@@ -55,6 +56,10 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* Hide scrollbar (used by the horizontal pill nav) while staying scrollable */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* Reusable surface helpers so role pages get dark mode for free */
 .ef-card {

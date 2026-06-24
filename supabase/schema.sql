@@ -106,7 +106,9 @@ create table special_exam_requests (
 -- ─────────────────────────────────────────────
 create type media_type as enum (
   'parent_id',
+  'parent_id_back',
   'parent_signature',
+  'parent_selfie',
   'supporting_document',
   'payment_receipt'
 );

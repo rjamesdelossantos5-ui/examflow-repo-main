@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import UserMenu from './UserMenu'
@@ -22,86 +21,61 @@ interface Props {
 
 export default function DashboardLayout({ role, userName, email, navItems, children }: Props) {
   const pathname = usePathname()
-  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Pick the single most-specific matching nav item (longest matching href),
+  // so /registrar/history doesn't also light up /registrar.
+  const activeHref = navItems
+    .filter((it) => pathname === it.href || pathname.startsWith(it.href + '/'))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
-      {/* Top bar: brand + account */}
-      <header className="shadow-sm relative z-50" style={{ backgroundColor: 'var(--header)' }}>
-        <div className="max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 h-16 flex items-center justify-between">
+      {/* Brand bar */}
+      <header className="relative z-50" style={{ backgroundColor: 'var(--header)' }}>
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link
             href={ROLE_HOME[role] ?? '/'}
-            className="font-black text-xl hover:opacity-90 transition-opacity"
+            className="font-black text-xl tracking-tight hover:opacity-90 transition-opacity"
             style={{ color: 'var(--sti-gold)' }}
           >
-            EXAMFLOW
+            EXAM<span className="text-white">FLOW</span>
           </Link>
-
-          <div className="flex items-center gap-2">
-            <UserMenu userName={userName} email={email} role={role} />
-            {/* Mobile menu toggle */}
-            {navItems.length > 0 && (
-              <button
-                className="md:hidden text-white p-1"
-                onClick={() => setMenuOpen((v) => !v)}
-                aria-label="Toggle menu"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d={menuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
-                </svg>
-              </button>
-            )}
-          </div>
+          <UserMenu userName={userName} email={email} role={role} />
         </div>
-
-        {/* Secondary nav row (below the brand) */}
-        {navItems.length > 0 && (
-          <div className="border-t border-white/10">
-            <nav className="hidden md:flex max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 gap-1">
-              {navItems.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + '/')
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                      active
-                        ? 'border-[var(--sti-gold)] text-[var(--sti-gold)]'
-                        : 'border-transparent text-white/70 hover:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-        )}
-
-        {/* Mobile nav */}
-        {menuOpen && navItems.length > 0 && (
-          <nav className="md:hidden px-4 pb-3 pt-1 flex flex-col gap-1 border-t border-white/10">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMenuOpen(false)}
-                className={`px-3 py-2 rounded text-sm font-medium ${
-                  pathname === item.href
-                    ? 'text-[var(--sti-navy)] bg-[var(--sti-gold)]'
-                    : 'text-white/80'
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        )}
       </header>
 
+      {/* Sub-nav bar (light surface, clearly separated from the brand bar) */}
+      {navItems.length > 0 && (
+        <div
+          className="sticky top-0 z-40 backdrop-blur"
+          style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}
+        >
+          <nav className="max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 flex gap-1.5 overflow-x-auto py-2.5 items-center no-scrollbar">
+            {navItems.map((item) => {
+              const active = item.href === activeHref
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    active ? 'shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'
+                  }`}
+                  style={
+                    active
+                      ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }
+                      : { color: 'var(--muted)' }
+                  }
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+        </div>
+      )}
+
       {/* Page content */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-5 lg:px-8 py-5 sm:py-6">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {children}
       </main>
     </div>

@@ -75,13 +75,16 @@ export async function submitRequest(formData: FormData) {
 
   // Validate files
   const parentId = formData.get('parent_id') as File | null
+  const parentIdBack = formData.get('parent_id_back') as File | null
   const parentSig = formData.get('parent_signature') as File | null
   const supportDoc = formData.get('supporting_document') as File | null
 
   const errors: string[] = []
-  const idErr = validateFile(parentId, 'Parent/Guardian ID')
+  const idErr = validateFile(parentId, 'Valid ID (front)')
+  const backErr = validateFile(parentIdBack, 'Valid ID (back)')
   const sigErr = validateFile(parentSig, 'Parent Signature')
   if (idErr) errors.push(idErr)
+  if (backErr) errors.push(backErr)
   if (sigErr) errors.push(sigErr)
 
   if (examType === 'excused') {
@@ -127,10 +130,17 @@ export async function submitRequest(formData: FormData) {
     if (retry.error || !retry.data) {
       return redirect(`/student/submit?error=${encodeURIComponent(retry.error?.message ?? 'Submission failed')}`)
     }
-    return finishSubmission(supabase, retry.data, user.id, examType, parentId, parentSig, supportDoc)
+    return finishSubmission(supabase, retry.data, user.id, examType, { parentId, parentIdBack, parentSig, supportDoc })
   }
 
-  return finishSubmission(supabase, req, user.id, examType, parentId, parentSig, supportDoc)
+  return finishSubmission(supabase, req, user.id, examType, { parentId, parentIdBack, parentSig, supportDoc })
+}
+
+interface SubmissionFiles {
+  parentId: File | null
+  parentIdBack: File | null
+  parentSig: File | null
+  supportDoc: File | null
 }
 
 async function finishSubmission(
@@ -138,18 +148,16 @@ async function finishSubmission(
   req: { id: string },
   userId: string,
   examType: string,
-  parentId: File | null,
-  parentSig: File | null,
-  supportDoc: File | null,
+  f: SubmissionFiles,
 ) {
-
-  // Upload files
+  // Upload documents (front + back of ID, signature, optional supporting doc)
   const uploads: Promise<{ path: string; error: string | null }>[] = [
-    uploadFile(supabase, parentId!, req.id, 'parent_id'),
-    uploadFile(supabase, parentSig!, req.id, 'parent_signature'),
+    uploadFile(supabase, f.parentId!, req.id, 'parent_id'),
+    uploadFile(supabase, f.parentIdBack!, req.id, 'parent_id_back'),
+    uploadFile(supabase, f.parentSig!, req.id, 'parent_signature'),
   ]
-  if (examType === 'excused' && supportDoc) {
-    uploads.push(uploadFile(supabase, supportDoc, req.id, 'supporting_document'))
+  if (examType === 'excused' && f.supportDoc) {
+    uploads.push(uploadFile(supabase, f.supportDoc, req.id, 'supporting_document'))
   }
 
   const uploaded = await Promise.all(uploads)
@@ -159,14 +167,13 @@ async function finishSubmission(
     return redirect(`/student/submit?error=${encodeURIComponent('File upload failed: ' + uploadErrors[0].error)}`)
   }
 
-  // Save media records
-  const mediaTypes = ['parent_id', 'parent_signature', ...(examType === 'excused' && supportDoc ? ['supporting_document'] : [])]
-  const files = [parentId!, parentSig!, ...(examType === 'excused' && supportDoc ? [supportDoc] : [])]
+  const mediaTypes = ['parent_id', 'parent_id_back', 'parent_signature', ...(examType === 'excused' && f.supportDoc ? ['supporting_document'] : [])]
+  const files = [f.parentId!, f.parentIdBack!, f.parentSig!, ...(examType === 'excused' && f.supportDoc ? [f.supportDoc] : [])]
 
   await supabase.from('application_media').insert(
     uploaded.map((u, i) => ({
       request_id: req.id,
-      media_type: mediaTypes[i] as 'parent_id' | 'parent_signature' | 'supporting_document',
+      media_type: mediaTypes[i],
       storage_path: u.path,
       file_name: files[i].name,
       mime_type: files[i].type,
@@ -174,7 +181,6 @@ async function finishSubmission(
     }))
   )
 
-  // Log
   await supabase.from('progress_logs').insert({
     request_id: req.id,
     actor_id: userId,

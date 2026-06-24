@@ -9,7 +9,7 @@ export type RequestStatus =
   | 'scheduled'
   | 'rejected'
 export type ExcusedReason = 'medical' | 'bereavement' | 'other'
-export type MediaType = 'parent_id' | 'parent_signature' | 'supporting_document' | 'payment_receipt'
+export type MediaType = 'parent_id' | 'parent_id_back' | 'parent_signature' | 'parent_selfie' | 'supporting_document' | 'payment_receipt'
 
 export interface Profile {
   id: string
