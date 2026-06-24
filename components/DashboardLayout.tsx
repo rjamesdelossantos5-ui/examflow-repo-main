@@ -47,7 +47,7 @@ export default function DashboardLayout({ role, userName, email, navItems, notif
           >
             EXAM<span className="text-white">FLOW</span>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-4 sm:gap-6">
             <NotificationBell items={notifications} />
             <UserMenu userName={userName} email={email} role={role} />
           </div>
