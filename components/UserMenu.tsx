@@ -112,9 +112,6 @@ export default function UserMenu({
       {confirmLogout && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmLogout(false)}>
           <div className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center bg-red-50 dark:bg-red-500/10 text-red-600">
-              <Icon name="logout" className="w-6 h-6" />
-            </div>
             <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Sign out of EXAMFLOW?</h3>
             <p className="text-sm ef-muted mt-1 mb-5">You&apos;ll need to log in again to access your dashboard.</p>
             <div className="flex gap-3">
