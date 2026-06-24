@@ -22,10 +22,12 @@ export async function getNotifications(
   userId: string,
   role: UserRole,
 ): Promise<NotificationItem[]> {
-  // One alert per pending request in a reviewer's queue (newest first).
+  // One alert per pending request in a reviewer's queue (newest first). The
+  // href carries ?req=<id> so the queue opens straight to that request's
+  // accept/reject panel instead of just landing on the page.
   const queueItems = async (
     status: string,
-    href: string,
+    basePath: string,
     text: (name: string, code: string) => string,
     tone: NotificationItem['tone'],
     icon: NotificationItem['icon'],
@@ -40,7 +42,7 @@ export async function getNotifications(
     return ((data ?? []) as unknown as QueueRow[]).map((r) => ({
       id: r.id,
       text: text(r.snap_name ?? r.profiles?.full_name ?? 'A student', r.subjects?.subject_code ?? 'a subject'),
-      href,
+      href: `${basePath}?req=${r.id}`,
       tone,
       icon,
     }))

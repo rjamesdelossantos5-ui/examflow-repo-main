@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
 import { Icon } from '@/components/Icon'
 import { verifyRequest, rejectRequest } from './actions'
@@ -20,8 +21,17 @@ interface RequestRow {
 }
 
 export default function RegistrarQueue({ requests }: { requests: RequestRow[] }) {
-  const [selected, setSelected] = useState<string | null>(null)
+  const reqParam = useSearchParams().get('req')
+  const [selected, setSelected] = useState<string | null>(reqParam)
   const active = requests.find((r) => r.id === selected) ?? null
+
+  // Opening from a notification (?req=…) auto-selects that request and scrolls it into view.
+  useEffect(() => {
+    if (reqParam) {
+      setSelected(reqParam)
+      document.getElementById(`req-${reqParam}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [reqParam])
 
   return (
     <div>
@@ -46,6 +56,7 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
           {requests.map((r) => (
             <button
               key={r.id}
+              id={`req-${r.id}`}
               onClick={() => setSelected(r.id === selected ? null : r.id)}
               className={`ef-card w-full text-left rounded-xl shadow-sm p-4 transition-all hover:shadow-md ${
                 selected === r.id ? 'ring-2 ring-[var(--sti-gold)]' : ''
