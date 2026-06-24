@@ -1,4 +1,5 @@
 import LoginModal from './LoginModal'
+import { Icon, type IconName } from './../components/Icon'
 
 const NAVY = '#002F6C'
 const GOLD = '#FDB913'
@@ -146,15 +147,17 @@ export default function LandingPage() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: '📝', title: 'Submit online', body: 'Pick your subject, choose paid or excused, and attach your documents — all in one guided form.' },
-              { icon: '📊', title: 'Track in real time', body: 'A clear progress tracker shows exactly which stage you’re at and what happens next.' },
-              { icon: '📎', title: 'Upload your documents', body: 'Add your ID, signature, and certificates. Reviewers verify each file right in their dashboard.' },
-              { icon: '🔁', title: 'Reviewed in order', body: 'Your request goes Registrar → Teacher → Program Head — nothing skipped, nothing lost.' },
-              { icon: '🧾', title: 'Receipts & schedule', body: 'For paid exams, upload your payment receipt and get your final exam schedule once approved.' },
-              { icon: '🔔', title: 'Always know the status', body: 'See approvals, rejections, and the reason for each — no more chasing people for updates.' },
+              { icon: 'pencil', title: 'Submit online', body: 'Pick your subject, choose paid or excused, and attach your documents — all in one guided form.' },
+              { icon: 'chart', title: 'Track in real time', body: 'A clear progress tracker shows exactly which stage you’re at and what happens next.' },
+              { icon: 'upload', title: 'Upload your documents', body: 'Add your ID, signature, and certificates. Reviewers verify each file right in their dashboard.' },
+              { icon: 'list', title: 'Reviewed in order', body: 'Your request goes Registrar → Teacher → Program Head — nothing skipped, nothing lost.' },
+              { icon: 'receipt', title: 'Receipts & schedule', body: 'For paid exams, upload your payment receipt and get your final exam schedule once approved.' },
+              { icon: 'bell', title: 'Always know the status', body: 'See approvals, rejections, and the reason for each — no more chasing people for updates.' },
             ].map((f) => (
               <div key={f.title} className="rounded-2xl border border-slate-200/80 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all" style={{ background: WHITE }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4" style={{ background: 'rgba(0,47,108,0.06)' }}>{f.icon}</div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,47,108,0.06)' }}>
+                  <Icon name={f.icon as IconName} className="w-6 h-6" style={{ color: NAVY }} />
+                </div>
                 <h3 className="font-bold text-lg mb-2" style={{ color: NAVY }}>{f.title}</h3>
                 <p className="text-sm text-slate-500 leading-relaxed">{f.body}</p>
               </div>
@@ -197,12 +200,14 @@ export default function LandingPage() {
           </div>
           <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
             {[
-              { icon: '🏫', role: 'Registrar', note: 'Verifies your submission' },
-              { icon: '✅', role: 'Teacher', note: 'Approves the subject exam' },
-              { icon: '👔', role: 'Program Head', note: 'Accepts & schedules it' },
+              { icon: 'building', role: 'Registrar', note: 'Verifies your submission' },
+              { icon: 'check', role: 'Teacher', note: 'Approves the subject exam' },
+              { icon: 'user', role: 'Program Head', note: 'Accepts & schedules it' },
             ].map((r) => (
               <div key={r.role} className="rounded-2xl border border-slate-200 shadow-sm p-6 text-center" style={{ background: WHITE }}>
-                <div className="text-3xl mb-3">{r.icon}</div>
+                <div className="w-11 h-11 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: 'rgba(0,47,108,0.06)' }}>
+                  <Icon name={r.icon as IconName} className="w-5 h-5" style={{ color: NAVY }} />
+                </div>
                 <p className="font-bold" style={{ color: NAVY }}>{r.role}</p>
                 <p className="text-xs text-slate-500 mt-1">{r.note}</p>
               </div>

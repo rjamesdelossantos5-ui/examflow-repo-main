@@ -85,7 +85,7 @@ export default async function LoginPage({
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          STI College · Special Exam Request System
+          Special Exam Request System
         </p>
         <p className="text-center mt-3">
           <Link href="/" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">

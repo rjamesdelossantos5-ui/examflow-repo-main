@@ -4,14 +4,15 @@ import { useRef, useState } from 'react'
 import type { Subject } from '@/lib/supabase/types'
 import { submitRequest } from './actions'
 import SubmitButton from '@/components/SubmitButton'
+import { Icon } from '@/components/Icon'
 
 const MAX_MB = 5
 const ALLOWED = '.jpg,.jpeg,.png,.pdf'
 
 const REASONS = [
-  { value: 'medical', label: 'Medical', icon: '🏥', desc: 'Illness or hospitalization', doc: 'Medical Certificate' },
-  { value: 'bereavement', label: 'Bereavement', icon: '🕊️', desc: 'Death in the family', doc: 'Death Certificate' },
-  { value: 'other', label: 'Other', icon: '📄', desc: 'Another valid reason', doc: 'Supporting Document' },
+  { value: 'medical', label: 'Medical', desc: 'Illness or hospitalization', doc: 'Medical Certificate' },
+  { value: 'bereavement', label: 'Bereavement', desc: 'Death in the family', doc: 'Death Certificate' },
+  { value: 'other', label: 'Other', desc: 'Another valid reason', doc: 'Supporting Document' },
 ] as const
 
 // Course catalog — sections depend on the chosen course (no free typing).
@@ -142,7 +143,7 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
                 }`}
               >
                 <input type="radio" name="exam_type" value={t} checked={examType === t} onChange={() => setExamType(t)} className="sr-only" />
-                <div className="text-2xl mb-1">{t === 'paid' ? '💳' : '📋'}</div>
+                <Icon name={t === 'paid' ? 'receipt' : 'file'} className="w-6 h-6 mb-2" style={{ color: 'var(--card-foreground)' }} />
                 <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>
                   {t === 'paid' ? 'Paid' : 'Excused'}
                 </div>
@@ -179,8 +180,7 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
                   }`}
                 >
                   <input type="radio" name="excused_reason" value={r.value} required checked={reason === r.value} onChange={() => setReason(r.value)} className="sr-only" />
-                  <div className="text-xl mb-1">{r.icon}</div>
-                  <div className="font-semibold text-xs" style={{ color: 'var(--card-foreground)' }}>{r.label}</div>
+                  <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>{r.label}</div>
                   <div className="text-[10px] ef-muted leading-tight mt-0.5">{r.desc}</div>
                 </label>
               ))}
@@ -228,7 +228,9 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
         {confirming && (
           <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirming(false)}>
             <div className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-              <div className="text-3xl mb-2">📋</div>
+              <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 18%, transparent)' }}>
+                <Icon name="file" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
+              </div>
               <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Submit this request?</h3>
               <p className="text-sm ef-muted mt-1 mb-5">
                 Please double-check your details and documents. Once submitted, it will be sent to the Registrar for review.

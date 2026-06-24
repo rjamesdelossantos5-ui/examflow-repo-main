@@ -10,12 +10,12 @@ import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
 
-const STEPS: { status: RequestStatus; label: string; icon: string }[] = [
-  { status: 'submitted', label: 'Submitted', icon: '📤' },
-  { status: 'verified_by_registrar', label: 'Registrar', icon: '🏫' },
-  { status: 'approved_by_teacher', label: 'Teacher', icon: '✅' },
-  { status: 'accepted', label: 'Program Head', icon: '👍' },
-  { status: 'scheduled', label: 'Scheduled', icon: '📅' },
+const STEPS: { status: RequestStatus; label: string }[] = [
+  { status: 'submitted', label: 'Submitted' },
+  { status: 'verified_by_registrar', label: 'Registrar' },
+  { status: 'approved_by_teacher', label: 'Teacher' },
+  { status: 'accepted', label: 'Program Head' },
+  { status: 'scheduled', label: 'Scheduled' },
 ]
 
 const STATUS_ORDER: Record<RequestStatus, number> = {
@@ -141,7 +141,7 @@ export default async function RequestDetailPage({
 
         {req.final_schedule && (
           <div className="mt-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
-            <strong>📅 Scheduled for:</strong> {new Date(req.final_schedule).toLocaleString()}
+            <strong>Scheduled for:</strong> {new Date(req.final_schedule).toLocaleString()}
           </div>
         )}
       </div>
@@ -189,7 +189,7 @@ export default async function RequestDetailPage({
                       } ${active ? 'ef-step-active' : ''}`}
                       style={!done ? { background: 'var(--card)', border: '2px solid var(--border)', color: 'var(--muted)' } : undefined}
                     >
-                      {done ? (active ? step.icon : '✓') : i + 1}
+                      {done ? '✓' : i + 1}
                     </div>
                     <span
                       className={`text-[11px] text-center leading-tight ${active ? 'font-semibold' : ''}`}

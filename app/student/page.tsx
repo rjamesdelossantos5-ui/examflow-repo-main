@@ -55,7 +55,7 @@ export default async function StudentPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-            Welcome, {profile?.full_name?.split(' ')[0]} 👋
+            Welcome, {profile?.full_name?.split(' ')[0]}
           </h1>
           <p className="text-sm ef-muted">Here&apos;s an overview of your special exam requests.</p>
         </div>
@@ -81,7 +81,9 @@ export default async function StudentPage() {
 
         {list.length === 0 ? (
           <div className="ef-card rounded-xl shadow-sm px-4 py-14 text-center">
-            <div className="text-4xl mb-3">📝</div>
+            <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)' }}>
+              <Icon name="file" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
+            </div>
             <p className="font-medium" style={{ color: 'var(--card-foreground)' }}>No requests yet</p>
             <p className="text-sm ef-muted mt-1">Start by submitting your first special exam request.</p>
             <Link

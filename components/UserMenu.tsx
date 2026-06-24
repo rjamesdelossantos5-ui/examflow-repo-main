@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { logout } from '@/app/login/actions'
 import ThemeToggle from './ThemeToggle'
+import { Icon } from './Icon'
 import type { UserRole } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -86,7 +87,7 @@ export default function UserMenu({
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
             style={{ color: 'var(--card-foreground)' }}
           >
-            <span className="text-base">👤</span>
+            <Icon name="user" className="w-4 h-4 opacity-70" />
             <span>My Account</span>
           </Link>
 
@@ -100,7 +101,7 @@ export default function UserMenu({
               onClick={() => { setOpen(false); setConfirmLogout(true) }}
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
             >
-              <span className="text-base">↩️</span>
+              <Icon name="logout" className="w-4 h-4" />
               <span>Sign Out</span>
             </button>
           </div>
@@ -111,7 +112,9 @@ export default function UserMenu({
       {confirmLogout && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmLogout(false)}>
           <div className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <div className="text-3xl mb-2">👋</div>
+            <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center bg-red-50 dark:bg-red-500/10 text-red-600">
+              <Icon name="logout" className="w-6 h-6" />
+            </div>
             <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Sign out of EXAMFLOW?</h3>
             <p className="text-sm ef-muted mt-1 mb-5">You&apos;ll need to log in again to access your dashboard.</p>
             <div className="flex gap-3">
