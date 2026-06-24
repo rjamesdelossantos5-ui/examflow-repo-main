@@ -45,8 +45,10 @@ export default function DashboardLayout({ role, userName, email, navItems, notif
           >
             EXAM<span className="text-white">FLOW</span>
           </Link>
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             <NotificationBell items={notifications} />
+            {/* Divider separates the notification (utility) zone from the account zone */}
+            <span className="w-px h-6 bg-white/20" aria-hidden />
             <UserMenu userName={userName} email={email} role={role} />
           </div>
         </div>
