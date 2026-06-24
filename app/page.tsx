@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import LoginModal from './LoginModal'
 
 const NAVY = '#002F6C'
 const GOLD = '#FDB913'
@@ -13,7 +13,7 @@ export default function LandingPage() {
   return (
     <div style={{ background: WHITE, color: '#1e293b' }}>
       {/* ───────── Nav ───────── */}
-      <header className="sticky top-0 z-50 backdrop-blur-md" style={{ background: 'rgba(0,20,45,0.75)', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+      <header className="sticky top-0 z-50" style={{ background: NAVY, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-between`}>
           <span className="font-black text-xl tracking-tight text-white">
             EXAM<span style={{ color: GOLD }}>FLOW</span>
@@ -23,13 +23,13 @@ export default function LandingPage() {
             <a href="#flow" className="hover:text-white transition-colors">How it works</a>
             <a href="#reviewers" className="hover:text-white transition-colors">Who reviews</a>
           </nav>
-          <Link
-            href="/login"
+          <a
+            href="#login"
             className="px-5 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow transition-all"
             style={{ background: GOLD, color: NAVY }}
           >
             Log In
-          </Link>
+          </a>
         </div>
       </header>
 
@@ -62,13 +62,13 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
-              <Link
-                href="/login"
+              <a
+                href="#login"
                 className="px-7 py-3.5 rounded-xl text-base font-bold shadow-lg hover:scale-[1.03] active:scale-95 transition-transform"
                 style={{ background: GOLD, color: NAVY }}
               >
                 Log In to Request
-              </Link>
+              </a>
               <a href="#flow" className="px-6 py-3.5 rounded-xl text-base font-semibold text-white border border-white/25 hover:bg-white/10 transition-colors">
                 See how it works
               </a>
@@ -218,6 +218,8 @@ export default function LandingPage() {
           <span>&copy; {new Date().getFullYear()} EXAMFLOW · Special Exam Request System</span>
         </div>
       </footer>
+
+      <LoginModal />
     </div>
   )
 }

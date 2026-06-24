@@ -47,6 +47,38 @@ export async function login(formData: FormData) {
   redirect(ROLE_HOME[profile.role] ?? '/login')
 }
 
+// Inline variant for the landing-page popup: returns the error string (so the
+// modal can show it in place) instead of redirecting to /login on failure. On
+// success it still redirects to the role's dashboard.
+export async function signIn(formData: FormData): Promise<{ error: string } | void> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return { error: 'Server is not configured. Supabase environment variables are missing.' }
+  }
+
+  const supabase = await createClient()
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const password = String(formData.get('password') ?? '')
+
+  if (!email || !password) return { error: 'Please fill in all fields.' }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error || !data.user) return { error: 'Invalid email or password.' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, is_active')
+    .eq('id', data.user.id)
+    .single()
+
+  if (!profile || !profile.is_active) {
+    await supabase.auth.signOut()
+    return { error: 'Your account is inactive. Please contact the registrar.' }
+  }
+
+  revalidatePath('/', 'layout')
+  redirect(ROLE_HOME[profile.role] ?? '/login')
+}
+
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
