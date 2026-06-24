@@ -6,9 +6,9 @@
           {
             "type": "command",
             "shell": "bash",
-            "command": "git add -A && (git diff --cached --quiet || git commit -m \"chore: auto-commit (Claude Code)\" -m \"Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\") ; exit 0",
-            "statusMessage": "Auto-committing changes…",
-            "timeout": 60
+            "command": "git add -A && (git diff --cached --quiet || git commit -m \"chore: auto-commit (Claude Code)\" -m \"Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\") ; GIT_TERMINAL_PROMPT=0 git push origin HEAD 2>/dev/null ; exit 0",
+            "statusMessage": "Auto-committing & pushing to Vercel…",
+            "timeout": 120
           }
         ]
       }
