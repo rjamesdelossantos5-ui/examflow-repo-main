@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import * as XLSX from 'xlsx'
 import StatusBadge from '@/components/StatusBadge'
+import { exportSchoolFormat } from './exportExcel'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface StudentRow {
   id: string
   status: RequestStatus
   exam_type: string
+  excused_reason: string | null
+  other_reason: string | null
   final_schedule: string | null
   submitted_at: string
   student_name: string
@@ -49,27 +51,19 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
     return () => { supabase.removeChannel(channel) }
   }, [])
 
-  function exportExcel() {
-    const data = rows.map((r) => ({
-      'Student Name': r.student_name,
-      'Student Number': r.student_number ?? '',
-      'Course': r.course ?? '',
-      'Year Level': r.year_level ?? '',
-      'Section': r.section ?? '',
-      'Subject Code': r.subject_code,
-      'Subject Name': r.subject_name,
-      'Department': r.department_name ?? '',
-      'Teacher': r.teacher_name ?? '',
-      'Exam Type': r.exam_type === 'paid' ? 'Paid (Unexcused)' : 'Excused',
-      'Status': r.status,
-      'Schedule': r.final_schedule ? new Date(r.final_schedule).toLocaleString() : '',
-      'Date Submitted': new Date(r.submitted_at).toLocaleDateString(),
-    }))
-
-    const ws = XLSX.utils.json_to_sheet(data)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Accepted Students')
-    XLSX.writeFile(wb, `examflow_accepted_students_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  async function exportExcel() {
+    await exportSchoolFormat(rows.map((r) => ({
+      exam_type: r.exam_type,
+      excused_reason: r.excused_reason,
+      other_reason: r.other_reason,
+      submitted_at: r.submitted_at,
+      student_name: r.student_name,
+      course: r.course,
+      year_level: r.year_level,
+      section: r.section,
+      subject_code: r.subject_code,
+      subject_name: r.subject_name,
+    })))
   }
 
   return (
@@ -166,6 +160,8 @@ async function fetchRows(supabase: ReturnType<typeof createClient>): Promise<Stu
       id: r.id,
       status: r.status as RequestStatus,
       exam_type: r.exam_type,
+      excused_reason: (r.excused_reason as string | null) ?? null,
+      other_reason: (r.other_reason as string | null) ?? null,
       final_schedule: r.final_schedule,
       submitted_at: r.submitted_at,
       student_name: s.snap_name ?? student?.full_name ?? '',

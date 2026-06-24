@@ -43,6 +43,8 @@ export default async function StudentsPage() {
       id: r.id,
       status: r.status as RequestStatus,
       exam_type: r.exam_type,
+      excused_reason: (r.excused_reason as string | null) ?? null,
+      other_reason: (r.other_reason as string | null) ?? null,
       final_schedule: r.final_schedule,
       submitted_at: r.submitted_at,
       student_name: s.snap_name ?? student?.full_name ?? '',

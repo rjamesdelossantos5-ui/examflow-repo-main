@@ -2,14 +2,18 @@ import Link from 'next/link'
 
 const NAVY = '#002F6C'
 const GOLD = '#FDB913'
+const WHITE = '#ffffff'
+const SOFT = '#f4f7fb' // gentle tint so it's "not full white"
 // Matches the dashboard's content width + padding exactly.
 const CONTAINER = 'max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8'
 
 export default function LandingPage() {
+  // Inline backgrounds (not Tailwind bg-* classes) so the app's dark-mode
+  // overrides never touch this public page — it always renders light.
   return (
-    <div style={{ background: '#eef2f7', color: '#1e293b' }}>
+    <div style={{ background: WHITE, color: '#1e293b' }}>
       {/* ───────── Nav ───────── */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-white/85 border-b border-slate-200/70">
+      <header className="sticky top-0 z-50 backdrop-blur-md border-b border-slate-200/70" style={{ background: 'rgba(255,255,255,0.85)' }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-between`}>
           <span className="font-black text-xl tracking-tight" style={{ color: NAVY }}>
             EXAM<span style={{ color: GOLD }}>FLOW</span>
@@ -70,7 +74,7 @@ export default function LandingPage() {
 
           {/* Mock request card */}
           <div className="relative">
-            <div className="rounded-2xl bg-white shadow-2xl p-6 max-w-sm mx-auto rotate-1 hover:rotate-0 transition-transform duration-300">
+            <div className="rounded-2xl shadow-2xl p-6 max-w-sm mx-auto rotate-1 hover:rotate-0 transition-transform duration-300" style={{ background: WHITE }}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="font-bold" style={{ color: NAVY }}>IT101 — Special Exam</p>
@@ -97,7 +101,7 @@ export default function LandingPage() {
                 ))}
               </div>
             </div>
-            <div className="hidden sm:block absolute -bottom-5 -left-3 rounded-xl bg-white shadow-xl px-4 py-3 -rotate-3">
+            <div className="hidden sm:block absolute -bottom-5 -left-3 rounded-xl shadow-xl px-4 py-3 -rotate-3" style={{ background: WHITE }}>
               <p className="text-xs text-slate-400">Documents</p>
               <p className="text-sm font-semibold" style={{ color: NAVY }}>3 files verified ✓</p>
             </div>
@@ -105,8 +109,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── Stat band (white) ───────── */}
-      <section className="bg-white border-b border-slate-100">
+      {/* ───────── Stat band ───────── */}
+      <section className="border-b border-slate-100" style={{ background: WHITE }}>
         <div className={`${CONTAINER} py-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center`}>
           {[
             ['Minutes', 'To submit a request'],
@@ -122,8 +126,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── Features (soft bg, white cards) ───────── */}
-      <section id="features" className="scroll-mt-16" style={{ background: '#eef2f7' }}>
+      {/* ───────── Features (soft tint) ───────── */}
+      <section id="features" className="scroll-mt-16" style={{ background: SOFT }}>
         <div className={`${CONTAINER} py-20 sm:py-24`}>
           <div className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>Everything you need in one form</h2>
@@ -139,7 +143,7 @@ export default function LandingPage() {
               { icon: '🧾', title: 'Receipts & schedule', body: 'For paid exams, upload your payment receipt and get your final exam schedule once approved.' },
               { icon: '🔔', title: 'Always know the status', body: 'See approvals, rejections, and the reason for each — no more chasing people for updates.' },
             ].map((f) => (
-              <div key={f.title} className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all">
+              <div key={f.title} className="rounded-2xl border border-slate-200/80 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all" style={{ background: WHITE }}>
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4" style={{ background: 'rgba(0,47,108,0.06)' }}>{f.icon}</div>
                 <h3 className="font-bold text-lg mb-2" style={{ color: NAVY }}>{f.title}</h3>
                 <p className="text-sm text-slate-500 leading-relaxed">{f.body}</p>
@@ -149,8 +153,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── How it works (white) ───────── */}
-      <section id="flow" className="scroll-mt-16 bg-white">
+      {/* ───────── How it works ───────── */}
+      <section id="flow" className="scroll-mt-16" style={{ background: WHITE }}>
         <div className={`${CONTAINER} py-20 sm:py-24`}>
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>What happens after you submit</h2>
@@ -164,7 +168,7 @@ export default function LandingPage() {
               { n: '3', t: 'Teacher approves', d: 'Confirms the subject and your absence.' },
               { n: '4', t: 'Program Head schedules', d: 'Accepts and sets your exam date.' },
             ].map((s) => (
-              <div key={s.n} className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 text-center">
+              <div key={s.n} className="rounded-2xl border border-slate-200 shadow-sm p-6 text-center" style={{ background: WHITE }}>
                 <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center font-black text-lg" style={{ background: GOLD, color: NAVY }}>{s.n}</div>
                 <h3 className="font-bold mb-2" style={{ color: NAVY }}>{s.t}</h3>
                 <p className="text-sm text-slate-500">{s.d}</p>
@@ -174,8 +178,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── Who reviews (soft bg) ───────── */}
-      <section id="reviewers" className="scroll-mt-16" style={{ background: '#eef2f7' }}>
+      {/* ───────── Who reviews (soft tint) ───────── */}
+      <section id="reviewers" className="scroll-mt-16" style={{ background: SOFT }}>
         <div className={`${CONTAINER} py-20 sm:py-24`}>
           <div className="text-center max-w-2xl mx-auto mb-14">
             <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>Who reviews your request</h2>
@@ -187,7 +191,7 @@ export default function LandingPage() {
               { icon: '✅', role: 'Teacher', note: 'Approves the subject exam' },
               { icon: '👔', role: 'Program Head', note: 'Accepts & schedules it' },
             ].map((r) => (
-              <div key={r.role} className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6 text-center">
+              <div key={r.role} className="rounded-2xl border border-slate-200 shadow-sm p-6 text-center" style={{ background: WHITE }}>
                 <div className="text-3xl mb-3">{r.icon}</div>
                 <p className="font-bold" style={{ color: NAVY }}>{r.role}</p>
                 <p className="text-xs text-slate-500 mt-1">{r.note}</p>
@@ -197,28 +201,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── CTA ───────── */}
-      <section className="bg-white">
-        <div className={`${CONTAINER} py-20`}>
-          <div className="rounded-3xl px-8 py-16 text-center relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${NAVY}, #024aa6)` }}>
-            <div className="absolute -top-16 -right-10 w-72 h-72 rounded-full blur-3xl opacity-25" style={{ background: GOLD }} />
-            <div className="relative">
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-4">Ready to request your exam?</h2>
-              <p className="text-blue-100/90 text-lg mb-8 max-w-xl mx-auto">Log in with the account from your registrar and submit your special exam request in minutes.</p>
-              <Link
-                href="/login"
-                className="inline-block px-9 py-4 rounded-xl text-base font-bold shadow-lg hover:scale-[1.03] active:scale-95 transition-transform"
-                style={{ background: GOLD, color: NAVY }}
-              >
-                Log In
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ───────── Footer ───────── */}
-      <footer className="bg-white border-t border-slate-100">
+      <footer className="border-t border-slate-100" style={{ background: WHITE }}>
         <div className={`${CONTAINER} py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-400`}>
           <span className="font-black" style={{ color: NAVY }}>EXAM<span style={{ color: GOLD }}>FLOW</span></span>
           <span>&copy; {new Date().getFullYear()} EXAMFLOW · Special Exam Request System</span>
