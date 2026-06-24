@@ -4,11 +4,11 @@ import type { UserRole } from '@/lib/supabase/types'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
-// Cap how many individual alerts we build per query. The bell dropdown scrolls
-// and the badge shows "9+" past nine, so this keeps payload + screen space
-// bounded even when a queue is large. Derived from current request state with
-// indexed queries — no polling/websocket, so it stays light on cheap phones.
-const MAX_ITEMS = 12
+// Upper bound per query so the payload can't grow without limit (safety for
+// low-end phones). The bell dropdown is height-capped + scrollable, so users
+// can scroll through all of these — none are hidden until this ceiling, which
+// is set high enough that a real queue won't reach it.
+const MAX_ITEMS = 50
 
 interface QueueRow {
   id: string
