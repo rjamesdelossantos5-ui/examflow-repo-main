@@ -329,3 +329,19 @@ create policy "storage_allow_update" on storage.objects
 create policy "storage_allow_delete" on storage.objects
   for delete to authenticated
   using (bucket_id = 'exam-documents');
+
+-- ── Realtime ──────────────────────────────────
+-- Required for the live notification bell and the live Accepted-Students list.
+-- (Realtime still respects the RLS select policies above.)
+alter table special_exam_requests replica identity full;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'special_exam_requests'
+  ) then
+    alter publication supabase_realtime add table special_exam_requests;
+  end if;
+end $$;
