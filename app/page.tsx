@@ -114,6 +114,8 @@ export default function LandingPage() {
 
       {/* ───────── Stat band ───────── */}
       <section className="border-b border-slate-100" style={{ background: WHITE }}>
+        {/* Gold accent hairline bridges the navy hero into the white below */}
+        <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
         <div className={`${CONTAINER} py-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center`}>
           {[
             ['Minutes', 'To submit a request'],
@@ -130,9 +132,10 @@ export default function LandingPage() {
       </section>
 
       {/* ───────── Features (soft tint) ───────── */}
-      <section id="features" className="scroll-mt-16" style={{ background: SOFT }}>
+      <section id="features" className="scroll-mt-16" style={{ background: `radial-gradient(1000px 360px at 50% -10%, rgba(0,47,108,0.06), transparent), ${SOFT}` }}>
         <div className={`${CONTAINER} py-20 sm:py-24`}>
           <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-4" style={{ background: 'rgba(253,185,19,0.18)', color: '#92710a' }}>Features</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>Everything you need in one form</h2>
             <p className="text-slate-500 text-lg">From the moment you submit to the day your exam is scheduled.</p>
           </div>
@@ -159,9 +162,10 @@ export default function LandingPage() {
       </section>
 
       {/* ───────── How it works ───────── */}
-      <section id="flow" className="scroll-mt-16" style={{ background: WHITE }}>
+      <section id="flow" className="scroll-mt-16" style={{ background: `radial-gradient(900px 320px at 50% 0%, rgba(0,47,108,0.04), transparent), ${WHITE}` }}>
         <div className={`${CONTAINER} py-20 sm:py-24`}>
           <div className="text-center max-w-2xl mx-auto mb-16">
+            <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-4" style={{ background: 'rgba(253,185,19,0.18)', color: '#92710a' }}>The process</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>What happens after you submit</h2>
             <p className="text-slate-500 text-lg">Four clear steps from your request to a scheduled exam.</p>
           </div>
@@ -184,9 +188,10 @@ export default function LandingPage() {
       </section>
 
       {/* ───────── Who reviews (soft tint) ───────── */}
-      <section id="reviewers" className="scroll-mt-16" style={{ background: SOFT }}>
+      <section id="reviewers" className="scroll-mt-16" style={{ background: `radial-gradient(1000px 360px at 50% -10%, rgba(0,47,108,0.06), transparent), ${SOFT}` }}>
         <div className={`${CONTAINER} py-20 sm:py-24`}>
           <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-4" style={{ background: 'rgba(253,185,19,0.18)', color: '#92710a' }}>Who reviews</span>
             <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>Who reviews your request</h2>
             <p className="text-slate-500 text-lg">Each reviewer has their own dashboard — you just track the progress.</p>
           </div>
