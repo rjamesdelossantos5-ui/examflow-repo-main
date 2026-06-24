@@ -44,14 +44,6 @@ export default function LandingPage() {
 
         <div className={`${CONTAINER} relative py-16 grid lg:grid-cols-2 gap-12 items-center w-full`}>
           <div>
-            <span
-              className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase px-3 py-1.5 rounded-full mb-6"
-              style={{ background: 'rgba(253,185,19,0.15)', color: GOLD, border: '1px solid rgba(253,185,19,0.3)' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: GOLD }} />
-              For Students
-            </span>
-
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-[1.1] mb-6">
               Missed an exam?<br />
               <span style={{ color: GOLD }}>Request it online.</span>
@@ -106,8 +98,8 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="hidden sm:block absolute -bottom-5 -left-3 rounded-xl shadow-xl px-4 py-3 -rotate-3" style={{ background: WHITE }}>
-              <p className="text-xs text-slate-400">Documents</p>
-              <p className="text-sm font-semibold" style={{ color: NAVY }}>3 files verified ✓</p>
+              <p className="text-xs text-slate-400">Requirements</p>
+              <p className="text-sm font-semibold" style={{ color: NAVY }}>3 forms verified ✓</p>
             </div>
           </div>
         </div>
