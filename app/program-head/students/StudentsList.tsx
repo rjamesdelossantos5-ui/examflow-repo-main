@@ -74,21 +74,21 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Accepted Students</h2>
-          <p className="text-sm text-gray-500">Live list — updates in real time</p>
+          <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Accepted Students</h2>
+          <p className="text-sm ef-muted">Live list — updates in real time</p>
         </div>
         <button
           onClick={exportExcel}
-          className="px-4 py-2 rounded-lg text-sm font-semibold border"
-          style={{ borderColor: 'var(--sti-navy)', color: 'var(--sti-navy)' }}
+          className="px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity shrink-0"
+          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
-          Export to Excel
+          ⬇ Export to Excel
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow overflow-x-auto">
+      <div className="ef-card rounded-xl shadow-sm overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -136,7 +136,7 @@ async function fetchRows(supabase: ReturnType<typeof createClient>): Promise<Stu
   const { data } = await supabase
     .from('special_exam_requests')
     .select(`
-      id, status, exam_type, final_schedule, submitted_at,
+      *,
       profiles!student_id(full_name, student_number, course, year_level, section),
       subjects(
         subject_code, subject_name,
@@ -160,18 +160,19 @@ async function fetchRows(supabase: ReturnType<typeof createClient>): Promise<Stu
       course: string | null
       year_level: number | null
       section: string | null
-    }
+    } | null
+    const s = r as { snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null; snap_year_level?: number | null; snap_section?: string | null }
     return {
       id: r.id,
       status: r.status as RequestStatus,
       exam_type: r.exam_type,
       final_schedule: r.final_schedule,
       submitted_at: r.submitted_at,
-      student_name: student?.full_name ?? '',
-      student_number: student?.student_number ?? null,
-      course: student?.course ?? null,
-      year_level: student?.year_level ?? null,
-      section: student?.section ?? null,
+      student_name: s.snap_name ?? student?.full_name ?? '',
+      student_number: s.snap_student_number ?? student?.student_number ?? null,
+      course: s.snap_course ?? student?.course ?? null,
+      year_level: s.snap_year_level ?? student?.year_level ?? null,
+      section: s.snap_section ?? student?.section ?? null,
       subject_code: subj?.subject_code ?? '',
       subject_name: subj?.subject_name ?? '',
       teacher_name: subj?.profiles?.full_name ?? null,

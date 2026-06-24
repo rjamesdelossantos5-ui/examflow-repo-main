@@ -22,6 +22,7 @@ export interface Profile {
   year_level: number | null
   section: string | null
   is_active: boolean
+  can_override?: boolean
   created_at: string
 }
 

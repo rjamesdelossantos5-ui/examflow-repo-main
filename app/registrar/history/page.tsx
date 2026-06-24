@@ -13,7 +13,7 @@ export default async function RegistrarHistoryPage() {
   const { data } = await supabase
     .from('special_exam_requests')
     .select(`
-      id, exam_type, status, submitted_at, updated_at,
+      *,
       profiles!student_id(full_name),
       subjects(subject_code, subject_name)
     `)
@@ -37,7 +37,7 @@ export default async function RegistrarHistoryPage() {
           <tbody className="divide-y">
             {(data ?? []).map((r) => (
               <tr key={r.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">{(r.profiles as unknown as { full_name: string })?.full_name}</td>
+                <td className="px-4 py-3">{(r as { snap_name?: string | null }).snap_name ?? (r.profiles as unknown as { full_name: string })?.full_name}</td>
                 <td className="px-4 py-3 text-gray-500">{(r.subjects as unknown as { subject_name: string })?.subject_name}</td>
                 <td className="px-4 py-3 capitalize">{r.exam_type}</td>
                 <td className="px-4 py-3"><StatusBadge status={r.status as RequestStatus} /></td>

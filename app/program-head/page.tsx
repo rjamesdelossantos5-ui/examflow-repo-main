@@ -13,7 +13,7 @@ export default async function ProgramHeadPage() {
   const { data: raw } = await supabase
     .from('special_exam_requests')
     .select(`
-      id, exam_type, excused_reason, other_reason, status, submitted_at, final_schedule,
+      *,
       profiles!student_id(full_name, student_number, course, year_level, section),
       subjects(
         subject_code, subject_name,
@@ -33,15 +33,23 @@ export default async function ProgramHeadPage() {
         subject_name: string
         profiles: { full_name: string } | null
       }
+      const p = r.profiles as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null } | null
+      const s = r as { snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null; snap_year_level?: number | null; snap_section?: string | null }
       return {
         ...r,
-        student: r.profiles as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null },
+        student: {
+          full_name: s.snap_name ?? p?.full_name ?? '—',
+          student_number: s.snap_student_number ?? p?.student_number ?? null,
+          course: s.snap_course ?? p?.course ?? null,
+          year_level: s.snap_year_level ?? p?.year_level ?? null,
+          section: s.snap_section ?? p?.section ?? null,
+        },
         subject: {
           subject_code: subj?.subject_code ?? '',
           subject_name: subj?.subject_name ?? '',
           teacher: subj?.profiles ?? null,
         },
-        media: (r.application_media ?? []).map((m, i) => ({ ...m, signed_url: mediaWithUrls[i]?.signed_url })),
+        media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[]).map((m, i) => ({ ...m, signed_url: mediaWithUrls[i]?.signed_url })),
         logs: r.progress_logs ?? [],
       }
     })

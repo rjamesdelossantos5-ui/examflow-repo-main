@@ -1,18 +1,21 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { attachSignedUrls } from '@/lib/supabase/getSignedUrls'
 import StatusBadge from '@/components/StatusBadge'
+import DocumentViewer from '@/components/DocumentViewer'
 import ReceiptUpload from './ReceiptUpload'
-import type { RequestStatus } from '@/lib/supabase/types'
+import DeleteRequestButton from './DeleteRequestButton'
+import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
 
-const STEPS: { status: RequestStatus; label: string }[] = [
-  { status: 'submitted', label: 'Submitted' },
-  { status: 'verified_by_registrar', label: 'Verified by Registrar' },
-  { status: 'approved_by_teacher', label: 'Approved by Teacher' },
-  { status: 'accepted', label: 'Accepted by Program Head' },
-  { status: 'scheduled', label: 'Scheduled' },
+const STEPS: { status: RequestStatus; label: string; icon: string }[] = [
+  { status: 'submitted', label: 'Submitted', icon: '📤' },
+  { status: 'verified_by_registrar', label: 'Registrar', icon: '🏫' },
+  { status: 'approved_by_teacher', label: 'Teacher', icon: '✅' },
+  { status: 'accepted', label: 'Program Head', icon: '👍' },
+  { status: 'scheduled', label: 'Scheduled', icon: '📅' },
 ]
 
 const STATUS_ORDER: Record<RequestStatus, number> = {
@@ -23,6 +26,26 @@ const STATUS_ORDER: Record<RequestStatus, number> = {
   receipt_uploaded: 3,
   scheduled: 4,
   rejected: -1,
+}
+
+const ROLE_DOT: Record<UserRole, string> = {
+  student: '#3b82f6',
+  registrar: '#a855f7',
+  subject_teacher: '#6366f1',
+  program_head: '#f59e0b',
+  admin: '#64748b',
+}
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString()
 }
 
 export default async function RequestDetailPage({
@@ -53,93 +76,131 @@ export default async function RequestDetailPage({
 
   if (!req) notFound()
 
+  const subj = req.subjects as unknown as { subject_code: string; subject_name: string } | null
   const currentStep = STATUS_ORDER[req.status as RequestStatus]
+  const isRejected = req.status === 'rejected'
+  const fillPct = isRejected ? 0 : (currentStep / (STEPS.length - 1)) * 100
+
+  const logs = (req.progress_logs as { id: string; action: string; created_at: string; actor_role: UserRole }[]) ?? []
+  const rawMedia = (req.application_media as { id: string; file_name: string; media_type: string; mime_type: string; storage_path: string }[]) ?? []
+  const signed = await attachSignedUrls(supabase, rawMedia)
+  const media = rawMedia.map((m, i) => ({ ...m, signed_url: signed[i]?.signed_url }))
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/student" className="text-sm text-gray-500 hover:underline">← My Requests</Link>
-      </div>
+    <div className="max-w-2xl space-y-5">
+      <Link href="/student" className="inline-flex items-center gap-1 text-sm ef-muted hover:underline">
+        ← Back to My Requests
+      </Link>
 
       {submitted && (
-        <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-          Request submitted successfully!
+        <div className="ef-toast rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
+          ✓ Request submitted successfully!
         </div>
       )}
 
       {/* Header */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-bold" style={{ color: 'var(--sti-navy)' }}>
-              {(req.subjects as { subject_name: string })?.subject_name}
+      <div className="ef-card rounded-xl shadow-sm p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold truncate" style={{ color: 'var(--card-foreground)' }}>
+              {subj?.subject_name}
             </h1>
-            <p className="text-sm text-gray-500">{(req.subjects as { subject_code: string })?.subject_code}</p>
+            <p className="text-sm ef-muted">{subj?.subject_code}</p>
           </div>
           <StatusBadge status={req.status as RequestStatus} />
         </div>
 
-        <div className="mt-4 flex gap-6 text-sm">
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
           <div>
-            <span className="text-gray-500">Type: </span>
-            <span className="font-medium capitalize">{req.exam_type === 'paid' ? 'Paid (Unexcused)' : 'Excused'}</span>
+            <span className="ef-muted">Type: </span>
+            <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>
+              {req.exam_type === 'paid' ? 'Paid (Unexcused)' : 'Excused'}
+            </span>
           </div>
           <div>
-            <span className="text-gray-500">Submitted: </span>
-            <span className="font-medium">{new Date(req.submitted_at).toLocaleDateString()}</span>
+            <span className="ef-muted">Submitted: </span>
+            <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>
+              {new Date(req.submitted_at).toLocaleDateString()}
+            </span>
           </div>
+          {req.excused_reason && (
+            <div>
+              <span className="ef-muted">Reason: </span>
+              <span className="font-medium capitalize" style={{ color: 'var(--card-foreground)' }}>
+                {req.excused_reason}{req.other_reason ? ` — ${req.other_reason}` : ''}
+              </span>
+            </div>
+          )}
         </div>
 
-        {req.excused_reason && (
-          <div className="mt-2 text-sm">
-            <span className="text-gray-500">Reason: </span>
-            <span className="font-medium capitalize">{req.excused_reason}</span>
-            {req.other_reason && <span> — {req.other_reason}</span>}
-          </div>
-        )}
-
-        {req.status === 'rejected' && req.rejection_reason && (
-          <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        {isRejected && req.rejection_reason && (
+          <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
             <strong>Rejected</strong> — {req.rejection_reason}
           </div>
         )}
 
         {req.final_schedule && (
-          <div className="mt-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-            <strong>Scheduled for:</strong>{' '}
-            {new Date(req.final_schedule).toLocaleString()}
+          <div className="mt-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
+            <strong>📅 Scheduled for:</strong> {new Date(req.final_schedule).toLocaleString()}
           </div>
         )}
       </div>
 
-      {/* Status Tracker */}
-      {req.status !== 'rejected' && (
-        <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="font-semibold text-gray-700 mb-4">Progress</h2>
-          <div className="flex items-center justify-between">
-            {STEPS.map((step, i) => {
-              const done = currentStep >= i
-              const active = currentStep === i
-              return (
-                <div key={step.status} className="flex-1 flex flex-col items-center gap-1">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
-                      done
-                        ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)] text-[var(--sti-navy)]'
-                        : 'border-gray-300 text-gray-400'
-                    }`}
-                  >
-                    {done ? '✓' : i + 1}
+      {/* Submitted details (what the student entered on this form) */}
+      <div className="ef-card rounded-xl shadow-sm p-6">
+        <h2 className="font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>Submitted Details</h2>
+        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+          {[
+            ['Name', req.snap_name],
+            ['Student No.', req.snap_student_number],
+            ['Course', req.snap_course],
+            ['Year', req.snap_year_level],
+            ['Section', req.snap_section],
+          ].map(([label, value]) => (
+            <div key={label as string}>
+              <dt className="text-xs ef-muted">{label}</dt>
+              <dd className="font-medium" style={{ color: 'var(--card-foreground)' }}>{value ?? '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      {/* 3D Progress stepper */}
+      {!isRejected && (
+        <div className="ef-card rounded-xl shadow-sm p-6 pb-5">
+          <h2 className="font-semibold mb-6" style={{ color: 'var(--card-foreground)' }}>Progress</h2>
+          <div className="relative">
+            {/* track */}
+            <div className="absolute left-5 right-5 top-5 h-1.5 rounded-full -translate-y-1/2" style={{ background: 'var(--border)' }} />
+            {/* filled */}
+            <div
+              className="absolute left-5 top-5 h-1.5 rounded-full -translate-y-1/2 transition-all duration-700"
+              style={{ width: `calc((100% - 2.5rem) * ${fillPct / 100})`, background: 'linear-gradient(90deg, #e0a200, var(--sti-gold))' }}
+            />
+            <div className="relative flex justify-between">
+              {STEPS.map((step, i) => {
+                const done = currentStep >= i
+                const active = currentStep === i
+                return (
+                  <div key={step.status} className="flex flex-col items-center gap-2 w-16">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ef-step-node ${
+                        done ? 'ef-step-done' : ''
+                      } ${active ? 'ef-step-active' : ''}`}
+                      style={!done ? { background: 'var(--card)', border: '2px solid var(--border)', color: 'var(--muted)' } : undefined}
+                    >
+                      {done ? (active ? step.icon : '✓') : i + 1}
+                    </div>
+                    <span
+                      className={`text-[11px] text-center leading-tight ${active ? 'font-semibold' : ''}`}
+                      style={{ color: active ? 'var(--card-foreground)' : 'var(--muted)' }}
+                    >
+                      {step.label}
+                    </span>
                   </div>
-                  <span className={`text-xs text-center leading-tight ${active ? 'font-semibold' : 'text-gray-500'}`}>
-                    {step.label}
-                  </span>
-                  {i < STEPS.length - 1 && (
-                    <div className="absolute" style={{ display: 'none' }} />
-                  )}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -150,35 +211,39 @@ export default async function RequestDetailPage({
       )}
 
       {/* Documents */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <h2 className="font-semibold text-gray-700 mb-3">Uploaded Documents</h2>
-        <ul className="space-y-2">
-          {((req.application_media as { id: string; file_name: string; media_type: string }[]) ?? []).map((m) => (
-            <li key={m.id} className="flex items-center gap-2 text-sm">
-              <span className="text-gray-400">📄</span>
-              <span className="font-medium capitalize">{m.media_type.replace(/_/g, ' ')}</span>
-              <span className="text-gray-400">—</span>
-              <span className="text-gray-600">{m.file_name}</span>
-            </li>
-          ))}
-        </ul>
+      <div className="ef-card rounded-xl shadow-sm p-6">
+        <h2 className="font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>Uploaded Documents</h2>
+        <DocumentViewer media={media} />
       </div>
 
-      {/* History */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <h2 className="font-semibold text-gray-700 mb-3">Activity History</h2>
-        <ol className="space-y-3">
-          {((req.progress_logs as { id: string; action: string; created_at: string; actor_role: string }[]) ?? []).map((log) => (
-            <li key={log.id} className="flex gap-3 text-sm">
-              <span className="text-gray-400 text-xs mt-0.5 shrink-0">{new Date(log.created_at).toLocaleString()}</span>
-              <div>
-                <span className="font-medium">{log.action}</span>
-                <span className="ml-1 text-gray-400 capitalize">({log.actor_role.replace(/_/g, ' ')})</span>
-              </div>
+      {/* Timeline history */}
+      <div className="ef-card rounded-xl shadow-sm p-6">
+        <h2 className="font-semibold mb-4" style={{ color: 'var(--card-foreground)' }}>Activity Timeline</h2>
+        <ol className="relative ml-2">
+          {logs.map((log, i) => (
+            <li key={log.id} className="relative pl-6 pb-5 last:pb-0">
+              {i < logs.length - 1 && (
+                <span className="absolute left-[5px] top-3 bottom-0 w-px" style={{ background: 'var(--border)' }} />
+              )}
+              <span
+                className="absolute left-0 top-1.5 w-3 h-3 rounded-full ring-2"
+                style={{ background: ROLE_DOT[log.actor_role] ?? '#64748b', boxShadow: '0 0 0 2px var(--card)' }}
+              />
+              <p className="text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>{log.action}</p>
+              <p className="text-xs ef-muted mt-0.5">
+                <span className="capitalize">{log.actor_role.replace(/_/g, ' ')}</span> · {timeAgo(log.created_at)}
+              </p>
             </li>
           ))}
         </ol>
       </div>
+
+      {/* Withdraw (only while still pending registrar review) */}
+      {req.status === 'submitted' && (
+        <div className="ef-card rounded-xl shadow-sm p-6">
+          <DeleteRequestButton requestId={req.id} />
+        </div>
+      )}
     </div>
   )
 }

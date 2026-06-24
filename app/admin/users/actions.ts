@@ -85,6 +85,25 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
   return { error: null }
 }
 
+export async function toggleOverride(userId: string, canOverride: boolean) {
+  const supabase = await createClient()
+
+  const { data: { user: me } } = await supabase.auth.getUser()
+  if (!me) return { error: 'Unauthorized' }
+
+  const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
+  if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ can_override: canOverride })
+    .eq('id', userId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/users')
+  return { error: null }
+}
+
 export async function deleteUser(userId: string) {
   const supabase = await createClient()
 

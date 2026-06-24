@@ -61,6 +61,18 @@ export async function submitRequest(formData: FormData) {
   }
   if (!subjectId) return redirect('/student/submit?error=Please+select+a+subject')
 
+  // Snapshot the student details entered on THIS form (does not touch the
+  // profile, so older requests keep the name/section they were submitted with).
+  const yearRaw = String(formData.get('year_level') ?? '').trim()
+  const yearNum = yearRaw ? Number(yearRaw) : null
+  const snapshot = {
+    snap_name: String(formData.get('full_name') ?? '').trim().slice(0, 120) || null,
+    snap_student_number: String(formData.get('student_number') ?? '').trim().slice(0, 40) || null,
+    snap_course: String(formData.get('course') ?? '').trim().slice(0, 60) || null,
+    snap_year_level: Number.isInteger(yearNum) && yearNum! >= 1 && yearNum! <= 6 ? yearNum : null,
+    snap_section: String(formData.get('section') ?? '').trim().slice(0, 20) || null,
+  }
+
   // Validate files
   const parentId = formData.get('parent_id') as File | null
   const parentSig = formData.get('parent_signature') as File | null
@@ -82,7 +94,7 @@ export async function submitRequest(formData: FormData) {
     return redirect(`/student/submit?error=${encodeURIComponent(errors.join('; '))}`)
   }
 
-  // Insert request
+  // Insert request (with the per-form snapshot of student details)
   const { data: req, error: reqErr } = await supabase
     .from('special_exam_requests')
     .insert({
@@ -92,13 +104,44 @@ export async function submitRequest(formData: FormData) {
       excused_reason: excusedReason,
       other_reason: examType === 'excused' && excusedReason === 'other' ? otherReason : null,
       status: 'submitted',
+      ...snapshot,
     })
     .select()
     .single()
 
   if (reqErr || !req) {
-    return redirect(`/student/submit?error=${encodeURIComponent(reqErr?.message ?? 'Submission failed')}`)
+    // If the snapshot columns aren't migrated yet, retry without them so
+    // submissions never break (see supabase/migration_snapshot.sql).
+    const retry = await supabase
+      .from('special_exam_requests')
+      .insert({
+        student_id: user.id,
+        subject_id: subjectId,
+        exam_type: examType as 'paid' | 'excused',
+        excused_reason: excusedReason,
+        other_reason: examType === 'excused' && excusedReason === 'other' ? otherReason : null,
+        status: 'submitted',
+      })
+      .select()
+      .single()
+    if (retry.error || !retry.data) {
+      return redirect(`/student/submit?error=${encodeURIComponent(retry.error?.message ?? 'Submission failed')}`)
+    }
+    return finishSubmission(supabase, retry.data, user.id, examType, parentId, parentSig, supportDoc)
   }
+
+  return finishSubmission(supabase, req, user.id, examType, parentId, parentSig, supportDoc)
+}
+
+async function finishSubmission(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  req: { id: string },
+  userId: string,
+  examType: string,
+  parentId: File | null,
+  parentSig: File | null,
+  supportDoc: File | null,
+) {
 
   // Upload files
   const uploads: Promise<{ path: string; error: string | null }>[] = [
@@ -134,7 +177,7 @@ export async function submitRequest(formData: FormData) {
   // Log
   await supabase.from('progress_logs').insert({
     request_id: req.id,
-    actor_id: user.id,
+    actor_id: userId,
     actor_role: 'student',
     action: 'Submitted special exam request',
   })

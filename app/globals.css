@@ -1,23 +1,125 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode for Tailwind v4 (`dark:` utilities key off .dark) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  /* Brand */
   --sti-gold: #FDB913;
   --sti-navy: #002F6C;
-  --background: #ffffff;
-  --foreground: #171717;
+
+  /* Semantic surface tokens (light) */
+  --background: #f3f4f6;   /* app canvas */
+  --foreground: #171717;   /* primary text */
+  --card: #ffffff;         /* panels / cards */
+  --card-foreground: #1f2937;
+  --muted: #6b7280;        /* secondary text */
+  --border: #e5e7eb;       /* hairlines */
+  --header: #002F6C;       /* top nav */
+}
+
+.dark {
+  --background: #0b1120;
+  --foreground: #e5e7eb;
+  --card: #111a2e;
+  --card-foreground: #e5e7eb;
+  --muted: #94a3b8;
+  --border: #1f2b45;
+  --header: #0a1830;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
   --color-sti-gold: var(--sti-gold);
   --color-sti-navy: var(--sti-navy);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  /* smooth theme transitions without flashing on first paint */
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* Reusable surface helpers so role pages get dark mode for free */
+.ef-card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+}
+.ef-muted { color: var(--muted); }
+.ef-border { border-color: var(--border); }
+
+/* Modern 3D progress stepper node */
+.ef-step-node {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.12),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+.ef-step-done {
+  background: linear-gradient(145deg, #ffd451 0%, var(--sti-gold) 55%, #e0a200 100%);
+  color: var(--sti-navy);
+}
+.ef-step-active {
+  animation: ef-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ef-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(253, 185, 19, 0.55), 0 4px 12px rgba(0,0,0,0.12); }
+  50%      { box-shadow: 0 0 0 8px rgba(253, 185, 19, 0), 0 4px 12px rgba(0,0,0,0.12); }
+}
+
+/* ─────────────────────────────────────────────
+   Dark-mode fallback for role pages that still use hardcoded
+   Tailwind surface utilities (registrar / teacher / program head / admin).
+   Retargets the common surfaces so they adapt without editing every file.
+   ───────────────────────────────────────────── */
+.dark .bg-white { background-color: var(--card) !important; }
+.dark .bg-gray-50,
+.dark .bg-gray-100 { background-color: var(--background) !important; }
+
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 { color: var(--card-foreground) !important; }
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-gray-400 { color: var(--muted) !important; }
+
+.dark .border,
+.dark .border-b,
+.dark .border-t,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border) !important;
+}
+
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover { background-color: rgba(255, 255, 255, 0.04) !important; }
+
+.dark .shadow,
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important; }
+
+/* Toast slide-in */
+@keyframes ef-toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ef-toast { animation: ef-toast-in 0.25s ease-out; }

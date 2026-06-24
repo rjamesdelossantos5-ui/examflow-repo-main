@@ -7,9 +7,41 @@ async function requirePH() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
-  const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const { data: p } = await supabase.from('profiles').select('role, can_override').eq('id', user.id).single()
   if (!p || !['program_head', 'admin'].includes(p.role)) return null
-  return { supabase, userId: user.id, role: p.role }
+  return { supabase, userId: user.id, role: p.role, canOverride: p.role === 'admin' || !!p.can_override }
+}
+
+// Authorized program heads may accept a request even if the registrar or
+// teacher hasn't acted yet (bypasses the earlier stages, with an audit log).
+export async function overrideAccept(requestId: string, scheduleStr: string) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase, userId, role, canOverride } = ctx
+  if (!canOverride) return { error: 'You are not authorized to override the approval chain. Ask an admin to grant access.' }
+
+  const finalSchedule = scheduleStr ? new Date(scheduleStr).toISOString() : null
+
+  const { error } = await supabase
+    .from('special_exam_requests')
+    .update({ status: 'accepted', final_schedule: finalSchedule })
+    .eq('id', requestId)
+    .in('status', ['submitted', 'verified_by_registrar', 'approved_by_teacher'])
+
+  if (error) return { error: error.message }
+
+  await supabase.from('progress_logs').insert({
+    request_id: requestId,
+    actor_id: userId,
+    actor_role: role,
+    action: scheduleStr
+      ? `Accepted by Program Head (override — earlier stages bypassed). Schedule: ${new Date(scheduleStr).toLocaleString()}`
+      : 'Accepted by Program Head (override — earlier stages bypassed)',
+  })
+
+  revalidatePath('/program-head')
+  revalidatePath('/program-head/overview')
+  return { error: null }
 }
 
 export async function acceptRequest(requestId: string, scheduleStr: string) {

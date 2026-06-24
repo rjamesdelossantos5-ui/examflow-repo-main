@@ -20,16 +20,16 @@ export default function ReceiptUpload({ requestId }: { requestId: string }) {
 
   if (success) {
     return (
-      <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-        Receipt uploaded successfully. Awaiting verification by the Program Head.
+      <div className="ef-toast rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
+        ✓ Receipt uploaded successfully. Awaiting verification by the Program Head.
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border-2 border-dashed p-6 text-center" style={{ borderColor: 'var(--sti-gold)' }}>
-      <h3 className="font-semibold mb-2" style={{ color: 'var(--sti-navy)' }}>Upload Payment Receipt</h3>
-      <p className="text-xs text-gray-500 mb-4">JPG, PNG, or PDF · max 5 MB</p>
+    <div className="ef-card rounded-xl border-2 border-dashed p-6 text-center" style={{ borderColor: 'var(--sti-gold)' }}>
+      <h3 className="font-semibold mb-2" style={{ color: 'var(--card-foreground)' }}>Upload Payment Receipt</h3>
+      <p className="text-xs ef-muted mb-4">JPG, PNG, or PDF · max 5 MB</p>
 
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
 

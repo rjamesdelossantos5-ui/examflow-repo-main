@@ -1,10 +1,52 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_BYTES = 5 * 1024 * 1024
+
+export async function deleteRequest(requestId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  // Only the owner can delete, and only while still 'submitted' (enforced by RLS too)
+  const { data: req } = await supabase
+    .from('special_exam_requests')
+    .select('id, status, student_id')
+    .eq('id', requestId)
+    .eq('student_id', user.id)
+    .single()
+
+  if (!req) return { error: 'Request not found' }
+  if (req.status !== 'submitted') {
+    return { error: 'You can only withdraw a request while it is still pending registrar review.' }
+  }
+
+  // Best-effort cleanup of uploaded files
+  const { data: media } = await supabase
+    .from('application_media')
+    .select('storage_path')
+    .eq('request_id', requestId)
+  const paths = (media ?? []).map((m) => m.storage_path).filter(Boolean)
+  if (paths.length) {
+    await supabase.storage.from('exam-documents').remove(paths)
+  }
+
+  // Deleting the request cascades media + progress logs
+  const { error } = await supabase
+    .from('special_exam_requests')
+    .delete()
+    .eq('id', requestId)
+    .eq('student_id', user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/student')
+  redirect('/student')
+}
 
 export async function uploadReceipt(requestId: string, formData: FormData) {
   const supabase = await createClient()

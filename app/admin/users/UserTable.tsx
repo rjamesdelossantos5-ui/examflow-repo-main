@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
-import { toggleUserActive, deleteUser, createUser } from './actions'
+import { toggleUserActive, deleteUser, createUser, toggleOverride } from './actions'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
@@ -34,6 +34,13 @@ export default function UserTable({
     if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return
     startTransition(async () => {
       const res = await deleteUser(userId)
+      if (res.error) setError(res.error)
+    })
+  }
+
+  function handleOverride(userId: string, current: boolean) {
+    startTransition(async () => {
+      const res = await toggleOverride(userId, !current)
       if (res.error) setError(res.error)
     })
   }
@@ -166,7 +173,21 @@ export default function UserTable({
                     {u.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-4 py-3 flex gap-2">
+                <td className="px-4 py-3 flex flex-wrap gap-2">
+                  {u.role === 'program_head' && (
+                    <button
+                      onClick={() => handleOverride(u.id, !!u.can_override)}
+                      disabled={isPending}
+                      title="Allow this Program Head to accept requests even if the registrar/teacher haven't acted"
+                      className={`text-xs px-2 py-1 rounded border disabled:opacity-50 ${
+                        u.can_override
+                          ? 'bg-amber-100 border-amber-300 text-amber-800'
+                          : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      {u.can_override ? '⚡ Override ON' : 'Grant override'}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleToggle(u.id, u.is_active)}
                     disabled={isPending}

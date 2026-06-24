@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { login } from './actions'
+import SubmitButton from '@/components/SubmitButton'
 
 export const metadata = { title: 'EXAMFLOW — Login' }
 
@@ -67,13 +68,19 @@ export default async function LoginPage({
               />
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90"
+            <SubmitButton
+              pendingText="Signing in…"
+              className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
             >
               Sign In
-            </button>
+            </SubmitButton>
+            <Link
+              href="/"
+              className="block w-full text-center py-2.5 rounded-lg font-medium text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </Link>
           </form>
         </div>
 

@@ -1,44 +1,98 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Subject } from '@/lib/supabase/types'
 import { submitRequest } from './actions'
+import SubmitButton from '@/components/SubmitButton'
 
 const MAX_MB = 5
 const ALLOWED = '.jpg,.jpeg,.png,.pdf'
 
-export default function SubmitForm({ subjects, error }: { subjects: Subject[]; error?: string }) {
+const REASONS = [
+  { value: 'medical', label: 'Medical', icon: '🏥', desc: 'Illness or hospitalization', doc: 'Medical Certificate' },
+  { value: 'bereavement', label: 'Bereavement', icon: '🕊️', desc: 'Death in the family', doc: 'Death Certificate' },
+  { value: 'other', label: 'Other', icon: '📄', desc: 'Another valid reason', doc: 'Supporting Document' },
+] as const
+
+interface ProfileInfo {
+  full_name: string
+  student_number: string
+  course: string
+  year_level: number | null
+  section: string
+}
+
+export default function SubmitForm({ subjects, profile, error }: { subjects: Subject[]; profile: ProfileInfo; error?: string }) {
   const [examType, setExamType] = useState<'paid' | 'excused'>('paid')
-  const [reason, setReason] = useState('')
+  const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>('')
+  const [confirming, setConfirming] = useState(false)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  function openConfirm() {
+    // Run native required/format validation before showing the confirm dialog
+    if (formRef.current?.reportValidity()) setConfirming(true)
+  }
+
+  const docLabel = REASONS.find((r) => r.value === reason)?.doc ?? 'Supporting Document'
+  const inputClass =
+    'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent'
 
   return (
     <div className="max-w-xl">
-      <h1 className="text-2xl font-bold mb-6" style={{ color: 'var(--sti-navy)' }}>Submit New Request</h1>
+      <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--foreground)' }}>Submit New Request</h1>
+      <p className="text-sm ef-muted mb-6">Complete the form below to request a special exam.</p>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
           {decodeURIComponent(error)}
         </div>
       )}
 
-      <form action={submitRequest} className="bg-white rounded-xl shadow p-6 space-y-5">
+      <form ref={formRef} action={submitRequest} className="ef-card rounded-xl shadow-sm p-6 space-y-6">
+        {/* Your information */}
+        <div className="space-y-4 pb-2 border-b ef-border">
+          <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Your Information</h2>
+          <div>
+            <label className="block text-sm font-medium ef-muted mb-1">Full name *</label>
+            <input name="full_name" required defaultValue={profile.full_name} className={inputClass} placeholder="Juan Dela Cruz" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium ef-muted mb-1">Student number</label>
+              <input name="student_number" defaultValue={profile.student_number} className={inputClass} placeholder="2024-00001" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium ef-muted mb-1">Course</label>
+              <input name="course" defaultValue={profile.course} className={inputClass} placeholder="BSIT" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium ef-muted mb-1">Year level</label>
+              <input name="year_level" type="number" min={1} max={6} defaultValue={profile.year_level ?? ''} className={inputClass} placeholder="1-6" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium ef-muted mb-1">Section</label>
+              <input name="section" defaultValue={profile.section} className={inputClass} placeholder="A" />
+            </div>
+          </div>
+        </div>
+
         {/* Exam type */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type *</label>
-          <div className="flex gap-4">
+          <label className="block text-sm font-medium ef-muted mb-2">Exam Type *</label>
+          <div className="grid grid-cols-2 gap-3">
             {(['paid', 'excused'] as const).map((t) => (
-              <label key={t} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="exam_type"
-                  value={t}
-                  checked={examType === t}
-                  onChange={() => setExamType(t)}
-                  className="accent-[var(--sti-gold)]"
-                />
-                <span className="text-sm font-medium capitalize">
-                  {t === 'paid' ? 'Paid (Unexcused)' : 'Excused (with reason)'}
-                </span>
+              <label
+                key={t}
+                className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                  examType === t ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
+                }`}
+              >
+                <input type="radio" name="exam_type" value={t} checked={examType === t} onChange={() => setExamType(t)} className="sr-only" />
+                <div className="text-2xl mb-1">{t === 'paid' ? '💳' : '📋'}</div>
+                <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>
+                  {t === 'paid' ? 'Paid' : 'Excused'}
+                </div>
+                <div className="text-xs ef-muted">{t === 'paid' ? 'Unexcused absence' : 'With valid reason'}</div>
               </label>
             ))}
           </div>
@@ -46,99 +100,129 @@ export default function SubmitForm({ subjects, error }: { subjects: Subject[]; e
 
         {/* Subject */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-          <select name="subject_id" required className="w-full border rounded-lg px-3 py-2.5 text-sm">
-            <option value="">— Select a subject —</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.subject_code} — {s.subject_name}
-              </option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
+          <div className="relative">
+            <select
+              name="subject_id"
+              required
+              className={`${inputClass} appearance-none pr-9 cursor-pointer`}
+              style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
+            >
+              <option value="">— Select a subject —</option>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>{s.subject_code} — {s.subject_name}</option>
+              ))}
+            </select>
+            <svg className="w-4 h-4 ef-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
 
-        {/* Excused reason */}
+        {/* Excused reason cards */}
         {examType === 'excused' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
-            <select
-              name="excused_reason"
-              required
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2.5 text-sm"
-            >
-              <option value="">— Select reason —</option>
-              <option value="medical">Medical</option>
-              <option value="bereavement">Bereavement / Death in family</option>
-              <option value="other">Other</option>
-            </select>
+            <label className="block text-sm font-medium ef-muted mb-2">Reason for Absence *</label>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {REASONS.map((r) => (
+                <label
+                  key={r.value}
+                  className={`cursor-pointer rounded-xl border-2 p-3 text-center transition-all ${
+                    reason === r.value ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
+                  }`}
+                >
+                  <input type="radio" name="excused_reason" value={r.value} required checked={reason === r.value} onChange={() => setReason(r.value)} className="sr-only" />
+                  <div className="text-xl mb-1">{r.icon}</div>
+                  <div className="font-semibold text-xs" style={{ color: 'var(--card-foreground)' }}>{r.label}</div>
+                  <div className="text-[10px] ef-muted leading-tight mt-0.5">{r.desc}</div>
+                </label>
+              ))}
+            </div>
           </div>
         )}
 
+        {/* Specify other */}
         {examType === 'excused' && reason === 'other' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Please specify *</label>
-            <input
-              name="other_reason"
-              required
-              maxLength={500}
-              className="w-full border rounded-lg px-3 py-2.5 text-sm"
-              placeholder="Briefly describe the reason"
-            />
+            <label className="block text-sm font-medium ef-muted mb-1">Please specify *</label>
+            <input name="other_reason" required maxLength={500} className={inputClass} placeholder="Briefly describe the reason" />
           </div>
         )}
 
-        {/* Parent ID */}
-        <FileField
-          name="parent_id"
-          label="Parent/Guardian Valid ID *"
-          hint="JPG, PNG, or PDF · max 5 MB"
-        />
+        {/* Parent documents */}
+        <FileField name="parent_id" label="Parent/Guardian Valid ID *" hint="JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
+        <FileField name="parent_signature" label="Parent Signature *" hint="JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
 
-        {/* Parent signature */}
-        <FileField
-          name="parent_signature"
-          label="Parent Signature *"
-          hint="JPG, PNG, or PDF · max 5 MB"
-        />
-
-        {/* Supporting document (excused only) */}
-        {examType === 'excused' && (
+        {/* Reason-specific supporting document */}
+        {examType === 'excused' && reason && (
           <FileField
             name="supporting_document"
-            label="Supporting Document *"
-            hint="Medical certificate, death certificate, etc. · JPG, PNG, or PDF · max 5 MB"
+            label={`${docLabel} *`}
+            hint={`Upload the ${docLabel.toLowerCase()} · JPG, PNG, or PDF · max 5 MB`}
+            inputClass={inputClass}
           />
         )}
 
+        {/* Opens the confirmation dialog (does not submit directly) */}
         <button
-          type="submit"
-          className="w-full py-3 rounded-lg font-semibold text-sm"
+          type="button"
+          onClick={openConfirm}
+          className="w-full py-3 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
           Submit Request
         </button>
+
+        {/* Confirmation dialog — the real submit lives here */}
+        {confirming && (
+          <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirming(false)}>
+            <div
+              className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-3xl mb-2">📋</div>
+              <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Submit this request?</h3>
+              <p className="text-sm ef-muted mt-1 mb-5">
+                Please double-check your details and documents. Once submitted, it will be sent to the Registrar for review.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border"
+                  style={{ color: 'var(--card-foreground)' }}
+                >
+                  Go Back
+                </button>
+                <SubmitButton
+                  pendingText="Submitting…"
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                >
+                  Yes, Submit
+                </SubmitButton>
+              </div>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   )
 }
 
-function FileField({ name, label, hint }: { name: string; label: string; hint: string }) {
+function FileField({ name, label, hint, inputClass }: { name: string; label: string; hint: string; inputClass: string }) {
   const [fileName, setFileName] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
 
   function validate(file: File) {
-    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
-      return 'Only JPG, PNG, or PDF allowed'
-    }
+    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) return 'Only JPG, PNG, or PDF allowed'
     if (file.size > MAX_MB * 1024 * 1024) return `Max ${MAX_MB} MB`
     return null
   }
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-sm font-medium ef-muted mb-1">{label}</label>
       <input
         type="file"
         name={name}
@@ -152,11 +236,11 @@ function FileField({ name, label, hint }: { name: string; label: string; hint: s
             setFileName(err ? null : f.name)
           }
         }}
-        className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 file:cursor-pointer"
+        className={`${inputClass} file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[var(--sti-gold)]/20 file:text-[var(--card-foreground)] file:cursor-pointer`}
       />
-      {fileError && <p className="mt-1 text-xs text-red-600">{fileError}</p>}
-      {fileName && !fileError && <p className="mt-1 text-xs text-green-600">Selected: {fileName}</p>}
-      <p className="mt-1 text-xs text-gray-400">{hint}</p>
+      {fileError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fileError}</p>}
+      {fileName && !fileError && <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ {fileName}</p>}
+      <p className="mt-1 text-xs ef-muted">{hint}</p>
     </div>
   )
 }

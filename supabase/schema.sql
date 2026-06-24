@@ -34,6 +34,9 @@ create table profiles (
   year_level     int,
   section        text,
   is_active      boolean not null default true,
+  -- When true, a program_head may approve/accept a request even if the
+  -- registrar or teacher has not yet acted (admin-granted override).
+  can_override   boolean not null default false,
   created_at     timestamptz not null default now()
 );
 
@@ -87,6 +90,13 @@ create table special_exam_requests (
   rejection_reason   text,
   rejected_by_role   user_role,
   final_schedule     timestamptz,
+  -- Snapshot of the student's details AT submission time, so later profile
+  -- edits don't retroactively change what an older request shows.
+  snap_name          text,
+  snap_student_number text,
+  snap_course        text,
+  snap_year_level    int,
+  snap_section       text,
   submitted_at       timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );

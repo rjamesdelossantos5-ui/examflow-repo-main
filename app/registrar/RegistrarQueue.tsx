@@ -24,44 +24,42 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Pending Submissions</h2>
+      <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Pending Submissions</h2>
 
       {requests.length === 0 && (
-        <div className="bg-white rounded-xl shadow px-4 py-10 text-center text-gray-400">
+        <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">
           No pending submissions.
         </div>
       )}
 
       <div className="grid md:grid-cols-2 gap-4">
         {/* List */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {requests.map((r) => (
             <button
               key={r.id}
               onClick={() => setSelected(r.id === selected ? null : r.id)}
-              className={`w-full text-left rounded-xl border p-4 transition-colors ${
-                selected === r.id
-                  ? 'border-[var(--sti-gold)] bg-yellow-50'
-                  : 'bg-white hover:bg-gray-50'
+              className={`ef-card w-full text-left rounded-xl shadow-sm p-4 transition-all hover:shadow-md ${
+                selected === r.id ? 'ring-2 ring-[var(--sti-gold)]' : ''
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-semibold">{r.student.full_name}</p>
-                  <p className="text-sm text-gray-500">{r.subject.subject_code} — {r.subject.subject_name}</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-semibold truncate" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</p>
+                  <p className="text-sm ef-muted truncate">{r.subject.subject_code} — {r.subject.subject_name}</p>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r.exam_type === 'paid' ? 'bg-yellow-50 text-yellow-700' : 'bg-teal-50 text-teal-700'}`}>
+                <span className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${r.exam_type === 'paid' ? 'bg-yellow-100 text-yellow-700' : 'bg-teal-100 text-teal-700'}`}>
                   {r.exam_type === 'paid' ? 'Paid' : 'Excused'}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">{new Date(r.submitted_at).toLocaleDateString()}</p>
+              <p className="text-xs ef-muted mt-1">{new Date(r.submitted_at).toLocaleDateString()}</p>
             </button>
           ))}
         </div>
 
         {/* Detail panel */}
         {active && (
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="ef-card rounded-xl shadow-sm p-6">
             <RequestReviewPanel
               requestId={active.id}
               studentName={active.student.full_name}

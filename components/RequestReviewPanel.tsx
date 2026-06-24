@@ -78,8 +78,8 @@ export default function RequestReviewPanel({
       {/* Left: request info */}
       <div className="space-y-4">
         <div>
-          <h3 className="font-bold text-lg" style={{ color: 'var(--sti-navy)' }}>{studentName}</h3>
-          <p className="text-sm text-gray-500">{subjectCode} — {subjectName}</p>
+          <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>{studentName}</h3>
+          <p className="text-sm ef-muted">{subjectCode} — {subjectName}</p>
           <div className="flex gap-3 mt-2 text-sm">
             <span className={`px-2 py-0.5 rounded font-semibold text-xs ${examType === 'paid' ? 'bg-yellow-50 text-yellow-700' : 'bg-teal-50 text-teal-700'}`}>
               {examType === 'paid' ? 'Paid' : 'Excused'}
