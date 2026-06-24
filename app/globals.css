@@ -45,7 +45,11 @@ html {
   /* smooth theme transitions without flashing on first paint */
   color-scheme: light;
   scroll-behavior: smooth;
+  /* Hide the window scrollbar site-wide (still scrollable) */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+html::-webkit-scrollbar { display: none; }
 html.dark {
   color-scheme: dark;
 }
