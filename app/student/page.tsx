@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import StatusBadge from '@/components/StatusBadge'
+import { Icon, type IconName } from '@/components/Icon'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — My Requests' }
@@ -10,11 +11,11 @@ const IN_PROGRESS: RequestStatus[] = [
   'submitted', 'verified_by_registrar', 'approved_by_teacher', 'accepted', 'receipt_uploaded',
 ]
 
-function StatCard({ label, value, accent }: { label: string; value: number; accent: string }) {
+function StatCard({ label, value, accent, icon }: { label: string; value: number; accent: string; icon: IconName }) {
   return (
     <div className="ef-card rounded-xl shadow-sm p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0" style={{ background: accent + '22' }}>
-        <span style={{ color: accent }}>●</span>
+      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: accent + '22' }}>
+        <Icon name={icon} className="w-5 h-5" style={{ color: accent }} />
       </div>
       <div>
         <p className="text-2xl font-bold leading-none" style={{ color: 'var(--card-foreground)' }}>{value}</p>
@@ -69,9 +70,9 @@ export default async function StudentPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Total Requests" value={counts.total} accent="#64748b" />
-        <StatCard label="In Progress" value={counts.inProgress} accent="#3b82f6" />
-        <StatCard label="Rejected" value={counts.rejected} accent="#dc2626" />
+        <StatCard label="Total Requests" value={counts.total} accent="#64748b" icon="layers" />
+        <StatCard label="In Progress" value={counts.inProgress} accent="#3b82f6" icon="clock" />
+        <StatCard label="Rejected" value={counts.rejected} accent="#dc2626" icon="x-circle" />
       </div>
 
       {/* Request list */}
@@ -95,6 +96,8 @@ export default async function StudentPage() {
           <div className="space-y-2.5">
             {list.map((r) => {
               const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null
+              // Paid + accepted = the cashier receipt still needs to be uploaded.
+              const needsReceipt = r.exam_type === 'paid' && r.status === 'accepted'
               return (
                 <Link
                   key={r.id}
@@ -109,13 +112,27 @@ export default async function StudentPage() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold truncate" style={{ color: 'var(--card-foreground)' }}>
+                    <p className="font-semibold truncate flex items-center gap-1.5" style={{ color: 'var(--card-foreground)' }}>
                       {subj?.subject_name ?? 'Unknown subject'}
+                      {needsReceipt && (
+                        <span
+                          className="shrink-0 inline-grid place-items-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold animate-pulse"
+                          title="Action needed: upload your cashier receipt"
+                        >
+                          !
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs ef-muted">
                       {subj?.subject_code} · Submitted {new Date(r.submitted_at).toLocaleDateString()}
                     </p>
                   </div>
+
+                  {needsReceipt && (
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                      ⚠ Receipt needed
+                    </span>
+                  )}
 
                   <span className={`hidden sm:inline-block px-2 py-0.5 rounded text-xs font-semibold ${r.exam_type === 'paid' ? 'bg-yellow-100 text-yellow-700' : 'bg-teal-100 text-teal-700'}`}>
                     {r.exam_type === 'paid' ? 'Paid' : 'Excused'}

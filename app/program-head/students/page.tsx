@@ -24,6 +24,9 @@ export default async function StudentsPage() {
     .in('status', ['accepted', 'receipt_uploaded', 'scheduled'])
     .order('submitted_at', { ascending: false })
 
+  // Live list rule: paid requests appear only once the receipt is verified
+  // (status 'scheduled'); excused requests appear right after first approval
+  // (status 'accepted'), since they have no receipt step.
   const rows = (data ?? []).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string
@@ -57,7 +60,7 @@ export default async function StudentsPage() {
       teacher_name: subj?.profiles?.full_name ?? null,
       department_name: subj?.departments?.name ?? null,
     }
-  })
+  }).filter((r) => r.status === 'scheduled' || (r.status === 'accepted' && r.exam_type === 'excused'))
 
   return <StudentsList initial={rows} />
 }

@@ -20,7 +20,8 @@ async function uploadFile(
   requestId: string,
   mediaType: string
 ): Promise<{ path: string; error: string | null }> {
-  const ext = file.name.split('.').pop() ?? 'bin'
+  // Sanitize the extension so a crafted filename can't influence the storage key
+  const ext = (file.name.split('.').pop() ?? 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin'
   const path = `requests/${requestId}/${mediaType}.${ext}`
 
   const { error } = await supabase.storage
@@ -43,13 +44,9 @@ export async function submitRequest(formData: FormData) {
 
   if (profile?.role !== 'student') return redirect('/login')
 
-  // Check submission window
-  const { data: setting } = await supabase
-    .from('settings')
-    .select('value')
-    .eq('key', 'submission_window_days')
-    .single()
-  // (Enforcement logic can be added with a last-period-start date in settings)
+  // NOTE: submission-window enforcement is not implemented yet. It needs a
+  // last-period-start date in `settings` to compare against; until then we read
+  // nothing here (the previous unused `settings` fetch was removed).
 
   const examType = String(formData.get('exam_type') ?? '')
   const subjectId = String(formData.get('subject_id') ?? '')

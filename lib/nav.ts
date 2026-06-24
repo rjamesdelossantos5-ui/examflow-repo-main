@@ -16,7 +16,8 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
     { label: 'History', href: '/teacher/history' },
   ],
   program_head: [
-    { label: 'Queue', href: '/program-head' },
+    { label: 'First Approval', href: '/program-head' },
+    { label: 'Second Approval', href: '/program-head/receipts' },
     { label: 'Overview', href: '/program-head/overview' },
     { label: 'Students', href: '/program-head/students' },
     { label: 'Settings', href: '/program-head/settings' },

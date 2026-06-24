@@ -3,23 +3,28 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import UserMenu from './UserMenu'
+import NotificationBell, { type NotificationItem } from './NotificationBell'
+import { Icon, type IconName } from './Icon'
 import { ROLE_HOME } from '@/lib/nav'
 import type { UserRole } from '@/lib/supabase/types'
 
 interface NavItem {
   label: string
   href: string
+  icon?: IconName
 }
 
 interface Props {
   role: UserRole
   userName: string
   email?: string
-  navItems: NavItem[]
+  navItems: readonly NavItem[]
+  /** Action-needed alerts for the header bell (e.g. paid requests awaiting a receipt). */
+  notifications?: NotificationItem[]
   children: React.ReactNode
 }
 
-export default function DashboardLayout({ role, userName, email, navItems, children }: Props) {
+export default function DashboardLayout({ role, userName, email, navItems, notifications, children }: Props) {
   const pathname = usePathname()
 
   // Pick the single most-specific matching nav item (longest matching href),
@@ -40,14 +45,17 @@ export default function DashboardLayout({ role, userName, email, navItems, child
           >
             EXAM<span className="text-white">FLOW</span>
           </Link>
-          <UserMenu userName={userName} email={email} role={role} />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <NotificationBell items={notifications} />
+            <UserMenu userName={userName} email={email} role={role} />
+          </div>
         </div>
       </header>
 
       {/* Sub-nav bar (light surface, clearly separated from the brand bar) */}
       {navItems.length > 0 && (
         <div
-          className="sticky top-0 z-40 backdrop-blur"
+          className="sticky top-0 z-40"
           style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}
         >
           <nav className="max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 flex gap-1.5 overflow-x-auto py-2.5 items-center no-scrollbar">
@@ -57,7 +65,7 @@ export default function DashboardLayout({ role, userName, email, navItems, child
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                     active ? 'shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'
                   }`}
                   style={
@@ -66,6 +74,7 @@ export default function DashboardLayout({ role, userName, email, navItems, child
                       : { color: 'var(--muted)' }
                   }
                 >
+                  {item.icon && <Icon name={item.icon} className="w-4 h-4" />}
                   {item.label}
                 </Link>
               )

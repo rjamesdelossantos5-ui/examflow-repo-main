@@ -3,10 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import DashboardLayout from '@/components/DashboardLayout'
 
 const NAV = [
-  { label: 'Users', href: '/admin/users' },
-  { label: 'Subjects', href: '/admin/subjects' },
-  { label: 'Departments', href: '/admin/departments' },
-]
+  { label: 'Users', href: '/admin/users', icon: 'users' },
+  { label: 'Subjects', href: '/admin/subjects', icon: 'book' },
+  { label: 'Departments', href: '/admin/departments', icon: 'building' },
+] as const
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()

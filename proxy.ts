@@ -29,6 +29,11 @@ export async function proxy(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
+        // When Supabase refreshes the session it hands us new cookies. They must
+        // be written to BOTH the request (so this same pass sees the fresh token)
+        // and a freshly-rebuilt response (so the browser receives the Set-Cookie).
+        // Skipping either side silently logs users out mid-session. Do not edit
+        // this without reading the Supabase SSR middleware guide.
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
@@ -102,6 +107,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Run on every route EXCEPT Next.js internals and static image assets — those
+  // don't need auth and skipping them avoids a DB round-trip per static file.
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],

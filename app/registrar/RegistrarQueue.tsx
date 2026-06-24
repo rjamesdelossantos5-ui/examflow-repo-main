@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
+import { Icon } from '@/components/Icon'
 import { verifyRequest, rejectRequest } from './actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -24,7 +25,14 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Pending Submissions</h2>
+      <div className="flex items-center gap-2.5 mb-4">
+        <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Pending Submissions</h2>
+        {requests.length > 0 && (
+          <span className="px-2.5 py-0.5 rounded-full text-sm font-bold" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+            {requests.length}
+          </span>
+        )}
+      </div>
 
       {requests.length === 0 && (
         <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">
@@ -32,7 +40,7 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-2 gap-4 items-start">
         {/* List */}
         <div className="space-y-2.5">
           {requests.map((r) => (
@@ -57,24 +65,33 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
           ))}
         </div>
 
-        {/* Detail panel */}
-        {active && (
-          <div className="ef-card rounded-xl shadow-sm p-6">
-            <RequestReviewPanel
-              requestId={active.id}
-              studentName={active.student.full_name}
-              subjectName={active.subject.subject_name}
-              subjectCode={active.subject.subject_code}
-              examType={active.exam_type}
-              excusedReason={active.excused_reason}
-              otherReason={active.other_reason}
-              status={active.status}
-              media={active.media}
-              logs={active.logs}
-              onVerify={verifyRequest}
-              onReject={rejectRequest}
-              verifyLabel="Verify & Forward to Teacher"
-            />
+        {/* Detail panel — sticky so it stays in view while scanning the list */}
+        {requests.length > 0 && (
+          <div className="md:sticky md:top-20">
+            {active ? (
+              <div className="ef-card rounded-xl shadow-sm p-6">
+                <RequestReviewPanel
+                  requestId={active.id}
+                  studentName={active.student.full_name}
+                  subjectName={active.subject.subject_name}
+                  subjectCode={active.subject.subject_code}
+                  examType={active.exam_type}
+                  excusedReason={active.excused_reason}
+                  otherReason={active.other_reason}
+                  status={active.status}
+                  media={active.media}
+                  logs={active.logs}
+                  onVerify={verifyRequest}
+                  onReject={rejectRequest}
+                  verifyLabel="Verify & Forward to Teacher"
+                />
+              </div>
+            ) : (
+              <div className="hidden md:flex flex-col items-center justify-center rounded-xl border-2 border-dashed ef-border px-6 py-20 text-center ef-muted">
+                <Icon name="file" className="w-8 h-8 mb-2 opacity-60" />
+                <p className="text-sm">Select a request to review its details.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

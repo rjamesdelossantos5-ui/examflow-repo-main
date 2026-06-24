@@ -22,13 +22,17 @@ export async function overrideAccept(requestId: string, scheduleStr: string) {
 
   const finalSchedule = scheduleStr ? new Date(scheduleStr).toISOString() : null
 
-  const { error } = await supabase
+  // Only override while it's still in an early stage; .select() confirms a row
+  // actually changed so we don't log an override that didn't happen.
+  const { data: updated, error } = await supabase
     .from('special_exam_requests')
     .update({ status: 'accepted', final_schedule: finalSchedule })
     .eq('id', requestId)
     .in('status', ['submitted', 'verified_by_registrar', 'approved_by_teacher'])
+    .select('id')
 
   if (error) return { error: error.message }
+  if (!updated?.length) return { error: 'This request can no longer be overridden (already accepted, scheduled, or rejected).' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,
@@ -51,13 +55,15 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
 
   const finalSchedule = scheduleStr ? new Date(scheduleStr).toISOString() : null
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('special_exam_requests')
     .update({ status: 'accepted', final_schedule: finalSchedule })
     .eq('id', requestId)
     .eq('status', 'approved_by_teacher')
+    .select('id')
 
   if (error) return { error: error.message }
+  if (!updated?.length) return { error: 'This request was already handled by someone else.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,
@@ -80,12 +86,14 @@ export async function rejectPHRequest(requestId: string, reason: string) {
   const sanitizedReason = String(reason).trim().slice(0, 1000)
   if (!sanitizedReason) return { error: 'Rejection reason is required' }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('special_exam_requests')
     .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: role })
     .eq('id', requestId)
+    .select('id')
 
   if (error) return { error: error.message }
+  if (!updated?.length) return { error: 'Request not found or no longer editable.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,
@@ -103,13 +111,15 @@ export async function confirmReceipt(requestId: string) {
   if (!ctx) return { error: 'Unauthorized' }
   const { supabase, userId, role } = ctx
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('special_exam_requests')
     .update({ status: 'scheduled' })
     .eq('id', requestId)
     .eq('status', 'receipt_uploaded')
+    .select('id')
 
   if (error) return { error: error.message }
+  if (!updated?.length) return { error: 'No receipt is awaiting confirmation for this request.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,
@@ -132,13 +142,15 @@ export async function rejectReceipt(requestId: string, reason: string) {
   if (!sanitizedReason) return { error: 'Rejection reason is required' }
 
   // Move back to accepted so student re-uploads
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('special_exam_requests')
     .update({ status: 'accepted', rejection_reason: sanitizedReason })
     .eq('id', requestId)
     .eq('status', 'receipt_uploaded')
+    .select('id')
 
   if (error) return { error: error.message }
+  if (!updated?.length) return { error: 'No receipt is awaiting review for this request.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,

@@ -72,7 +72,7 @@ export async function uploadReceipt(requestId: string, formData: FormData) {
   if (req.exam_type !== 'paid') return { error: 'Only Paid requests require a receipt' }
   if (req.status !== 'accepted') return { error: 'Receipt upload not available at this stage' }
 
-  const ext = file.name.split('.').pop() ?? 'bin'
+  const ext = (file.name.split('.').pop() ?? 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin'
   const path = `requests/${requestId}/payment_receipt.${ext}`
 
   const { error: uploadErr } = await supabase.storage
@@ -80,6 +80,15 @@ export async function uploadReceipt(requestId: string, formData: FormData) {
     .upload(path, file, { contentType: file.type, upsert: true })
 
   if (uploadErr) return { error: uploadErr.message }
+
+  // Re-uploads (after a rejected receipt) reuse the same storage path, but the
+  // media row must be replaced — otherwise duplicate 'payment_receipt' rows pile
+  // up. Clear any prior receipt row before recording the new one.
+  await supabase
+    .from('application_media')
+    .delete()
+    .eq('request_id', requestId)
+    .eq('media_type', 'payment_receipt')
 
   await supabase.from('application_media').insert({
     request_id: requestId,

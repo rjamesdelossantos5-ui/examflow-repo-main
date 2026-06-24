@@ -17,13 +17,17 @@ export async function approveRequest(requestId: string) {
   if (!ctx) return { error: 'Unauthorized' }
   const { supabase, userId, role } = ctx
 
-  const { error } = await supabase
+  // Status guard doubles as concurrency control — if it's no longer awaiting
+  // the teacher, 0 rows update and we skip the phantom log / false success.
+  const { data: updated, error } = await supabase
     .from('special_exam_requests')
     .update({ status: 'approved_by_teacher' })
     .eq('id', requestId)
     .eq('status', 'verified_by_registrar')
+    .select('id')
 
   if (error) return { error: error.message }
+  if (!updated?.length) return { error: 'This request was already handled by someone else.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,
@@ -44,12 +48,14 @@ export async function rejectTeacherRequest(requestId: string, reason: string) {
   const sanitizedReason = String(reason).trim().slice(0, 1000)
   if (!sanitizedReason) return { error: 'Rejection reason is required' }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('special_exam_requests')
     .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: role })
     .eq('id', requestId)
+    .select('id')
 
   if (error) return { error: error.message }
+  if (!updated?.length) return { error: 'Request not found or no longer editable.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,

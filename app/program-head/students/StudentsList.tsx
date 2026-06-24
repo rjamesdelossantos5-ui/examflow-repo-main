@@ -174,5 +174,5 @@ async function fetchRows(supabase: ReturnType<typeof createClient>): Promise<Stu
       teacher_name: subj?.profiles?.full_name ?? null,
       department_name: subj?.departments?.name ?? null,
     }
-  })
+  }).filter((r) => r.status === 'scheduled' || (r.status === 'accepted' && r.exam_type === 'excused'))
 }

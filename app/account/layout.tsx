@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DashboardLayout from '@/components/DashboardLayout'
 import { NAV_BY_ROLE } from '@/lib/nav'
+import { getNotifications } from '@/lib/notifications'
 import type { UserRole } from '@/lib/supabase/types'
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
@@ -18,9 +19,10 @@ export default async function AccountLayout({ children }: { children: React.Reac
   if (!profile) redirect('/login')
 
   const role = profile.role as UserRole
+  const notifications = await getNotifications(supabase, user.id, role)
 
   return (
-    <DashboardLayout role={role} userName={profile.full_name} email={profile.email} navItems={NAV_BY_ROLE[role] ?? []}>
+    <DashboardLayout role={role} userName={profile.full_name} email={profile.email} navItems={NAV_BY_ROLE[role] ?? []} notifications={notifications}>
       {children}
     </DashboardLayout>
   )

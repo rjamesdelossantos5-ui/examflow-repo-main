@@ -1,11 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { attachSignedUrls } from '@/lib/supabase/getSignedUrls'
-import PHQueue from './PHQueue'
+import PHQueue from '../PHQueue'
 
-export const metadata = { title: 'EXAMFLOW — Program Head Queue' }
+export const metadata = { title: 'EXAMFLOW — Second Approval (Receipts)' }
 
-export default async function ProgramHeadPage() {
+// Second Approval: paid requests where the student has uploaded the cashier
+// receipt and is now waiting for the Program Head to verify it. Confirming here
+// marks the request Scheduled, which is what puts it on the live Accepted list.
+export default async function ProgramHeadReceiptsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -22,9 +25,7 @@ export default async function ProgramHeadPage() {
       application_media(id, media_type, storage_path, file_name, mime_type),
       progress_logs(id, action, created_at, actor_role)
     `)
-    // First Approval: only requests the teacher just approved. Receipts are
-    // handled separately on the Second Approval tab (/program-head/receipts).
-    .eq('status', 'approved_by_teacher')
+    .eq('status', 'receipt_uploaded')
     .order('submitted_at', { ascending: true })
 
   const requests = await Promise.all(
@@ -60,8 +61,8 @@ export default async function ProgramHeadPage() {
   return (
     <PHQueue
       requests={requests}
-      title="First Approval"
-      emptyText="No requests awaiting first approval."
+      title="Second Approval — Verify Receipts"
+      emptyText="No payment receipts awaiting verification."
     />
   )
 }
