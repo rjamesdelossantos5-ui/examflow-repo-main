@@ -18,7 +18,21 @@ export async function overrideAccept(requestId: string, scheduleStr: string) {
   const ctx = await requirePH()
   if (!ctx) return { error: 'Unauthorized' }
   const { supabase, userId, role, canOverride } = ctx
-  if (!canOverride) return { error: 'You are not authorized to override the approval chain. Ask an admin to grant access.' }
+
+  // Authorized either by the admin-granted global flag, OR by an approved
+  // per-request override for this specific request.
+  let authorized = canOverride
+  if (!authorized) {
+    const { data: appr } = await supabase
+      .from('override_requests')
+      .select('id')
+      .eq('request_id', requestId)
+      .eq('requested_by', userId)
+      .eq('status', 'approved')
+      .limit(1)
+    authorized = !!(appr && appr.length)
+  }
+  if (!authorized) return { error: 'You are not authorized to override. Request admin approval first.' }
 
   const finalSchedule = scheduleStr ? new Date(scheduleStr).toISOString() : null
 
@@ -44,6 +58,35 @@ export async function overrideAccept(requestId: string, scheduleStr: string) {
   })
 
   revalidatePath('/program-head')
+  revalidatePath('/program-head/overview')
+  return { error: null }
+}
+
+// PH asks the admin for permission to fast-track a stuck request.
+export async function requestOverride(requestId: string, reasonType: string, reasonNote: string) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase, userId } = ctx
+
+  if (!['absent', 'on_leave', 'other'].includes(reasonType)) return { error: 'Please choose a reason.' }
+  const note = reasonType === 'other' ? String(reasonNote ?? '').trim().slice(0, 500) : null
+  if (reasonType === 'other' && !note) return { error: 'Please describe the reason.' }
+
+  // Don't stack duplicate pending requests for the same form.
+  const { data: existing } = await supabase
+    .from('override_requests')
+    .select('id')
+    .eq('request_id', requestId)
+    .eq('requested_by', userId)
+    .eq('status', 'pending')
+    .limit(1)
+  if (existing && existing.length) return { error: 'You already have a pending request for this form.' }
+
+  const { error } = await supabase
+    .from('override_requests')
+    .insert({ request_id: requestId, requested_by: userId, reason_type: reasonType, reason_note: note })
+  if (error) return { error: error.message }
+
   revalidatePath('/program-head/overview')
   return { error: null }
 }

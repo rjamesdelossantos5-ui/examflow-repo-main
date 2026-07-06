@@ -275,6 +275,29 @@ create policy "requests_ph_admin_delete" on special_exam_requests
     current_user_role() in ('program_head', 'admin') and status in ('accepted', 'scheduled')
   );
 
+-- ── override_requests (admin-override flow) ────
+create table if not exists override_requests (
+  id           uuid primary key default gen_random_uuid(),
+  request_id   uuid not null references special_exam_requests(id) on delete cascade,
+  requested_by uuid not null references profiles(id),
+  reason_type  text not null check (reason_type in ('absent', 'on_leave', 'other')),
+  reason_note  text,
+  status       text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
+  decided_by   uuid references profiles(id),
+  created_at   timestamptz not null default now(),
+  decided_at   timestamptz
+);
+alter table override_requests enable row level security;
+create policy "override_select" on override_requests for select using (
+  requested_by = auth.uid() or current_user_role() = 'admin'
+);
+create policy "override_insert_ph" on override_requests for insert with check (
+  requested_by = auth.uid() and current_user_role() in ('program_head', 'admin')
+);
+create policy "override_admin_update" on override_requests for update using (
+  current_user_role() = 'admin'
+);
+
 -- ── application_media ─────────────────────────
 create policy "media_select" on application_media
   for select using (

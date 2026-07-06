@@ -23,6 +23,17 @@ export default async function OverviewPage() {
     .neq('status', 'scheduled')
     .order('submitted_at', { ascending: false })
 
+  // This PH's own override requests, keyed by request (latest per request wins).
+  const { data: overrides } = await supabase
+    .from('override_requests')
+    .select('request_id, status, created_at')
+    .eq('requested_by', user.id)
+    .order('created_at', { ascending: false })
+  const ovByReq = new Map<string, string>()
+  for (const o of (overrides ?? []) as { request_id: string; status: string }[]) {
+    if (!ovByReq.has(o.request_id)) ovByReq.set(o.request_id, o.status)
+  }
+
   const rows: OverviewRow[] = (data ?? []).map((r) => {
     const prof = r.profiles as unknown as { full_name: string; section: string | null } | null
     const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null
@@ -38,6 +49,7 @@ export default async function OverviewPage() {
       subject_name: subj?.subject_name ?? '',
       rejected_by_role: (r.rejected_by_role as string | null) ?? null,
       rejection_reason: (r.rejection_reason as string | null) ?? null,
+      overrideStatus: (ovByReq.get(r.id as string) as OverviewRow['overrideStatus']) ?? 'none',
     }
   })
 

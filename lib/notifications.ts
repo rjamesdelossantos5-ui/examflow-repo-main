@@ -13,6 +13,15 @@ export async function countByStatus(supabase: SupabaseServer, status: string): P
   return count ?? 0
 }
 
+// Pending admin-override requests — used for the admin nav-tab badge.
+export async function countPendingOverrides(supabase: SupabaseServer): Promise<number> {
+  const { count } = await supabase
+    .from('override_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+  return count ?? 0
+}
+
 // Upper bound per query so the payload can't grow without limit (safety for
 // low-end phones). The bell dropdown is height-capped + scrollable, so users
 // can scroll through all of these — none are hidden until this ceiling, which
@@ -70,7 +79,46 @@ export async function getNotifications(
       queueItems('approved_by_teacher', '/program-head', (name, code) => `${name} — ${code} is awaiting first approval.`, 'info', 'inbox'),
       queueItems('receipt_uploaded', '/program-head/receipts', (name, code) => `${name} uploaded a payment receipt for ${code}.`, 'warning', 'receipt'),
     ])
-    return [...first, ...second]
+
+    // "Your override request was approved" — only while the request is still
+    // overridable (drops off once the PH has accepted it).
+    type OvRow = { id: string; request: { status: string; snap_name: string | null; student: { full_name: string } | null } | null }
+    const { data: appr } = await supabase
+      .from('override_requests')
+      .select('id, request:special_exam_requests!request_id(status, snap_name, student:profiles!student_id(full_name))')
+      .eq('requested_by', userId)
+      .eq('status', 'approved')
+      .order('decided_at', { ascending: false })
+      .limit(MAX_ITEMS)
+    const approved: NotificationItem[] = ((appr ?? []) as unknown as OvRow[])
+      .filter((r) => ['submitted', 'verified_by_registrar', 'approved_by_teacher'].includes(r.request?.status ?? ''))
+      .map((r) => ({
+        id: `ov-${r.id}`,
+        text: `Your override request for ${r.request?.snap_name ?? r.request?.student?.full_name ?? 'a student'} was approved — you can accept it now.`,
+        href: '/program-head/overview',
+        tone: 'success',
+        icon: 'check',
+      }))
+
+    return [...first, ...second, ...approved]
+  }
+
+  // Admin: Program Heads asking to fast-track a stuck request.
+  if (role === 'admin') {
+    type OvAdminRow = { id: string; requester: { full_name: string } | null; request: { snap_name: string | null; student: { full_name: string } | null } | null }
+    const { data } = await supabase
+      .from('override_requests')
+      .select('id, requester:profiles!requested_by(full_name), request:special_exam_requests!request_id(snap_name, student:profiles!student_id(full_name))')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(MAX_ITEMS)
+    return ((data ?? []) as unknown as OvAdminRow[]).map((r) => ({
+      id: r.id,
+      text: `${r.requester?.full_name ?? 'A Program Head'} requested an override for ${r.request?.snap_name ?? r.request?.student?.full_name ?? 'a student'}.`,
+      href: '/admin/overrides',
+      tone: 'warning' as const,
+      icon: 'inbox' as const,
+    }))
   }
 
   // Students: one alert per update on their own requests (someone acted on it).
