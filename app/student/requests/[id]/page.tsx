@@ -6,6 +6,7 @@ import StatusBadge from '@/components/StatusBadge'
 import DocumentViewer from '@/components/DocumentViewer'
 import ReceiptUpload from './ReceiptUpload'
 import DeleteRequestButton from './DeleteRequestButton'
+import { getPeriodById, TERM_LABEL } from '@/lib/examSettings'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
@@ -73,6 +74,7 @@ export default async function RequestDetailPage({
   if (!req) notFound()
 
   const subj = req.subjects as unknown as { subject_code: string; subject_name: string } | null
+  const period = req.period_id ? await getPeriodById(supabase, req.period_id as string) : null
   const isPaid = req.exam_type === 'paid'
   const STEPS = isPaid ? STEPS_PAID : STEPS_EXCUSED
   const STATUS_ORDER = isPaid ? ORDER_PAID : ORDER_EXCUSED
@@ -144,6 +146,20 @@ export default async function RequestDetailPage({
           </div>
         )}
       </div>
+
+      {/* Exam details for this request's period (frozen to that term) */}
+      {period && (period.examDay || period.examLocation || period.examBring) && (
+        <div className="ef-card rounded-xl shadow-sm p-6">
+          <h2 className="font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>
+            {TERM_LABEL[period.term]} Special Exam{period.schoolYear ? ` · ${period.schoolYear}` : ''}
+          </h2>
+          <dl className="space-y-1.5 text-sm">
+            {period.examDay && <p><span className="ef-muted">When: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{new Date(period.examDay).toLocaleString()}</span></p>}
+            {period.examLocation && <p><span className="ef-muted">Where: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{period.examLocation}</span></p>}
+            {period.examBring && <p><span className="ef-muted">Bring: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{period.examBring}</span></p>}
+          </dl>
+        </div>
+      )}
 
       {/* Submitted details (what the student entered on this form) */}
       <div className="ef-card rounded-xl shadow-sm p-6">

@@ -1,16 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getExamSettings } from '@/lib/examSettings'
+import { getActivePeriod, getAllPeriods } from '@/lib/examSettings'
 import SettingsForm from './SettingsForm'
 
-export const metadata = { title: 'EXAMFLOW — Settings' }
+export const metadata = { title: 'EXAMFLOW — Exam Periods' }
 
 export default async function PHSettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const settings = await getExamSettings(supabase)
+  const [active, periods] = await Promise.all([getActivePeriod(supabase), getAllPeriods(supabase)])
 
-  return <SettingsForm settings={settings} />
+  return <SettingsForm active={active} periods={periods} />
 }

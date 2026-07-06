@@ -5,6 +5,7 @@ import { Icon } from '@/components/Icon'
 
 interface Props {
   configured: boolean
+  termLabel: string | null
   open: boolean
   notStarted: boolean
   daysRemaining: number | null
@@ -48,7 +49,8 @@ export default function SubmissionNotice(props: Props) {
 
   const { open, notStarted, daysRemaining } = props
   const tone = open ? '#16a34a' : notStarted ? '#f59e0b' : '#dc2626'
-  const title = open ? 'Submission window is open' : notStarted ? 'Submissions open soon' : 'Submissions are closed'
+  const base = open ? 'Submission window is open' : notStarted ? 'Submissions open soon' : 'Submissions are closed'
+  const title = props.termLabel ? `${props.termLabel} — ${base}` : base
   const headline = open
     ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left to submit`
     : notStarted

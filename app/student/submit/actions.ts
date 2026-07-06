@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getExamSettings, computeWindow } from '@/lib/examSettings'
+import { getActivePeriod, computeWindow } from '@/lib/examSettings'
 import type { ExcusedReason } from '@/lib/supabase/types'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
@@ -45,12 +45,12 @@ export async function submitRequest(formData: FormData) {
 
   if (profile?.role !== 'student') return redirect('/login')
 
-  // Enforce the submission window server-side (the client button is also
+  // Enforce the active period's window server-side (the client button is also
   // disabled, but this is the real guard against a crafted request).
-  const settings = await getExamSettings(supabase)
-  const win = computeWindow(settings.submissionStart, settings.windowDays)
-  if (!win.open) {
-    return redirect(`/student/submit?error=${encodeURIComponent('The submission window is currently closed.')}`)
+  const activePeriod = await getActivePeriod(supabase)
+  const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
+  if (!activePeriod || !win.open) {
+    return redirect(`/student/submit?error=${encodeURIComponent('Special exam submissions are not open right now.')}`)
   }
 
   const examType = String(formData.get('exam_type') ?? '')
@@ -113,6 +113,7 @@ export async function submitRequest(formData: FormData) {
       excused_reason: excusedReason,
       other_reason: examType === 'excused' && excusedReason === 'other' ? otherReason : null,
       status: 'submitted',
+      period_id: activePeriod.id,
       ...snapshot,
     })
     .select()

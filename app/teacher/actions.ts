@@ -17,6 +17,13 @@ export async function approveRequest(requestId: string) {
   if (!ctx) return { error: 'Unauthorized' }
   const { supabase, userId, role } = ctx
 
+  // Ensure the request is in THIS teacher's queue. RLS select scopes a teacher
+  // to their own subjects, so a foreign request returns nothing — without this,
+  // the permissive staff UPDATE policy would let a teacher approve another
+  // teacher's request by id. (Admins can see all, so they're unaffected.)
+  const { data: owned } = await supabase.from('special_exam_requests').select('id').eq('id', requestId).maybeSingle()
+  if (!owned) return { error: 'This request is not in your queue.' }
+
   // Status guard doubles as concurrency control — if it's no longer awaiting
   // the teacher, 0 rows update and we skip the phantom log / false success.
   const { data: updated, error } = await supabase
@@ -47,6 +54,10 @@ export async function rejectTeacherRequest(requestId: string, reason: string) {
 
   const sanitizedReason = String(reason).trim().slice(0, 1000)
   if (!sanitizedReason) return { error: 'Rejection reason is required' }
+
+  // Same ownership guard as approveRequest.
+  const { data: owned } = await supabase.from('special_exam_requests').select('id').eq('id', requestId).maybeSingle()
+  if (!owned) return { error: 'This request is not in your queue.' }
 
   const { data: updated, error } = await supabase
     .from('special_exam_requests')

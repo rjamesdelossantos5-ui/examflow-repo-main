@@ -254,7 +254,9 @@ export async function updateSubmissionWindow(days: number) {
   return { error: null }
 }
 
-interface ExamSettingsInput {
+interface PeriodInput {
+  term: string
+  schoolYear: string
   submissionStart: string
   windowDays: number
   examDay: string
@@ -262,30 +264,56 @@ interface ExamSettingsInput {
   examBring: string
 }
 
-// Saves the whole submission timeframe + exam-day details in one shot.
-export async function updateExamSettings(input: ExamSettingsInput) {
+// Create/update an exam period (Prelim/Midterms/Pre-finals/Finals) and make it
+// the single active one students submit to.
+export async function savePeriod(input: PeriodInput) {
   const ctx = await requirePH()
   if (!ctx) return { error: 'Unauthorized' }
   const { supabase } = ctx
 
+  if (!['prelim', 'midterms', 'prefinals', 'finals'].includes(input.term)) return { error: 'Choose a term.' }
+  if (!input.submissionStart) return { error: 'Set a submission start date.' }
   if (!Number.isInteger(input.windowDays) || input.windowDays < 1 || input.windowDays > 365) {
     return { error: 'Submission window must be 1–365 days.' }
   }
 
-  const now = new Date().toISOString()
-  const rows = [
-    { key: 'submission_start', value: String(input.submissionStart ?? '').slice(0, 40) },
-    { key: 'submission_window_days', value: String(input.windowDays) },
-    { key: 'exam_day', value: String(input.examDay ?? '').slice(0, 40) },
-    { key: 'exam_location', value: String(input.examLocation ?? '').trim().slice(0, 300) },
-    { key: 'exam_bring', value: String(input.examBring ?? '').trim().slice(0, 1000) },
-  ].map((r) => ({ ...r, updated_at: now }))
+  const row = {
+    term: input.term,
+    school_year: String(input.schoolYear ?? '').trim().slice(0, 20),
+    submission_start: input.submissionStart,
+    window_days: input.windowDays,
+    exam_day: input.examDay || null,
+    exam_location: String(input.examLocation ?? '').trim().slice(0, 300) || null,
+    exam_bring: String(input.examBring ?? '').trim().slice(0, 1000) || null,
+    is_active: true,
+  }
 
-  const { error } = await supabase.from('settings').upsert(rows)
+  const { data: saved, error } = await supabase
+    .from('exam_periods')
+    .upsert(row, { onConflict: 'term,school_year' })
+    .select('id')
+    .single()
   if (error) return { error: error.message }
+
+  // Exactly one active period.
+  await supabase.from('exam_periods').update({ is_active: false }).neq('id', saved!.id)
 
   revalidatePath('/program-head/settings')
   revalidatePath('/student')
   revalidatePath('/student/submit')
+  return { error: null }
+}
+
+export async function setActivePeriod(id: string) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase } = ctx
+
+  const { error } = await supabase.from('exam_periods').update({ is_active: true }).eq('id', id)
+  if (error) return { error: error.message }
+  await supabase.from('exam_periods').update({ is_active: false }).neq('id', id)
+
+  revalidatePath('/program-head/settings')
+  revalidatePath('/student')
   return { error: null }
 }
