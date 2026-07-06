@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import StatusBadge from '@/components/StatusBadge'
 import { exportSchoolFormat } from './exportExcel'
+import { deleteFinishedRequest } from '../actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface StudentRow {
@@ -27,6 +28,19 @@ interface StudentRow {
 
 export default function StudentsList({ initial }: { initial: StudentRow[] }) {
   const [rows, setRows] = useState<StudentRow[]>(initial)
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [, startTransition] = useTransition()
+
+  function handleDelete(id: string) {
+    if (!confirm('Delete this record permanently? This removes the form and its uploaded files.')) return
+    setPendingDelete(id)
+    startTransition(async () => {
+      const res = await deleteFinishedRequest(id)
+      setPendingDelete(null)
+      if (res.error) alert(res.error)
+      else setRows((rs) => rs.filter((r) => r.id !== id))
+    })
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -94,6 +108,7 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
               <th className="px-3 py-3">Teacher</th>
               <th className="px-3 py-3">Type</th>
               <th className="px-3 py-3">Status</th>
+              <th className="px-3 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -110,10 +125,19 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
                 <td className="px-3 py-2 text-gray-500">{r.teacher_name ?? '—'}</td>
                 <td className="px-3 py-2 capitalize text-xs">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</td>
                 <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
+                <td className="px-3 py-2 text-right">
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    disabled={pendingDelete === r.id}
+                    className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    {pendingDelete === r.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No accepted students yet.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No accepted students yet.</td></tr>
             )}
           </tbody>
         </table>

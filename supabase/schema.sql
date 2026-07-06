@@ -269,6 +269,12 @@ create policy "requests_student_delete_own" on special_exam_requests
     student_id = auth.uid() and status = 'submitted' and current_user_role() = 'student'
   );
 
+-- Program Head / Admin can delete finished records (accepted or scheduled)
+create policy "requests_ph_admin_delete" on special_exam_requests
+  for delete using (
+    current_user_role() in ('program_head', 'admin') and status in ('accepted', 'scheduled')
+  );
+
 -- ── application_media ─────────────────────────
 create policy "media_select" on application_media
   for select using (

@@ -1,12 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DashboardLayout from '@/components/DashboardLayout'
-import { getNotifications } from '@/lib/notifications'
-
-const NAV = [
-  { label: 'Pending Queue', href: '/teacher', icon: 'inbox' },
-  { label: 'Reviewed History', href: '/teacher/history', icon: 'history' },
-] as const
+import { getNotifications, countByStatus } from '@/lib/notifications'
 
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -22,9 +17,14 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   if (!profile || !['subject_teacher', 'admin'].includes(profile.role)) redirect('/login')
 
   const notifications = await getNotifications(supabase, user.id, 'subject_teacher')
+  const pending = await countByStatus(supabase, 'verified_by_registrar')
+  const nav = [
+    { label: 'Pending Queue', href: '/teacher', icon: 'inbox' as const, badge: pending },
+    { label: 'Reviewed History', href: '/teacher/history', icon: 'history' as const },
+  ]
 
   return (
-    <DashboardLayout role="subject_teacher" userName={profile.full_name} email={profile.email} navItems={NAV} notifications={notifications}>
+    <DashboardLayout role="subject_teacher" userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
       {children}
     </DashboardLayout>
   )

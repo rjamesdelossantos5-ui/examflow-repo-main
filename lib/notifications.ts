@@ -4,6 +4,15 @@ import type { UserRole } from '@/lib/supabase/types'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
+// Cheap indexed count of requests at a given status — used for the nav-tab badges.
+export async function countByStatus(supabase: SupabaseServer, status: string): Promise<number> {
+  const { count } = await supabase
+    .from('special_exam_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', status)
+  return count ?? 0
+}
+
 // Upper bound per query so the payload can't grow without limit (safety for
 // low-end phones). The bell dropdown is height-capped + scrollable, so users
 // can scroll through all of these — none are hidden until this ceiling, which

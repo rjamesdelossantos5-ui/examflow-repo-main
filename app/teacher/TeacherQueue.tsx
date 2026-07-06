@@ -35,14 +35,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2.5 mb-4">
-        <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
-        {requests.length > 0 && (
-          <span className="px-2.5 py-0.5 rounded-full text-sm font-bold" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-            {requests.length}
-          </span>
-        )}
-      </div>
+      <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
 
       {requests.length === 0 && (
         <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">

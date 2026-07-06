@@ -163,6 +163,36 @@ export async function rejectReceipt(requestId: string, reason: string) {
   return { error: null }
 }
 
+// Delete a finished request (scheduled, or accepted excused) to clear the list
+// after the exam. Requires the requests_ph_admin_delete RLS policy (see
+// supabase/migration_delete.sql). Cascades media + logs; best-effort file cleanup.
+export async function deleteFinishedRequest(requestId: string) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase } = ctx
+
+  const { data: media } = await supabase
+    .from('application_media')
+    .select('storage_path')
+    .eq('request_id', requestId)
+  const paths = (media ?? []).map((m) => m.storage_path).filter(Boolean)
+  if (paths.length) await supabase.storage.from('exam-documents').remove(paths)
+
+  const { data: deleted, error } = await supabase
+    .from('special_exam_requests')
+    .delete()
+    .eq('id', requestId)
+    .in('status', ['accepted', 'scheduled'])
+    .select('id')
+
+  if (error) return { error: error.message }
+  if (!deleted?.length) return { error: 'Only accepted or scheduled records can be deleted.' }
+
+  revalidatePath('/program-head/students')
+  revalidatePath('/program-head/overview')
+  return { error: null }
+}
+
 export async function updateSubmissionWindow(days: number) {
   const ctx = await requirePH()
   if (!ctx) return { error: 'Unauthorized' }

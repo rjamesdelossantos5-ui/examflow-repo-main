@@ -13,6 +13,7 @@ interface NavItem {
   label: string
   href: string
   icon?: IconName
+  badge?: number
 }
 
 interface Props {
@@ -78,6 +79,11 @@ export default function DashboardLayout({ role, userName, email, navItems, notif
                 >
                   {item.icon && <Icon name={item.icon} className="w-4 h-4" />}
                   {item.label}
+                  {item.badge ? (
+                    <span className="ml-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center">
+                      {item.badge}
+                    </span>
+                  ) : null}
                 </Link>
               )
             })}

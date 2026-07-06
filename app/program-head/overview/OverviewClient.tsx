@@ -14,17 +14,26 @@ export interface OverviewRow {
   section: string | null
   subject_code: string
   subject_name: string
+  rejected_by_role: string | null
+  rejection_reason: string | null
 }
 
+// 'scheduled' is intentionally omitted — scheduled requests drop off the overview.
 const STAGES: { status: RequestStatus; label: string }[] = [
   { status: 'submitted', label: 'Waiting for Registrar' },
   { status: 'verified_by_registrar', label: 'Waiting for Teacher' },
   { status: 'approved_by_teacher', label: 'Waiting for Program Head' },
   { status: 'accepted', label: 'Accepted' },
   { status: 'receipt_uploaded', label: 'Receipt to verify' },
-  { status: 'scheduled', label: 'Scheduled' },
   { status: 'rejected', label: 'Rejected' },
 ]
+
+const ROLE_LABEL: Record<string, string> = {
+  registrar: 'Registrar',
+  subject_teacher: 'Subject Teacher',
+  program_head: 'Program Head',
+  admin: 'Admin',
+}
 
 // Stages an authorized PH can fast-track straight to "accepted"
 const OVERRIDABLE: RequestStatus[] = ['submitted', 'verified_by_registrar', 'approved_by_teacher']
@@ -114,7 +123,17 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
                   <div className="text-xs ef-muted">{r.subject_code}</div>
                 </td>
                 <td className="px-4 py-3 capitalize ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</td>
-                <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                <td className="px-4 py-3">
+                  <StatusBadge status={r.status} />
+                  {r.status === 'rejected' && (
+                    <div className="mt-1 text-xs">
+                      <span className="font-medium text-red-600 dark:text-red-400">
+                        Rejected by {ROLE_LABEL[r.rejected_by_role ?? ''] ?? 'a reviewer'}
+                      </span>
+                      {r.rejection_reason && <div className="ef-muted mt-0.5 max-w-xs">{r.rejection_reason}</div>}
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-3 ef-muted">{new Date(r.submitted_at).toLocaleDateString()}</td>
                 {canOverride && (
                   <td className="px-4 py-3">

@@ -19,6 +19,8 @@ export default async function OverviewPage() {
       profiles!student_id(full_name, section),
       subjects(subject_code, subject_name)
     `)
+    // Once scheduled, a request is done — it drops off the overview.
+    .neq('status', 'scheduled')
     .order('submitted_at', { ascending: false })
 
   const rows: OverviewRow[] = (data ?? []).map((r) => {
@@ -34,6 +36,8 @@ export default async function OverviewPage() {
       section: s.snap_section ?? prof?.section ?? null,
       subject_code: subj?.subject_code ?? '',
       subject_name: subj?.subject_name ?? '',
+      rejected_by_role: (r.rejected_by_role as string | null) ?? null,
+      rejection_reason: (r.rejection_reason as string | null) ?? null,
     }
   })
 

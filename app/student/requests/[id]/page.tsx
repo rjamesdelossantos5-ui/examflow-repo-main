@@ -10,22 +10,18 @@ import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
 
-const STEPS: { status: RequestStatus; label: string }[] = [
-  { status: 'submitted', label: 'Submitted' },
-  { status: 'verified_by_registrar', label: 'Registrar' },
-  { status: 'approved_by_teacher', label: 'Teacher' },
-  { status: 'accepted', label: 'Program Head' },
-  { status: 'scheduled', label: 'Scheduled' },
-]
+// Paid exams have an extra receipt step (Program Head → Receipt → Scheduled);
+// excused exams finish once the Program Head approves.
+const STEPS_PAID = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Receipt', 'Scheduled']
+const STEPS_EXCUSED = ['Submitted', 'Registrar', 'Teacher', 'Approved']
 
-const STATUS_ORDER: Record<RequestStatus, number> = {
-  submitted: 0,
-  verified_by_registrar: 1,
-  approved_by_teacher: 2,
-  accepted: 3,
-  receipt_uploaded: 3,
-  scheduled: 4,
-  rejected: -1,
+const ORDER_PAID: Record<RequestStatus, number> = {
+  submitted: 0, verified_by_registrar: 1, approved_by_teacher: 2,
+  accepted: 3, receipt_uploaded: 4, scheduled: 5, rejected: -1,
+}
+const ORDER_EXCUSED: Record<RequestStatus, number> = {
+  submitted: 0, verified_by_registrar: 1, approved_by_teacher: 2,
+  accepted: 3, receipt_uploaded: 3, scheduled: 3, rejected: -1,
 }
 
 const ROLE_DOT: Record<UserRole, string> = {
@@ -77,6 +73,9 @@ export default async function RequestDetailPage({
   if (!req) notFound()
 
   const subj = req.subjects as unknown as { subject_code: string; subject_name: string } | null
+  const isPaid = req.exam_type === 'paid'
+  const STEPS = isPaid ? STEPS_PAID : STEPS_EXCUSED
+  const STATUS_ORDER = isPaid ? ORDER_PAID : ORDER_EXCUSED
   const currentStep = STATUS_ORDER[req.status as RequestStatus]
   const isRejected = req.status === 'rejected'
   const fillPct = isRejected ? 0 : (currentStep / (STEPS.length - 1)) * 100
@@ -182,7 +181,7 @@ export default async function RequestDetailPage({
                 const done = currentStep >= i
                 const active = currentStep === i
                 return (
-                  <div key={step.status} className="flex flex-col items-center gap-2 w-16">
+                  <div key={step} className="flex flex-col items-center gap-2 w-16">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ef-step-node ${
                         done ? 'ef-step-done' : ''
@@ -195,7 +194,7 @@ export default async function RequestDetailPage({
                       className={`text-[11px] text-center leading-tight ${active ? 'font-semibold' : ''}`}
                       style={{ color: active ? 'var(--card-foreground)' : 'var(--muted)' }}
                     >
-                      {step.label}
+                      {step}
                     </span>
                   </div>
                 )
