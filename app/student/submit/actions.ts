@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getExamSettings, computeWindow } from '@/lib/examSettings'
 import type { ExcusedReason } from '@/lib/supabase/types'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
@@ -44,9 +45,13 @@ export async function submitRequest(formData: FormData) {
 
   if (profile?.role !== 'student') return redirect('/login')
 
-  // NOTE: submission-window enforcement is not implemented yet. It needs a
-  // last-period-start date in `settings` to compare against; until then we read
-  // nothing here (the previous unused `settings` fetch was removed).
+  // Enforce the submission window server-side (the client button is also
+  // disabled, but this is the real guard against a crafted request).
+  const settings = await getExamSettings(supabase)
+  const win = computeWindow(settings.submissionStart, settings.windowDays)
+  if (!win.open) {
+    return redirect(`/student/submit?error=${encodeURIComponent('The submission window is currently closed.')}`)
+  }
 
   const examType = String(formData.get('exam_type') ?? '')
   const subjectId = String(formData.get('subject_id') ?? '')

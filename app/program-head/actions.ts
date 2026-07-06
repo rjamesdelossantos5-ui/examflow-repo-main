@@ -210,3 +210,39 @@ export async function updateSubmissionWindow(days: number) {
   revalidatePath('/program-head/settings')
   return { error: null }
 }
+
+interface ExamSettingsInput {
+  submissionStart: string
+  windowDays: number
+  examDay: string
+  examLocation: string
+  examBring: string
+}
+
+// Saves the whole submission timeframe + exam-day details in one shot.
+export async function updateExamSettings(input: ExamSettingsInput) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase } = ctx
+
+  if (!Number.isInteger(input.windowDays) || input.windowDays < 1 || input.windowDays > 365) {
+    return { error: 'Submission window must be 1–365 days.' }
+  }
+
+  const now = new Date().toISOString()
+  const rows = [
+    { key: 'submission_start', value: String(input.submissionStart ?? '').slice(0, 40) },
+    { key: 'submission_window_days', value: String(input.windowDays) },
+    { key: 'exam_day', value: String(input.examDay ?? '').slice(0, 40) },
+    { key: 'exam_location', value: String(input.examLocation ?? '').trim().slice(0, 300) },
+    { key: 'exam_bring', value: String(input.examBring ?? '').trim().slice(0, 1000) },
+  ].map((r) => ({ ...r, updated_at: now }))
+
+  const { error } = await supabase.from('settings').upsert(rows)
+  if (error) return { error: error.message }
+
+  revalidatePath('/program-head/settings')
+  revalidatePath('/student')
+  revalidatePath('/student/submit')
+  return { error: null }
+}

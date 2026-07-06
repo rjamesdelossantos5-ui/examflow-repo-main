@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon, type IconName } from '@/components/Icon'
+import { getExamSettings, computeWindow } from '@/lib/examSettings'
+import SubmissionNotice from './SubmissionNotice'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — My Requests' }
@@ -36,12 +38,16 @@ export default async function StudentPage() {
     .eq('id', user.id)
     .single()
 
-  const { data: requests } = await supabase
-    .from('special_exam_requests')
-    .select('*, subjects(subject_code, subject_name)')
-    .eq('student_id', user.id)
-    .order('submitted_at', { ascending: false })
+  const [{ data: requests }, settings] = await Promise.all([
+    supabase
+      .from('special_exam_requests')
+      .select('*, subjects(subject_code, subject_name)')
+      .eq('student_id', user.id)
+      .order('submitted_at', { ascending: false }),
+    getExamSettings(supabase),
+  ])
 
+  const win = computeWindow(settings.submissionStart, settings.windowDays)
   const list = requests ?? []
   const counts = {
     total: list.length,
@@ -51,6 +57,17 @@ export default async function StudentPage() {
 
   return (
     <div className="space-y-6">
+      <SubmissionNotice
+        configured={win.configured}
+        open={win.open}
+        notStarted={win.notStarted}
+        daysRemaining={win.daysRemaining}
+        start={win.start}
+        end={win.end}
+        examDay={settings.examDay}
+        examLocation={settings.examLocation}
+        examBring={settings.examBring}
+      />
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>

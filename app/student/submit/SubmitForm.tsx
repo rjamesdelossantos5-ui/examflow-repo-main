@@ -36,7 +36,7 @@ interface ProfileInfo {
   section: string
 }
 
-export default function SubmitForm({ subjects, profile, error }: { subjects: Subject[]; profile: ProfileInfo; error?: string }) {
+export default function SubmitForm({ subjects, profile, error, submissionOpen = true, windowMessage }: { subjects: Subject[]; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null }) {
   const [examType, setExamType] = useState<'paid' | 'excused'>('paid')
   const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>('')
   const [course, setCourse] = useState(COURSES.some((c) => c.code === profile.course) ? profile.course : '')
@@ -48,6 +48,7 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
   const sectionsForCourse = COURSES.find((c) => c.code === course)?.sections ?? []
 
   function openConfirm() {
+    if (!submissionOpen) return
     if (formRef.current?.reportValidity()) setConfirming(true)
   }
 
@@ -65,6 +66,12 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
           {decodeURIComponent(error)}
+        </div>
+      )}
+
+      {windowMessage && (
+        <div className="mb-4 rounded-lg border px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', borderColor: 'rgba(245,158,11,0.4)', color: 'var(--card-foreground)' }}>
+          {windowMessage}
         </div>
       )}
 
@@ -218,10 +225,11 @@ export default function SubmitForm({ subjects, profile, error }: { subjects: Sub
         <button
           type="button"
           onClick={openConfirm}
-          className="w-full py-3 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
+          disabled={!submissionOpen}
+          className="w-full py-3 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
-          Submit Request
+          {submissionOpen ? 'Submit Request' : 'Submissions Closed'}
         </button>
 
         {/* Confirmation dialog — the real submit lives here */}
