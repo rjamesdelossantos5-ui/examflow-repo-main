@@ -21,7 +21,11 @@ const csp = [
 ].join("; ");
 
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
+  // CSP is production-only. In dev the server runs over plain HTTP, and
+  // `upgrade-insecure-requests` would force stylesheet/HMR requests to HTTPS —
+  // which fails on a LAN IP (e.g. http://192.168.x.x:3000) and leaves the page
+  // completely unstyled. Production (Vercel) is HTTPS, so CSP applies fully there.
+  ...(isDev ? [] : [{ key: "Content-Security-Policy", value: csp }]),
   // Clickjacking protection (in addition to CSP frame-ancestors, for old browsers)
   { key: "X-Frame-Options", value: "DENY" },
   // Stop MIME-type sniffing
@@ -40,7 +44,7 @@ const nextConfig: NextConfig = {
   // Allow accessing the dev server from other devices on the LAN (e.g. phone,
   // another PC). Without this, Next.js blocks the cross-origin requests it uses
   // for hydration/HMR, so the page loads but nothing is clickable.
-  allowedDevOrigins: ['192.168.1.11'],
+  allowedDevOrigins: ['192.168.1.11', '192.168.100.12'],
   // Hide the framework banner header
   poweredByHeader: false,
   experimental: {
