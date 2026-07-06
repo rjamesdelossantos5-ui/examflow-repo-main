@@ -94,7 +94,6 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
               <th className="px-3 py-3">Teacher</th>
               <th className="px-3 py-3">Type</th>
               <th className="px-3 py-3">Status</th>
-              <th className="px-3 py-3">Schedule</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -111,13 +110,10 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
                 <td className="px-3 py-2 text-gray-500">{r.teacher_name ?? '—'}</td>
                 <td className="px-3 py-2 capitalize text-xs">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</td>
                 <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
-                <td className="px-3 py-2 text-gray-500 text-xs">
-                  {r.final_schedule ? new Date(r.final_schedule).toLocaleString() : '—'}
-                </td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No accepted students yet.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No accepted students yet.</td></tr>
             )}
           </tbody>
         </table>

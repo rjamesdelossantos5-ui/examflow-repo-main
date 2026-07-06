@@ -20,7 +20,7 @@ export default async function TeacherPage() {
       progress_logs(id, action, created_at, actor_role)
     `)
     .eq('status', 'verified_by_registrar')
-    .order('submitted_at', { ascending: true })
+    .order('submitted_at', { ascending: false })
 
   // RLS already filters by teacher; double-check teacher_id client side is optional
   const requests = await Promise.all(

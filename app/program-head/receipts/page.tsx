@@ -26,7 +26,7 @@ export default async function ProgramHeadReceiptsPage() {
       progress_logs(id, action, created_at, actor_role)
     `)
     .eq('status', 'receipt_uploaded')
-    .order('submitted_at', { ascending: true })
+    .order('submitted_at', { ascending: false })
 
   const requests = await Promise.all(
     (raw ?? []).map(async (r) => {

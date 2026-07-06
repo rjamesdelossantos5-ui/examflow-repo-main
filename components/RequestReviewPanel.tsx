@@ -30,6 +30,8 @@ interface Props {
   /** The status at which THIS reviewer can act. Registrar = 'submitted', Teacher = 'verified_by_registrar'. */
   actionableStatus?: RequestStatus
   showRejectedBy?: string
+  /** Teachers don't verify the parent documents, so hide that section for them. */
+  showDocuments?: boolean
 }
 
 export default function RequestReviewPanel({
@@ -47,6 +49,7 @@ export default function RequestReviewPanel({
   onReject,
   verifyLabel = 'Verify & Forward',
   actionableStatus = 'submitted',
+  showDocuments = true,
 }: Props) {
   const isActionable = status === actionableStatus
   const [rejectMode, setRejectMode] = useState(false)
@@ -91,6 +94,7 @@ export default function RequestReviewPanel({
         </div>
 
         {/* Documents list */}
+        {showDocuments && (
         <div>
           <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Documents</h4>
           <div className="space-y-2">
@@ -127,6 +131,7 @@ export default function RequestReviewPanel({
             ))}
           </div>
         </div>
+        )}
 
         {/* History */}
         <div>

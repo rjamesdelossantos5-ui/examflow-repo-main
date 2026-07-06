@@ -120,14 +120,13 @@ export default function PHQueue({
 function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () => void }) {
   const [rejectMode, setRejectMode] = useState<'request' | 'receipt' | null>(null)
   const [reason, setReason] = useState('')
-  const [schedule, setSchedule] = useState(r.final_schedule ? r.final_schedule.slice(0, 16) : '')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleAccept() {
     startTransition(async () => {
-      const res = await acceptRequest(r.id, schedule)
+      const res = await acceptRequest(r.id, '')
       if (res.error) setError(res.error)
       else onClose()
     })
@@ -219,15 +218,6 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
       {/* Actions */}
       {r.status === 'approved_by_teacher' && !rejectMode && (
         <div className="space-y-3 border-t pt-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Set Exam Schedule (optional)</label>
-            <input
-              type="datetime-local"
-              value={schedule}
-              onChange={(e) => setSchedule(e.target.value)}
-              className="w-full border rounded px-2 py-1.5 text-xs"
-            />
-          </div>
           <button onClick={handleAccept} disabled={isPending}
             className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>

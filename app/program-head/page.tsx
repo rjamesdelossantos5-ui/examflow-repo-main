@@ -25,7 +25,7 @@ export default async function ProgramHeadPage() {
     // First Approval: only requests the teacher just approved. Receipts are
     // handled separately on the Second Approval tab (/program-head/receipts).
     .eq('status', 'approved_by_teacher')
-    .order('submitted_at', { ascending: true })
+    .order('submitted_at', { ascending: false })
 
   const requests = await Promise.all(
     (raw ?? []).map(async (r) => {
