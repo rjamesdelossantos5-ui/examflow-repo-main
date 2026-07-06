@@ -16,8 +16,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!profile || profile.role !== 'admin') redirect('/login')
 
-  const notifications = await getNotifications(supabase, user.id, 'admin')
-  const overrides = await countPendingOverrides(supabase)
+  const [notifications, overrides] = await Promise.all([
+    getNotifications(supabase, user.id, 'admin'),
+    countPendingOverrides(supabase),
+  ])
   const nav = [
     { label: 'Users', href: '/admin/users', icon: 'users' as const },
     { label: 'Subjects', href: '/admin/subjects', icon: 'book' as const },

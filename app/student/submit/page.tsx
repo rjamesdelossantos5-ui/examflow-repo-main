@@ -9,13 +9,39 @@ export const metadata = { title: 'EXAMFLOW — Submit Request' }
 export default async function SubmitPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; from?: string }>
 }) {
-  const { error } = await searchParams
+  const { error, from } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Resubmitting a rejected request: pre-fill from its snapshot so the student
+  // only fixes what was wrong and re-uploads.
+  let prefill: Record<string, unknown> | null = null
+  if (from) {
+    const { data: prev } = await supabase
+      .from('special_exam_requests')
+      .select('id, status, subject_id, exam_type, excused_reason, other_reason, snap_name, snap_student_number, snap_course, snap_year_level, snap_section')
+      .eq('id', from)
+      .eq('student_id', user.id)
+      .single()
+    if (prev && prev.status === 'rejected') {
+      prefill = {
+        fromId: prev.id,
+        subjectId: prev.subject_id,
+        examType: prev.exam_type,
+        excusedReason: prev.excused_reason,
+        otherReason: prev.other_reason,
+        fullName: prev.snap_name,
+        studentNumber: prev.snap_student_number,
+        course: prev.snap_course,
+        yearLevel: prev.snap_year_level,
+        section: prev.snap_section,
+      }
+    }
+  }
 
   const [{ data: subjects }, { data: profile }, settings] = await Promise.all([
     supabase.from('subjects').select('id, subject_code, subject_name').order('subject_code'),
@@ -43,6 +69,7 @@ export default async function SubmitPage({
       error={error}
       submissionOpen={win.open}
       windowMessage={windowMessage}
+      prefill={prefill as never}
     />
   )
 }

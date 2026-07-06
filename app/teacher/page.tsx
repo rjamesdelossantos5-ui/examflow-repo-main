@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { attachSignedUrls } from '@/lib/supabase/getSignedUrls'
 import TeacherQueue from './TeacherQueue'
 
 export const metadata = { title: 'EXAMFLOW — Teacher Queue' }
@@ -22,20 +21,18 @@ export default async function TeacherPage() {
     .eq('status', 'verified_by_registrar')
     .order('submitted_at', { ascending: false })
 
-  // RLS already filters by teacher; double-check teacher_id client side is optional
-  const requests = await Promise.all(
-    (raw ?? []).map(async (r) => {
-      const mediaWithUrls = await attachSignedUrls(supabase, r.application_media ?? [])
-      const prof = r.profiles as unknown as { full_name: string } | null
-      return {
-        ...r,
-        student: { full_name: (r as { snap_name?: string | null }).snap_name ?? prof?.full_name ?? '—' },
-        subject: r.subjects as unknown as { subject_code: string; subject_name: string },
-        media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[]).map((m, i) => ({ ...m, signed_url: mediaWithUrls[i]?.signed_url })),
-        logs: r.progress_logs ?? [],
-      }
-    })
-  )
+  // RLS already filters by teacher. Media isn't shown to teachers, but we pass
+  // it through; signed URLs are fetched lazily where documents are viewable.
+  const requests = (raw ?? []).map((r) => {
+    const prof = r.profiles as unknown as { full_name: string } | null
+    return {
+      ...r,
+      student: { full_name: (r as { snap_name?: string | null }).snap_name ?? prof?.full_name ?? '—' },
+      subject: r.subjects as unknown as { subject_code: string; subject_name: string },
+      media: (r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[],
+      logs: r.progress_logs ?? [],
+    }
+  })
 
   return <TeacherQueue requests={requests} />
 }

@@ -16,8 +16,10 @@ export default async function TeacherLayout({ children }: { children: React.Reac
 
   if (!profile || !['subject_teacher', 'admin'].includes(profile.role)) redirect('/login')
 
-  const notifications = await getNotifications(supabase, user.id, 'subject_teacher')
-  const pending = await countByStatus(supabase, 'verified_by_registrar')
+  const [notifications, pending] = await Promise.all([
+    getNotifications(supabase, user.id, 'subject_teacher'),
+    countByStatus(supabase, 'verified_by_registrar'),
+  ])
   const nav = [
     { label: 'Pending Queue', href: '/teacher', icon: 'inbox' as const, badge: pending },
     { label: 'Reviewed History', href: '/teacher/history', icon: 'history' as const },

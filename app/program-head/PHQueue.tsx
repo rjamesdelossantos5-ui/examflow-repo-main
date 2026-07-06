@@ -7,6 +7,7 @@ import type { RequestStatus } from '@/lib/supabase/types'
 import { acceptRequest, rejectPHRequest, confirmReceipt, rejectReceipt } from './actions'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon } from '@/components/Icon'
+import { getSignedUrl } from '@/app/media-actions'
 
 interface MediaItem {
   id: string
@@ -114,8 +115,17 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
   const [rejectMode, setRejectMode] = useState<'request' | 'receipt' | null>(null)
   const [reason, setReason] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [urls, setUrls] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  function handleExpand(m: MediaItem) {
+    const next = expanded === m.id ? null : m.id
+    setExpanded(next)
+    if (next && !m.signed_url && !urls[m.id]) {
+      getSignedUrl(m.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [m.id]: u })) })
+    }
+  }
 
   function handleAccept() {
     startTransition(async () => {
@@ -175,29 +185,34 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
 
       {/* Documents */}
       <div className="space-y-2">
-        {r.media.map((m) => (
+        {r.media.map((m) => {
+          const url = m.signed_url ?? urls[m.id]
+          return (
           <div key={m.id}>
             <button
-              onClick={() => setExpanded(expanded === m.id ? null : m.id)}
+              onClick={() => handleExpand(m)}
               className="w-full flex items-center gap-2 p-2 rounded border hover:bg-gray-50 text-xs text-left"
             >
               <span className="capitalize font-medium">{m.media_type.replace(/_/g, ' ')}</span>
               <span className="ml-auto text-gray-400">{expanded === m.id ? '▲' : '▼'}</span>
             </button>
-            {expanded === m.id && m.signed_url && (
+            {expanded === m.id && (
               <div className="mt-1 rounded border overflow-hidden">
-                {m.mime_type.startsWith('image/') ? (
+                {!url ? (
+                  <div className="p-2 text-xs text-gray-400">Loading…</div>
+                ) : m.mime_type.startsWith('image/') ? (
                   <div className="relative w-full h-48">
-                    <Image src={m.signed_url} alt={m.media_type} fill className="object-contain" unoptimized />
+                    <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
                   </div>
                 ) : (
-                  <a href={m.signed_url} target="_blank" rel="noreferrer"
+                  <a href={url} target="_blank" rel="noreferrer"
                     className="block p-2 text-xs text-blue-600 hover:underline">Open PDF: {m.file_name}</a>
                 )}
               </div>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* History */}

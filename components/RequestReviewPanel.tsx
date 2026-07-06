@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
+import { getSignedUrl } from '@/app/media-actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface MediaItem {
@@ -56,7 +57,17 @@ export default function RequestReviewPanel({
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [urls, setUrls] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
+
+  // Fetch the document's signed URL only when it's actually opened.
+  function handleExpand(m: MediaItem) {
+    const next = expanded === m.id ? null : m.id
+    setExpanded(next)
+    if (next && !m.signed_url && !urls[m.id]) {
+      getSignedUrl(m.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [m.id]: u })) })
+    }
+  }
 
   function handleVerify() {
     if (!onVerify) return
@@ -98,29 +109,27 @@ export default function RequestReviewPanel({
         <div>
           <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Documents</h4>
           <div className="space-y-2">
-            {media.map((m) => (
+            {media.map((m) => {
+              const url = m.signed_url ?? urls[m.id]
+              return (
               <div key={m.id}>
                 <button
-                  onClick={() => setExpanded(expanded === m.id ? null : m.id)}
+                  onClick={() => handleExpand(m)}
                   className="w-full flex items-center gap-2 p-2 rounded border hover:bg-gray-50 text-sm text-left"
                 >
                   <span className="capitalize font-medium">{m.media_type.replace(/_/g, ' ')}</span>
                   <span className="text-gray-400 text-xs ml-auto">{expanded === m.id ? '▲ hide' : '▼ view'}</span>
                 </button>
-                {expanded === m.id && m.signed_url && (
+                {expanded === m.id && (
                   <div className="mt-1 rounded overflow-hidden border">
-                    {m.mime_type.startsWith('image/') ? (
+                    {!url ? (
+                      <div className="p-3 text-xs text-gray-400">Loading…</div>
+                    ) : m.mime_type.startsWith('image/') ? (
                       <div className="relative w-full h-64 cursor-zoom-in">
-                        <Image
-                          src={m.signed_url}
-                          alt={m.media_type}
-                          fill
-                          className="object-contain"
-                          unoptimized
-                        />
+                        <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
                       </div>
                     ) : (
-                      <a href={m.signed_url} target="_blank" rel="noreferrer"
+                      <a href={url} target="_blank" rel="noreferrer"
                         className="block p-3 text-sm text-blue-600 hover:underline">
                         Open PDF: {m.file_name}
                       </a>
@@ -128,7 +137,8 @@ export default function RequestReviewPanel({
                   </div>
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
         )}

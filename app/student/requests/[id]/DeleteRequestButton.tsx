@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { deleteRequest } from './actions'
 
-export default function DeleteRequestButton({ requestId }: { requestId: string }) {
+export default function DeleteRequestButton({ requestId, label = 'Withdraw this request' }: { requestId: string; label?: string }) {
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -30,14 +30,13 @@ export default function DeleteRequestButton({ requestId }: { requestId: string }
         onClick={() => setConfirming(true)}
         className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline"
       >
-        🗑 Withdraw this request
+        {label}
       </button>
 
       {confirming && (
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirming(false)}>
           <div className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <div className="text-3xl mb-2">🗑</div>
-            <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Withdraw this request?</h3>
+            <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Remove this request?</h3>
             <p className="text-sm ef-muted mt-1 mb-5">
               This permanently deletes the request and its uploaded documents. This cannot be undone.
             </p>

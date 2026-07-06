@@ -243,6 +243,24 @@ export default async function RequestDetailPage({
           <DeleteRequestButton requestId={req.id} />
         </div>
       )}
+
+      {/* Rejected — edit & resubmit (details pre-filled) or delete */}
+      {req.status === 'rejected' && (
+        <div className="ef-card rounded-xl shadow-sm p-6 space-y-4">
+          <div>
+            <h2 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Want to try again?</h2>
+            <p className="text-sm ef-muted mt-0.5">Your details are kept, so you just fix what was wrong and re-upload.</p>
+          </div>
+          <Link
+            href={`/student/submit?from=${req.id}`}
+            className="block w-full text-center py-2.5 rounded-lg font-semibold text-sm"
+            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          >
+            Edit &amp; Resubmit
+          </Link>
+          <DeleteRequestButton requestId={req.id} label="Delete this request" />
+        </div>
+      )}
     </div>
   )
 }

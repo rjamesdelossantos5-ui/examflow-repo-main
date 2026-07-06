@@ -16,8 +16,8 @@ export default async function ProgramHeadLayout({ children }: { children: React.
 
   if (!profile || !['program_head', 'admin'].includes(profile.role)) redirect('/login')
 
-  const notifications = await getNotifications(supabase, user.id, 'program_head')
-  const [firstCount, secondCount] = await Promise.all([
+  const [notifications, firstCount, secondCount] = await Promise.all([
+    getNotifications(supabase, user.id, 'program_head'),
     countByStatus(supabase, 'approved_by_teacher'),
     countByStatus(supabase, 'receipt_uploaded'),
   ])

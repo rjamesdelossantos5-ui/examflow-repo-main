@@ -21,8 +21,8 @@ export async function deleteRequest(requestId: string) {
     .single()
 
   if (!req) return { error: 'Request not found' }
-  if (req.status !== 'submitted') {
-    return { error: 'You can only withdraw a request while it is still pending registrar review.' }
+  if (!['submitted', 'rejected'].includes(req.status)) {
+    return { error: 'You can only remove a request while it is pending, or after it was rejected.' }
   }
 
   // Best-effort cleanup of uploaded files

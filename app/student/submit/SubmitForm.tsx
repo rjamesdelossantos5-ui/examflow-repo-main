@@ -36,11 +36,33 @@ interface ProfileInfo {
   section: string
 }
 
-export default function SubmitForm({ subjects, profile, error, submissionOpen = true, windowMessage }: { subjects: Subject[]; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null }) {
-  const [examType, setExamType] = useState<'paid' | 'excused'>('paid')
-  const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>('')
-  const [course, setCourse] = useState(COURSES.some((c) => c.code === profile.course) ? profile.course : '')
-  const [section, setSection] = useState(profile.section ?? '')
+interface Prefill {
+  fromId: string
+  subjectId: string | null
+  examType: 'paid' | 'excused'
+  excusedReason: 'medical' | 'bereavement' | 'other' | null
+  otherReason: string | null
+  fullName: string | null
+  studentNumber: string | null
+  course: string | null
+  yearLevel: number | null
+  section: string | null
+}
+
+export default function SubmitForm({ subjects, profile, error, submissionOpen = true, windowMessage, prefill }: { subjects: Subject[]; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null }) {
+  // Effective values: a resubmit's saved snapshot overrides the profile defaults.
+  const eff = {
+    full_name: prefill?.fullName ?? profile.full_name,
+    student_number: prefill?.studentNumber ?? profile.student_number,
+    course: prefill?.course ?? profile.course,
+    year_level: prefill?.yearLevel ?? profile.year_level,
+    section: prefill?.section ?? profile.section,
+  }
+
+  const [examType, setExamType] = useState<'paid' | 'excused'>(prefill?.examType ?? 'paid')
+  const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>(prefill?.excusedReason ?? '')
+  const [course, setCourse] = useState(COURSES.some((c) => c.code === eff.course) ? eff.course : '')
+  const [section, setSection] = useState(eff.section ?? '')
   const [confirming, setConfirming] = useState(false)
 
   const formRef = useRef<HTMLFormElement>(null)
@@ -75,18 +97,25 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
         </div>
       )}
 
+      {prefill && (
+        <div className="mb-4 rounded-lg border px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', borderColor: 'rgba(253,185,19,0.4)', color: 'var(--card-foreground)' }}>
+          Resubmitting a rejected request — your details are filled in. Fix what was wrong and re-upload your documents.
+        </div>
+      )}
+
       <form ref={formRef} action={submitRequest} className="ef-card rounded-xl shadow-sm p-6 space-y-6">
+        {prefill?.fromId && <input type="hidden" name="resubmit_from" value={prefill.fromId} />}
         {/* Your information */}
         <div className="space-y-4 pb-2 border-b ef-border">
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Your Information</h2>
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Full name *</label>
-            <input name="full_name" required defaultValue={profile.full_name} className={inputClass} placeholder="Juan Dela Cruz" />
+            <input name="full_name" required defaultValue={eff.full_name} className={inputClass} placeholder="Juan Dela Cruz" />
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Student number</label>
-              <input name="student_number" defaultValue={profile.student_number} className={inputClass} placeholder="2024-00001" />
+              <input name="student_number" defaultValue={eff.student_number} className={inputClass} placeholder="2024-00001" />
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Course *</label>
@@ -110,7 +139,7 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Year level *</label>
               <div className="relative">
-                <select name="year_level" required defaultValue={profile.year_level ?? ''} className={selectClass} style={selectStyle}>
+                <select name="year_level" required defaultValue={eff.year_level ?? ''} className={selectClass} style={selectStyle}>
                   <option value="">— Select year —</option>
                   {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
                 </select>
@@ -164,7 +193,7 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
         <div>
           <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
           <div className="relative">
-            <select name="subject_id" required className={selectClass} style={selectStyle}>
+            <select name="subject_id" required defaultValue={prefill?.subjectId ?? ''} className={selectClass} style={selectStyle}>
               <option value="">— Select a subject —</option>
               {subjects.map((s) => (
                 <option key={s.id} value={s.id}>{s.subject_code} — {s.subject_name}</option>
@@ -199,7 +228,7 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
         {examType === 'excused' && reason === 'other' && (
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Please specify *</label>
-            <input name="other_reason" required maxLength={500} className={inputClass} placeholder="Briefly describe the reason" />
+            <input name="other_reason" required maxLength={500} defaultValue={prefill?.otherReason ?? ''} className={inputClass} placeholder="Briefly describe the reason" />
           </div>
         )}
 

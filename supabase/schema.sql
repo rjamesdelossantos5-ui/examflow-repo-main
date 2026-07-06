@@ -263,10 +263,11 @@ create policy "requests_student_update_own" on special_exam_requests
     student_id = auth.uid() and current_user_role() = 'student'
   );
 
--- Students can delete their own submitted requests (used to roll back failed uploads)
+-- Students can delete their own submitted OR rejected requests
+-- (roll back a failed upload, or clear/resubmit after a rejection)
 create policy "requests_student_delete_own" on special_exam_requests
   for delete using (
-    student_id = auth.uid() and status = 'submitted' and current_user_role() = 'student'
+    student_id = auth.uid() and status in ('submitted', 'rejected') and current_user_role() = 'student'
   );
 
 -- Program Head / Admin can delete finished records (accepted or scheduled)

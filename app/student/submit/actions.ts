@@ -63,6 +63,10 @@ export async function submitRequest(formData: FormData) {
   }
   if (!subjectId) return redirect('/student/submit?error=Please+select+a+subject')
 
+  // If this is a resubmit of a rejected form, remove the old one once the new
+  // one is in (handled in finishSubmission).
+  const resubmitFrom = String(formData.get('resubmit_from') ?? '')
+
   // Snapshot the student details entered on THIS form (does not touch the
   // profile, so older requests keep the name/section they were submitted with).
   const yearRaw = String(formData.get('year_level') ?? '').trim()
@@ -132,10 +136,10 @@ export async function submitRequest(formData: FormData) {
     if (retry.error || !retry.data) {
       return redirect(`/student/submit?error=${encodeURIComponent(retry.error?.message ?? 'Submission failed')}`)
     }
-    return finishSubmission(supabase, retry.data, user.id, examType, { parentId, parentIdBack, parentSig, supportDoc })
+    return finishSubmission(supabase, retry.data, user.id, examType, { parentId, parentIdBack, parentSig, supportDoc }, resubmitFrom)
   }
 
-  return finishSubmission(supabase, req, user.id, examType, { parentId, parentIdBack, parentSig, supportDoc })
+  return finishSubmission(supabase, req, user.id, examType, { parentId, parentIdBack, parentSig, supportDoc }, resubmitFrom)
 }
 
 interface SubmissionFiles {
@@ -151,6 +155,7 @@ async function finishSubmission(
   userId: string,
   examType: string,
   f: SubmissionFiles,
+  resubmitFrom?: string,
 ) {
   // Upload documents (front + back of ID, signature, optional supporting doc)
   const uploads: Promise<{ path: string; error: string | null }>[] = [
@@ -189,6 +194,16 @@ async function finishSubmission(
     actor_role: 'student',
     action: 'Submitted special exam request',
   })
+
+  // Resubmit: now that the new request exists, remove the old rejected one.
+  if (resubmitFrom) {
+    await supabase
+      .from('special_exam_requests')
+      .delete()
+      .eq('id', resubmitFrom)
+      .eq('student_id', userId)
+      .eq('status', 'rejected')
+  }
 
   redirect(`/student/requests/${req.id}?submitted=1`)
 }

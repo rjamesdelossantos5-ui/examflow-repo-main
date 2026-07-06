@@ -16,8 +16,10 @@ export default async function RegistrarLayout({ children }: { children: React.Re
 
   if (!profile || !['registrar', 'admin'].includes(profile.role)) redirect('/login')
 
-  const notifications = await getNotifications(supabase, user.id, 'registrar')
-  const pending = await countByStatus(supabase, 'submitted')
+  const [notifications, pending] = await Promise.all([
+    getNotifications(supabase, user.id, 'registrar'),
+    countByStatus(supabase, 'submitted'),
+  ])
   const nav = [
     { label: 'Pending Queue', href: '/registrar', icon: 'inbox' as const, badge: pending },
     { label: 'Verified History', href: '/registrar/history', icon: 'history' as const },
