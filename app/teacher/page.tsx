@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { keepActive, computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import { keepActive } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
-import StaffWindowBanner from '@/components/StaffWindowBanner'
 import TeacherQueue from './TeacherQueue'
 
 export const metadata = { title: 'EXAMFLOW — Teacher Queue' }
@@ -30,7 +29,6 @@ export default async function TeacherPage() {
   // it through; signed URLs are fetched lazily where documents are viewable.
   const [activePeriod, meta] = await Promise.all([getActivePeriodCached(), getMyProfileMeta()])
   const activeId = activePeriod?.id ?? null
-  const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const requests = keepActive(raw ?? [], activeId).map((r) => {
     const prof = r.profiles as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null } | null
     const s = r as {
@@ -55,16 +53,5 @@ export default async function TeacherPage() {
     }
   })
 
-  return (
-    <>
-      <StaffWindowBanner
-        termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
-        open={win.open}
-        notStarted={win.notStarted}
-        daysRemaining={win.daysRemaining}
-        end={win.end}
-      />
-      <TeacherQueue requests={requests} />
-    </>
-  )
+  return <TeacherQueue requests={requests} />
 }

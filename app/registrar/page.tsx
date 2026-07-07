@@ -1,9 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { keepActive, computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import { keepActive } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
-import StaffWindowBanner from '@/components/StaffWindowBanner'
 import RegistrarQueue from './RegistrarQueue'
 
 export const metadata = { title: 'EXAMFLOW — Registrar Queue' }
@@ -30,7 +29,6 @@ export default async function RegistrarPage() {
   // term is activated in Settings.
   const activePeriod = await getActivePeriodCached()
   const activeId = activePeriod?.id ?? null
-  const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const requests = keepActive(raw ?? [], activeId).map((r) => {
     const prof = r.profiles as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null } | null
     const routedTeacher = r.routed_teacher as unknown as { full_name: string } | null
@@ -60,16 +58,5 @@ export default async function RegistrarPage() {
     }
   })
 
-  return (
-    <>
-      <StaffWindowBanner
-        termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
-        open={win.open}
-        notStarted={win.notStarted}
-        daysRemaining={win.daysRemaining}
-        end={win.end}
-      />
-      <RegistrarQueue requests={requests} />
-    </>
-  )
+  return <RegistrarQueue requests={requests} />
 }
