@@ -40,7 +40,7 @@ export default function SubmissionStatusModal(props: Props) {
   const title = termLabel ? `${termLabel} — ${base}` : base
   const headline = open
     ? daysRemaining != null
-      ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left to submit`
+      ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left to submit${props.end ? ` · closes ${fmtDate(props.end)}` : ''}`
       : 'Open — no active term set yet'
     : notStarted
       ? `Opens ${fmtDate(props.start)}`
@@ -65,9 +65,6 @@ export default function SubmissionStatusModal(props: Props) {
         </div>
         <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>{title}</h3>
         <p className="text-sm font-semibold mt-1" style={{ color: tone }}>{headline}</p>
-        {open && props.end && (
-          <p className="text-xs ef-muted mt-2">Deadline: <strong style={{ color: 'var(--card-foreground)' }}>{fmtDate(props.end)}</strong></p>
-        )}
         <button
           onClick={handleOk}
           className="w-full mt-5 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"

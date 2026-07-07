@@ -20,13 +20,13 @@ const IN_PROGRESS: RequestStatus[] = [
 
 function StatCard({ label, value, accent, icon }: { label: string; value: number; accent: string; icon: IconName }) {
   return (
-    <div className="ef-card rounded-xl shadow-sm p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: accent + '22' }}>
-        <Icon name={icon} className="w-5 h-5" style={{ color: accent }} />
+    <div className="ef-card rounded-xl shadow-sm p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0">
+      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: accent + '22' }}>
+        <Icon name={icon} className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: accent }} />
       </div>
-      <div>
-        <p className="text-2xl font-bold leading-none" style={{ color: 'var(--card-foreground)' }}>{value}</p>
-        <p className="text-xs ef-muted mt-1">{label}</p>
+      <div className="min-w-0">
+        <p className="text-lg sm:text-2xl font-bold leading-none" style={{ color: 'var(--card-foreground)' }}>{value}</p>
+        <p className="text-[11px] sm:text-xs ef-muted mt-1 truncate">{label}</p>
       </div>
     </div>
   )

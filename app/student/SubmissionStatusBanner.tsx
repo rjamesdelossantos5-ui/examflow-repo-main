@@ -41,7 +41,7 @@ export default function SubmissionStatusBanner(props: Props) {
   const title = termLabel ? `${termLabel} — ${base}` : base
   const headline = open
     ? daysRemaining != null
-      ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`
+      ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left${props.end ? ` · closes ${fmtDate(props.end)}` : ''}`
       : 'Open'
     : notStarted
       ? `Opens ${fmtDate(props.start)}`

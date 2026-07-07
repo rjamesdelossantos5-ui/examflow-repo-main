@@ -183,7 +183,7 @@ export async function getNotifications(
       if (win.open && new Date(active.submissionStart + 'T00:00:00').getTime() > seenMs) {
         items.push({
           id: `open-${active.id}`,
-          text: `${TERM_LABEL[active.term]} submissions are now open. You have ${win.daysRemaining} day${win.daysRemaining === 1 ? '' : 's'} to submit.`,
+          text: `${TERM_LABEL[active.term]} submissions are now open. You have ${win.daysRemaining} day${win.daysRemaining === 1 ? '' : 's'} to submit (closes ${win.end ? new Date(win.end).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}).`,
           href: '/student/submit',
           tone: 'success',
           icon: 'calendar',
