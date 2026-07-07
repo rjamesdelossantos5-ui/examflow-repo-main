@@ -118,13 +118,13 @@ export default function UserMenu({
               <button
                 type="button"
                 onClick={() => setConfirmLogout(false)}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border"
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                 style={{ color: 'var(--card-foreground)' }}
               >
                 Cancel
               </button>
               <form action={logout} className="flex-1">
-                <button type="submit" className="w-full py-2.5 rounded-lg font-semibold text-sm bg-red-600 text-white">
+                <button type="submit" className="w-full py-2.5 rounded-lg font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors">
                   Sign Out
                 </button>
               </form>
