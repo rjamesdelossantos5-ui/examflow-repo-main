@@ -365,16 +365,21 @@ export async function saveExamSchedule(input: ScheduleInput) {
   if (end && isNaN(end.getTime())) return { error: 'Invalid exam end date.' }
   if (end && end.getTime() < start.getTime()) return { error: 'Exam end must be on or after the start.' }
 
-  const { error } = await supabase
-    .from('exam_periods')
-    .update({
-      exam_day: start.toISOString(),
-      exam_end_day: end ? end.toISOString() : null,
-      exam_location: String(input.examLocation ?? '').trim().slice(0, 300) || null,
-      exam_bring: String(input.examBring ?? '').trim().slice(0, 1000) || null,
-      schedule_updated_at: new Date().toISOString(),
-    })
-    .eq('id', active.id)
+  const base = {
+    exam_day: start.toISOString(),
+    exam_end_day: end ? end.toISOString() : null,
+    exam_location: String(input.examLocation ?? '').trim().slice(0, 300) || null,
+    exam_bring: String(input.examBring ?? '').trim().slice(0, 1000) || null,
+  }
+
+  let { error } = await supabase.from('exam_periods').update({ ...base, schedule_updated_at: new Date().toISOString() }).eq('id', active.id)
+  if (error) {
+    // schedule_updated_at may not exist yet (migration_schedule_notify.sql not
+    // run) — retry without it so the actual schedule still saves. The bell
+    // notification / one-time popup for it just won't fire until that
+    // migration is applied, but the PH isn't blocked from setting the date.
+    ;({ error } = await supabase.from('exam_periods').update(base).eq('id', active.id))
+  }
   if (error) return { error: error.message }
 
   revalidatePath('/program-head/settings')
