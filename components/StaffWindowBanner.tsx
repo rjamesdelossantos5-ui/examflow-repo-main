@@ -6,8 +6,6 @@ interface Props {
   notStarted: boolean
   daysRemaining: number | null
   end: string | null // submission window end (ISO)
-  examDay: string | null
-  examEndDay: string | null
 }
 
 function fmt(iso: string | null) {
@@ -17,8 +15,9 @@ function fmt(iso: string | null) {
 
 /**
  * Compact banner for the Registrar and Teacher queues so they can see the
- * submission window and the special-exam date at a glance — i.e. how much time
- * is left to process the remaining forms.
+ * submission window at a glance — i.e. how much time is left to process the
+ * remaining forms. The special-exam date/location is a Program Head concern,
+ * not shown here.
  */
 export default function StaffWindowBanner(props: Props) {
   const { open, notStarted, daysRemaining, termLabel } = props
@@ -35,11 +34,6 @@ export default function StaffWindowBanner(props: Props) {
     : notStarted
       ? 'Submissions not yet open'
       : 'Submissions closed'
-  const examLabel = props.examDay
-    ? props.examEndDay
-      ? `${fmt(props.examDay)} → ${fmt(props.examEndDay)}`
-      : fmt(props.examDay)
-    : 'To be announced'
 
   return (
     <div className="ef-card rounded-xl shadow-sm px-4 py-3 mb-5 flex flex-wrap items-center gap-x-6 gap-y-1.5">
@@ -51,9 +45,6 @@ export default function StaffWindowBanner(props: Props) {
           <span className="font-bold" style={{ color: 'var(--card-foreground)' }}>{termLabel}</span>
           <span className="text-sm ml-2" style={{ color: tone }}>{state}</span>
         </span>
-      </span>
-      <span className="text-sm ef-muted">
-        Special exam: <strong style={{ color: 'var(--card-foreground)' }}>{examLabel}</strong>
       </span>
     </div>
   )

@@ -17,7 +17,7 @@ export default async function TeacherPage() {
     .from('special_exam_requests')
     .select(`
       *,
-      profiles!student_id(full_name),
+      profiles!student_id(full_name, student_number, course, year_level, section),
       subjects!inner(subject_code, subject_name, teacher_id),
       application_media(id, media_type, storage_path, file_name, mime_type),
       progress_logs(id, action, created_at, actor_role)
@@ -31,10 +31,21 @@ export default async function TeacherPage() {
   const activeId = activePeriod?.id ?? null
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const requests = keepActive(raw ?? [], activeId).map((r) => {
-    const prof = r.profiles as unknown as { full_name: string } | null
+    const prof = r.profiles as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null } | null
+    const s = r as {
+      snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null
+      snap_year_level?: number | null; snap_section?: string | null; snap_contact_number?: string | null
+    }
     return {
       ...r,
-      student: { full_name: (r as { snap_name?: string | null }).snap_name ?? prof?.full_name ?? '—' },
+      student: {
+        full_name: s.snap_name ?? prof?.full_name ?? '—',
+        student_number: s.snap_student_number ?? prof?.student_number ?? null,
+        course: s.snap_course ?? prof?.course ?? null,
+        year_level: s.snap_year_level ?? prof?.year_level ?? null,
+        section: s.snap_section ?? prof?.section ?? null,
+        contact_number: s.snap_contact_number ?? null,
+      },
       subject: r.subjects as unknown as { subject_code: string; subject_name: string },
       media: (r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[],
       logs: r.progress_logs ?? [],
@@ -50,8 +61,6 @@ export default async function TeacherPage() {
         notStarted={win.notStarted}
         daysRemaining={win.daysRemaining}
         end={win.end}
-        examDay={activePeriod?.examDay ?? null}
-        examEndDay={activePeriod?.examEndDay ?? null}
       />
       <TeacherQueue requests={requests} />
     </>

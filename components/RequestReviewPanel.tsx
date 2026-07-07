@@ -15,9 +15,18 @@ interface MediaItem {
   signed_url?: string
 }
 
+interface StudentInfo {
+  contact_number?: string | null
+  student_number?: string | null
+  course?: string | null
+  year_level?: number | null
+  section?: string | null
+}
+
 interface Props {
   requestId: string
   studentName: string
+  studentInfo?: StudentInfo
   subjectName: string
   subjectCode: string
   examType: string
@@ -43,6 +52,7 @@ interface Props {
 export default function RequestReviewPanel({
   requestId,
   studentName,
+  studentInfo,
   subjectName,
   subjectCode,
   examType,
@@ -111,6 +121,27 @@ export default function RequestReviewPanel({
             )}
           </div>
         </div>
+
+        {/* Form details — what the student filled in */}
+        {studentInfo && (
+          <div>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Form Details</h4>
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              {[
+                ['Contact No.', studentInfo.contact_number],
+                ['Student No.', studentInfo.student_number],
+                ['Course', studentInfo.course],
+                ['Year', studentInfo.year_level],
+                ['Section', studentInfo.section],
+              ].map(([label, value]) => (
+                <div key={label as string}>
+                  <dt className="text-[11px] text-gray-400">{label}</dt>
+                  <dd className="font-medium text-gray-700">{value ?? '—'}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
 
         {/* Documents list */}
         {showDocuments && (
