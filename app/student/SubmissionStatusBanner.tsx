@@ -93,7 +93,7 @@ export default function SubmissionStatusBanner(props: Props) {
 
       {hasTerm && (
         <p className="px-4 mt-2 text-sm">
-          <span className="ef-muted">Exam: </span>
+          <span className="ef-muted">Exam Date: </span>
           <strong style={{ color: 'var(--card-foreground)' }}>{examRange}</strong>
           {props.examLocation && (
             <>
