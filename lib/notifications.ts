@@ -1,16 +1,21 @@
 import type { NotificationItem } from '@/components/NotificationBell'
 import type { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/supabase/types'
-import { getActivePeriod } from '@/lib/examSettings'
+import { getActivePeriod, endedPeriodIds } from '@/lib/examSettings'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
-// Cheap indexed count of requests at a given status — used for the nav-tab badges.
+// Cheap indexed count of requests at a given status — used for the nav-tab
+// badges. Excludes requests from ended terms so the badge matches the (filtered)
+// queue below it.
 export async function countByStatus(supabase: SupabaseServer, status: string): Promise<number> {
-  const { count } = await supabase
+  const ended = await endedPeriodIds(supabase)
+  let q = supabase
     .from('special_exam_requests')
     .select('id', { count: 'exact', head: true })
     .eq('status', status)
+  if (ended.size) q = q.not('period_id', 'in', `(${[...ended].join(',')})`)
+  const { count } = await q
   return count ?? 0
 }
 
@@ -44,6 +49,10 @@ export async function getNotifications(
   // One alert per pending request in a reviewer's queue (newest first). The
   // href carries ?req=<id> so the queue opens straight to that request's
   // accept/reject panel instead of just landing on the page.
+  // Ended-term requests drop off the reviewer queues, so their alerts should
+  // drop off the bell too (keeps the bell in step with the queue + badge).
+  const ended = role === 'student' ? new Set<string>() : await endedPeriodIds(supabase)
+
   const queueItems = async (
     status: string,
     basePath: string,
@@ -51,12 +60,14 @@ export async function getNotifications(
     tone: NotificationItem['tone'],
     icon: NotificationItem['icon'],
   ): Promise<NotificationItem[]> => {
-    const { data } = await supabase
+    let q = supabase
       .from('special_exam_requests')
       .select('id, snap_name, profiles!student_id(full_name), subjects(subject_code)')
       .eq('status', status)
       .order('submitted_at', { ascending: false })
       .limit(MAX_ITEMS)
+    if (ended.size) q = q.not('period_id', 'in', `(${[...ended].join(',')})`)
+    const { data } = await q
 
     return ((data ?? []) as unknown as QueueRow[]).map((r) => ({
       id: r.id,
