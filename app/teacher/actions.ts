@@ -47,6 +47,45 @@ export async function approveRequest(requestId: string) {
   return { error: null }
 }
 
+// Approve every still-pending form for a student at once. RLS scopes the SELECT
+// to this teacher's own subjects, so foreign ids are dropped before the update.
+export async function approveAll(requestIds: string[]) {
+  const ctx = await requireTeacher()
+  if (!ctx) return { error: 'Unauthorized', count: 0 }
+  const { supabase, userId, role } = ctx
+
+  const ids = [...new Set(requestIds)].filter(Boolean)
+  if (!ids.length) return { error: 'Nothing to approve.', count: 0 }
+
+  // Ownership: RLS returns only forms for subjects this teacher owns.
+  const { data: owned } = await supabase.from('special_exam_requests').select('id').in('id', ids)
+  const ownedIds = (owned ?? []).map((o) => o.id)
+  if (!ownedIds.length) return { error: 'These requests are not in your queue.', count: 0 }
+
+  const { data: updated, error } = await supabase
+    .from('special_exam_requests')
+    .update({ status: 'approved_by_teacher' })
+    .in('id', ownedIds)
+    .eq('status', 'verified_by_registrar')
+    .select('id')
+
+  if (error) return { error: error.message, count: 0 }
+  const rows = updated ?? []
+  if (!rows.length) return { error: 'These requests were already handled.', count: 0 }
+
+  await supabase.from('progress_logs').insert(
+    rows.map((r) => ({
+      request_id: r.id,
+      actor_id: userId,
+      actor_role: role,
+      action: 'Approved by Subject Teacher — forwarded to Program Head',
+    }))
+  )
+
+  revalidatePath('/teacher')
+  return { error: null, count: rows.length }
+}
+
 export async function rejectTeacherRequest(requestId: string, reason: string) {
   const ctx = await requireTeacher()
   if (!ctx) return { error: 'Unauthorized' }

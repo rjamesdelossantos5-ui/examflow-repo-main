@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
 import { Icon } from '@/components/Icon'
-import { approveRequest, rejectTeacherRequest } from './actions'
+import { approveRequest, rejectTeacherRequest, approveAll } from './actions'
 import { TEACHER_REJECT } from '@/lib/rejectReasons'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -22,94 +22,152 @@ interface RequestRow {
   logs: { id: string; action: string; created_at: string; actor_role: string }[]
 }
 
+interface Group {
+  key: string
+  name: string
+  forms: RequestRow[]
+}
+
+function groupByStudent(rows: RequestRow[]): Group[] {
+  const map = new Map<string, Group>()
+  for (const r of rows) {
+    const key = r.student.full_name
+    const g = map.get(key)
+    if (g) g.forms.push(r)
+    else map.set(key, { key, name: r.student.full_name, forms: [r] })
+  }
+  return [...map.values()]
+}
+
 export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const reqParam = useSearchParams().get('req')
-  const [selected, setSelected] = useState<string | null>(reqParam)
   const [items, setItems] = useState(requests)
   useEffect(() => setItems(requests), [requests])
-  const active = items.find((r) => r.id === selected) ?? null
 
-  function dropActive() {
-    setItems((prev) => prev.filter((r) => r.id !== selected))
-    setSelected(null)
+  const groups = groupByStudent(items)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const active = groups.find((g) => g.key === selectedKey) ?? null
+  const detailRef = useRef<HTMLDivElement>(null)
+
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    if (!reqParam) return
+    const form = requests.find((r) => r.id === reqParam)
+    if (form) setSelectedKey(form.student.full_name)
+  }, [reqParam, requests])
+
+  useEffect(() => {
+    if (selectedKey && typeof window !== 'undefined' && window.innerWidth < 768) {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [selectedKey])
+
+  function dropForm(id: string) {
+    setItems((prev) => prev.filter((r) => r.id !== id))
   }
 
-  // Opening from a notification (?req=…) auto-selects that request and scrolls it into view.
-  useEffect(() => {
-    if (reqParam) {
-      setSelected(reqParam)
-      document.getElementById(`req-${reqParam}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  }, [reqParam])
+  function approveGroup(g: Group) {
+    const ids = g.forms.filter((f) => f.status === 'verified_by_registrar').map((f) => f.id)
+    if (!ids.length) return
+    setError(null)
+    startTransition(async () => {
+      const res = await approveAll(ids)
+      if (res.error) setError(res.error)
+      else setItems((prev) => prev.filter((r) => !ids.includes(r.id)))
+    })
+  }
 
   return (
     <div>
       <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
 
-      {items.length === 0 && (
-        <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">
-          No pending requests.
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
+          {error} <button className="underline ml-1" onClick={() => setError(null)}>Dismiss</button>
         </div>
       )}
 
+      {groups.length === 0 && (
+        <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">No pending requests.</div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-4 items-start">
+        {/* Student list */}
         <div className="space-y-2.5">
-          {items.map((r) => (
-            <button
-              key={r.id}
-              id={`req-${r.id}`}
-              onClick={() => setSelected(r.id === selected ? null : r.id)}
-              className={`ef-card w-full text-left rounded-xl shadow-sm p-4 transition-all hover:shadow-md ${
-                selected === r.id ? 'ring-2 ring-[var(--sti-gold)]' : ''
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-semibold truncate" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</p>
-                  <p className="text-sm ef-muted truncate">{r.subject.subject_code} — {r.subject.subject_name}</p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r.exam_type === 'paid' ? 'bg-yellow-100 text-yellow-700' : 'bg-teal-100 text-teal-700'}`}>
-                    {r.exam_type === 'paid' ? 'Paid' : 'Excused'}
+          {groups.map((g) => {
+            const pending = g.forms.filter((f) => f.status === 'verified_by_registrar').length
+            const anyResub = g.forms.some((f) => f.resubmitted)
+            return (
+              <button
+                key={g.key}
+                onClick={() => setSelectedKey(g.key === selectedKey ? null : g.key)}
+                className={`ef-card w-full text-left rounded-xl shadow-sm p-4 transition-all hover:shadow-md ${selectedKey === g.key ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate flex items-center gap-2" style={{ color: 'var(--card-foreground)' }}>
+                      {g.name}
+                      {anyResub && <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
+                    </p>
+                    <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_code).join(', ')}</p>
+                  </div>
+                  <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
+                    {pending} form{pending === 1 ? '' : 's'}
                   </span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700">✓ Registrar verified</span>
-                  {r.resubmitted && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                 </div>
-              </div>
-              <p className="text-xs ef-muted mt-1">{new Date(r.submitted_at).toLocaleDateString()}</p>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
 
-        {/* Detail panel — sticky so it stays in view while scanning the list */}
-        {items.length > 0 && (
-          <div className="md:sticky md:top-20">
+        {/* Detail */}
+        {groups.length > 0 && (
+          <div className="md:sticky md:top-20" ref={detailRef}>
             {active ? (
-              <div className="ef-card rounded-xl shadow-sm p-6">
-                <RequestReviewPanel
-                  requestId={active.id}
-                  studentName={active.student.full_name}
-                  subjectName={active.subject.subject_name}
-                  subjectCode={active.subject.subject_code}
-                  examType={active.exam_type}
-                  excusedReason={active.excused_reason}
-                  otherReason={active.other_reason}
-                  status={active.status}
-                  media={active.media}
-                  logs={active.logs}
-                  onVerify={approveRequest}
-                  onReject={rejectTeacherRequest}
-                  onDone={dropActive}
-                  rejectPresets={TEACHER_REJECT}
-                  verifyLabel="Approve & Forward to Program Head"
-                  actionableStatus="verified_by_registrar"
-                  showDocuments={false}
-                />
+              <div className="space-y-3">
+                {active.forms.filter((f) => f.status === 'verified_by_registrar').length > 1 && (
+                  <button
+                    onClick={() => approveGroup(active)}
+                    disabled={isPending}
+                    className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                  >
+                    {isPending ? 'Approving…' : `Approve all ${active.forms.filter((f) => f.status === 'verified_by_registrar').length} forms`}
+                  </button>
+                )}
+                {active.forms.map((f) => (
+                  <div key={f.id} className="ef-card rounded-xl shadow-sm p-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide ef-muted mb-2">
+                      {f.subject.subject_code} — {f.subject.subject_name}
+                    </p>
+                    <RequestReviewPanel
+                      requestId={f.id}
+                      studentName={f.student.full_name}
+                      subjectName={f.subject.subject_name}
+                      subjectCode={f.subject.subject_code}
+                      examType={f.exam_type}
+                      excusedReason={f.excused_reason}
+                      otherReason={f.other_reason}
+                      status={f.status}
+                      media={f.media}
+                      logs={f.logs}
+                      onVerify={approveRequest}
+                      onReject={rejectTeacherRequest}
+                      onDone={() => dropForm(f.id)}
+                      rejectPresets={TEACHER_REJECT}
+                      verifyLabel="Approve & Forward to Program Head"
+                      actionableStatus="verified_by_registrar"
+                      showDocuments={false}
+                    />
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="hidden md:flex flex-col items-center justify-center rounded-xl border-2 border-dashed ef-border px-6 py-20 text-center ef-muted">
                 <Icon name="file" className="w-8 h-8 mb-2 opacity-60" />
-                <p className="text-sm">Select a request to review its details.</p>
+                <p className="text-sm">Select a student to review their forms.</p>
               </div>
             )}
           </div>

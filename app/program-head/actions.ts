@@ -134,6 +134,51 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
   return { error: null }
 }
 
+// Accept every first-approval form for a student at once. Excused forms finish
+// (scheduled); paid forms wait for the receipt (accepted). Only rows still at
+// 'approved_by_teacher' are touched.
+export async function acceptAll(requestIds: string[]) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized', count: 0 }
+  const { supabase, userId, role } = ctx
+
+  const ids = [...new Set(requestIds)].filter(Boolean)
+  if (!ids.length) return { error: 'Nothing to accept.', count: 0 }
+
+  const { data: forms } = await supabase
+    .from('special_exam_requests')
+    .select('id, exam_type')
+    .in('id', ids)
+    .eq('status', 'approved_by_teacher')
+  const rows = (forms ?? []) as { id: string; exam_type: string }[]
+  if (!rows.length) return { error: 'These requests were already handled.', count: 0 }
+
+  const excusedIds = rows.filter((r) => r.exam_type === 'excused').map((r) => r.id)
+  const paidIds = rows.filter((r) => r.exam_type !== 'excused').map((r) => r.id)
+
+  if (excusedIds.length) {
+    await supabase.from('special_exam_requests').update({ status: 'scheduled' }).in('id', excusedIds).eq('status', 'approved_by_teacher')
+  }
+  if (paidIds.length) {
+    await supabase.from('special_exam_requests').update({ status: 'accepted' }).in('id', paidIds).eq('status', 'approved_by_teacher')
+  }
+
+  await supabase.from('progress_logs').insert(
+    rows.map((r) => ({
+      request_id: r.id,
+      actor_id: userId,
+      actor_role: role,
+      action: r.exam_type === 'excused'
+        ? 'Accepted & scheduled by Program Head (excused — no receipt needed)'
+        : 'Accepted by Program Head — awaiting payment receipt',
+    }))
+  )
+
+  revalidatePath('/program-head')
+  revalidatePath('/program-head/students')
+  return { error: null, count: rows.length }
+}
+
 export async function rejectPHRequest(requestId: string, reason: string) {
   const ctx = await requirePH()
   if (!ctx) return { error: 'Unauthorized' }
