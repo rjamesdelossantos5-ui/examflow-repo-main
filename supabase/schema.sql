@@ -213,11 +213,15 @@ returns user_role language sql security definer stable as $$
 $$;
 
 -- ── profiles ──────────────────────────────────
--- Users can read their own profile; staff can read all (needed for joins)
+-- Users can read their own profile; staff can read all (needed for joins).
+-- Everyone (including students) can read a TEACHER's row — a teacher's name is
+-- normal directory info, and students need it when picking a section/teacher
+-- on the submit form.
 create policy "profiles_select" on profiles
   for select using (
     id = auth.uid() or
-    current_user_role() in ('admin', 'registrar', 'subject_teacher', 'program_head')
+    current_user_role() in ('admin', 'registrar', 'subject_teacher', 'program_head') or
+    role = 'subject_teacher'
   );
 
 -- Admin can insert/update/delete any profile
