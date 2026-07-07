@@ -57,7 +57,7 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
         <div className="ef-card rounded-xl shadow-sm p-4 text-sm ef-muted">No active term — students can&apos;t submit until you set one below.</div>
       )}
 
-      <WindowForm active={active} onError={setError} isPending={isPending} startTransition={startTransition} />
+      <WindowForm active={active} periods={periods} onError={setError} isPending={isPending} startTransition={startTransition} />
       <ScheduleForm active={active} onError={setError} isPending={isPending} startTransition={startTransition} />
 
       {periods.length > 0 && (
@@ -130,18 +130,41 @@ type FormProps = {
 }
 
 // ── Form 1: submission window ──────────────────────────────────────────────
-function WindowForm({ active, onError, isPending, startTransition }: FormProps) {
+function WindowForm({ active, periods, onError, isPending, startTransition }: FormProps & { periods: ExamPeriod[] }) {
   const [term, setTerm] = useState<Term>(active?.term ?? 'prelim')
   const [start, setStart] = useState(active?.submissionStart ?? '')
   const [days, setDays] = useState(active?.windowDays ?? 7)
   const [saved, setSaved] = useState(false)
+  const [info, setInfo] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  // The saved period for whichever term is currently selected (not
+  // necessarily the active one — the PH can set up a future term here).
+  const existing = periods.find((p) => p.term === term) ?? null
+  const alreadySet = !!existing
+
+  function unchanged() {
+    return (
+      !!existing &&
+      start === existing.submissionStart &&
+      days === existing.windowDays &&
+      existing.isActive
+    )
+  }
 
   const win = computeWindow(start || null, days)
   const endLabel = win.end ? new Date(win.end).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '—'
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    onError(null); setSaved(false)
+    onError(null); setSaved(false); setInfo(null)
+    if (!start) { onError('Set a submission start date.'); return }
+    if (unchanged()) { setInfo('You haven’t changed anything, so there’s nothing to save.'); return }
+    setConfirmOpen(true) // in-app confirmation instead of a browser popup
+  }
+
+  function doSave() {
+    setConfirmOpen(false)
     startTransition(async () => {
       const res = await savePeriod({ term, submissionStart: start, windowDays: days })
       if (res.error) onError(res.error)
@@ -156,6 +179,12 @@ function WindowForm({ active, onError, isPending, startTransition }: FormProps) 
         <p className="text-sm ef-muted">When students can submit their request for this term.</p>
       </div>
       {saved && <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">Window saved and set active.</div>}
+      {info && <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 text-sm text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-300">{info}</div>}
+      {existing && !saved && (
+        <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
+          Current: <strong>Opens {new Date(existing.submissionStart + 'T00:00:00').toLocaleDateString()} · {existing.windowDays} days</strong>{existing.isActive ? '' : ' (not active)'}
+        </div>
+      )}
 
       <div>
         <label className={label}>Term *</label>
@@ -180,8 +209,34 @@ function WindowForm({ active, onError, isPending, startTransition }: FormProps) 
       </div>
 
       <button type="submit" disabled={isPending} className="px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-        {isPending ? 'Saving…' : 'Save & set active'}
+        {isPending ? 'Saving…' : alreadySet ? 'Change window' : 'Save & set active'}
       </button>
+
+      {/* In-app confirmation (replaces the browser confirm dialog) */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmOpen(false)}>
+          <div className="ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>
+              {alreadySet ? 'Change the submission window?' : 'Set the submission window?'}
+            </h3>
+            <div className="mt-3 space-y-2 text-sm">
+              {existing && (
+                <p className="ef-muted">Current: <span style={{ color: 'var(--card-foreground)' }}>Opens {new Date(existing.submissionStart + 'T00:00:00').toLocaleDateString()} · {existing.windowDays} days</span></p>
+              )}
+              <p className="ef-muted">
+                New: <strong style={{ color: 'var(--card-foreground)' }}>Opens {new Date(start + 'T00:00:00').toLocaleDateString()} · {days} days (closes {endLabel})</strong>
+              </p>
+              <p className="ef-muted">This makes {TERM_LABEL[term]} the active term — students will see it right away.</p>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
+              <button type="button" onClick={doSave} className="flex-1 py-2.5 rounded-lg font-semibold text-sm" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                {alreadySet ? 'Yes, change it' : 'Yes, set it'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }
