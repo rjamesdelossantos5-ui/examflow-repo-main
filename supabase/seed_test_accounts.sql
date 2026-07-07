@@ -15,15 +15,15 @@
 --
 -- Accounts (all password Exam@123):
 --   admin@examflow.com          admin
---   registrar@examflow.com      registrar
---   ict.teacher1@examflow.com   Joshua Galamiton (ICT)
---   ict.teacher2@examflow.com   Kid Valles       (ICT)
+--   santos@examflow.com         Maria Santos (registrar)
+--   galamiton@examflow.com      Joshua Galamiton (ICT)
+--   valles@examflow.com         Kid Valles       (ICT)
 --   shs.teacher1@examflow.com   Maria Clara      (SHS)
 --   shs.teacher2@examflow.com   Alice Go         (SHS)
---   ict.head@examflow.com       Ms. Lara Camille Vergara (ICT Head)
---   shs.head@examflow.com       Ms. Grace Pangilinan     (SHS Head)
---   student1@examflow.com       student (course BSIT)
---   student2@examflow.com       student (course STEM)
+--   vergara@examflow.com        Ms. Lara Camille Vergara (ICT Head)
+--   pangalinan@examflow.com     Ms. Grace Pangilinan     (SHS Head)
+--   student1@examflow.com       Jose Rizal, student (course BSIT)
+--   penduko@examflow.com        Pedro Penduko, student (course STEM)
 --
 -- The student-facing Course dropdown is trimmed to exactly 2 for testing:
 -- BSIT (tertiary) and STEM (senior high) — matching the offerings below.
@@ -91,16 +91,16 @@ SELECT id INTO ict_id FROM departments WHERE name = 'ICT Department';
 SELECT id INTO shs_id FROM departments WHERE name = 'Senior High School';
 
 -- ── Accounts ──────────────────────────────────
-admin_id := _seed_user('admin@examflow.com',        pw, 'System Admin',        'admin');
-reg_id   := _seed_user('registrar@examflow.com',    pw, 'Maria Santos',        'registrar');
-t_g      := _seed_user('ict.teacher1@examflow.com', pw, 'Instructor Joshua Galamiton', 'subject_teacher');
-t_gm     := _seed_user('ict.teacher2@examflow.com', pw, 'Instructor Kid Valles',       'subject_teacher');
+admin_id := _seed_user('admin@examflow.com',       pw, 'System Admin',        'admin');
+reg_id   := _seed_user('santos@examflow.com',      pw, 'Maria Santos',        'registrar');
+t_g      := _seed_user('galamiton@examflow.com',   pw, 'Instructor Joshua Galamiton', 'subject_teacher');
+t_gm     := _seed_user('valles@examflow.com',       pw, 'Instructor Kid Valles',       'subject_teacher');
 t_p      := _seed_user('shs.teacher1@examflow.com', pw, 'Instructor Maria Clara',      'subject_teacher');
 t_l      := _seed_user('shs.teacher2@examflow.com', pw, 'Instructor Alice Go',         'subject_teacher');
-ph_ict   := _seed_user('ict.head@examflow.com',     pw, 'Ms. Lara Camille Vergara',    'program_head');
-ph_shs   := _seed_user('shs.head@examflow.com',     pw, 'Ms. Grace Pangilinan',        'program_head');
-stu1     := _seed_user('student1@examflow.com',     pw, 'Jose Rizal',          'student');
-stu2     := _seed_user('student2@examflow.com',     pw, 'Pedro Penduko',       'student');
+ph_ict   := _seed_user('vergara@examflow.com',     pw, 'Ms. Lara Camille Vergara',    'program_head');
+ph_shs   := _seed_user('pangalinan@examflow.com',  pw, 'Ms. Grace Pangilinan',        'program_head');
+stu1     := _seed_user('student1@examflow.com',    pw, 'Jose Rizal',          'student');
+stu2     := _seed_user('penduko@examflow.com',     pw, 'Pedro Penduko',       'student');
 
 -- ── Roles + departments (trigger defaults everyone to 'student') ──
 UPDATE profiles SET role='admin'                              WHERE id=admin_id;
