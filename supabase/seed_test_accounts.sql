@@ -130,6 +130,14 @@ UPDATE profiles SET role='program_head',    department_id=shs_id WHERE id=ph_shs
 UPDATE profiles SET role='student', student_number='2024-00001', course='BSIT', year_level=2, section='BSIT 2-201', department_id=ict_id WHERE id=stu1;
 UPDATE profiles SET role='student', student_number='2024-00002', course='STEM', year_level=1, section='STEM 11-A', department_id=shs_id WHERE id=stu2;
 
+-- ── Wipe old test requests first ───────────────
+-- Rebuilding subjects/offerings below requires them to be unreferenced.
+-- special_exam_requests.subject_id is "on delete restrict", so any leftover
+-- test submissions from previous runs block the DELETEs further down unless
+-- cleared here (this cascades to progress_logs / application_media /
+-- override_requests for those requests automatically).
+DELETE FROM special_exam_requests;
+
 -- ── Subjects (teacher_id null: routing is via class_offerings) ──
 DELETE FROM subjects;
 INSERT INTO subjects (subject_code, subject_name, department_id) VALUES
