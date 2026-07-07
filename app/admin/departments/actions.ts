@@ -3,10 +3,16 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
+// Admin CRUD for departments. Deleting a department does NOT delete its
+// subjects/teachers — their department_id becomes null (FK is on delete set
+// null, see supabase/schema.sql).
+
 function sanitize(v: unknown) {
   return String(v ?? '').trim().slice(0, 200)
 }
 
+// All three actions re-verify the admin role server-side; returning null
+// makes the caller answer "Unauthorized" without touching the DB.
 async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

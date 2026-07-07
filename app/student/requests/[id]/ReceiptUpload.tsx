@@ -7,6 +7,12 @@ import { compressImage } from '@/lib/compressImage'
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_MB = 5
 
+/**
+ * Paid-exam step: after acceptance the student pays the ₱200 fee at the
+ * Cashier and uploads the official receipt here, which moves the request to
+ * 'receipt_uploaded' for the Program Head's second approval. Photos are
+ * compressed in the browser before upload (phone camera shots are huge).
+ */
 export default function ReceiptUpload({ requestId, rejectedReason }: { requestId: string; rejectedReason?: string | null }) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -37,6 +43,8 @@ export default function ReceiptUpload({ requestId, rejectedReason }: { requestId
     setBusy(true)
     const compressed = await compressImage(file)
     setBusy(false)
+    // Swap the compressed file back INTO the <input> so the normal FormData
+    // submit picks it up — the server action never knows compression happened.
     if (compressed !== file && inputRef.current) {
       const dt = new DataTransfer()
       dt.items.add(compressed)

@@ -1,5 +1,7 @@
 import type { RequestStatus } from '@/lib/supabase/types'
 
+// One color per workflow status, used everywhere a request is listed so the
+// same status always looks the same (student, registrar, teacher, PH views).
 const CONFIG: Record<RequestStatus, { label: string; classes: string }> = {
   submitted:              { label: 'Submitted',              classes: 'bg-blue-100 text-blue-700' },
   verified_by_registrar:  { label: 'Verified by Registrar',  classes: 'bg-purple-100 text-purple-700' },

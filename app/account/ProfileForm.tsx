@@ -29,6 +29,12 @@ function Banner({ kind, text }: { kind: 'ok' | 'err'; text: string }) {
   )
 }
 
+/**
+ * My Account page: edit your own name (and, for students, the details that
+ * pre-fill the submit form — student number, course, year, section). Email
+ * and role are read-only here; only the admin can change those. Note: edits
+ * do NOT rewrite past requests — those keep the snapshot taken at submit time.
+ */
 export default function ProfileForm({ profile }: { profile: Profile }) {
   const isStudent = profile.role === 'student'
   const [isPending, startTransition] = useTransition()

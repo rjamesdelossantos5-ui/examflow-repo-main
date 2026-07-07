@@ -7,6 +7,12 @@ import { validateRows, importSubjects, type ParsedRow } from './actions'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
+/**
+ * Admin bulk-import of the semester's subjects from an Excel file.
+ * Flow: pick .xlsx → parse in the browser (SheetJS) → server validates every
+ * row (department/teacher must exist) → admin reviews the preview table →
+ * confirm writes to the DB. Nothing is saved until "Confirm Import".
+ */
 export default function SubjectUpload({
   subjects,
   departments,
@@ -22,6 +28,9 @@ export default function SubjectUpload({
   const [fileError, setFileError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // Parse the chosen .xlsx locally and send the rows to the server for
+  // validation — column matching is case-insensitive and by header NAME, so
+  // the school's column order doesn't matter.
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -72,6 +81,8 @@ export default function SubjectUpload({
     reader.readAsArrayBuffer(file)
   }
 
+  // Write the previewed rows. 'upsert' adds/updates by subject code;
+  // 'replace' wipes the subject list first (start-of-semester reset).
   function handleImport() {
     if (!preview) return
     startTransition(async () => {

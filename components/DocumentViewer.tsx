@@ -11,7 +11,14 @@ export interface ViewerMedia {
   signed_url?: string
 }
 
+/**
+ * Grid of a request's uploaded documents (IDs, signatures, certificates) for
+ * reviewers. Images open in a fullscreen lightbox; PDFs/other files fall back
+ * to an "Open original" link. All URLs are short-lived signed URLs — the
+ * storage bucket is private (see lib/supabase/getSignedUrls.ts).
+ */
 export default function DocumentViewer({ media }: { media: ViewerMedia[] }) {
+  // Holds the signed URL of the image being zoomed; null = lightbox closed.
   const [lightbox, setLightbox] = useState<string | null>(null)
 
   if (media.length === 0) {

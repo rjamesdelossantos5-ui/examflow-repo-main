@@ -29,6 +29,9 @@ interface Group {
   forms: RequestRow[]
 }
 
+// One student = one card, no matter how many subjects they filed for. The
+// teacher reviews per-student (all that student's forms open together in the
+// detail pane) instead of hunting the same name across the list.
 function groupByStudent(rows: RequestRow[]): Group[] {
   const map = new Map<string, Group>()
   for (const r of rows) {
@@ -40,8 +43,16 @@ function groupByStudent(rows: RequestRow[]): Group[] {
   return [...map.values()]
 }
 
+/**
+ * Teacher's pending queue: master list of students on the left, the selected
+ * student's forms (approve / reject panels) on the right. Approving or
+ * rejecting removes the form from the list immediately (optimistic) — the
+ * server round trip happens in the background via the actions in ./actions.
+ */
 export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const reqParam = useSearchParams().get('req')
+  // Local copy of the server-rendered list so handled forms can be dropped
+  // instantly; re-synced whenever the server sends a fresh list (LiveRefresh).
   const [items, setItems] = useState(requests)
   useEffect(() => setItems(requests), [requests])
 
@@ -53,12 +64,16 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // ?req=<id> (from a notification-bell link) opens straight to that
+  // student's forms instead of landing on an unselected queue.
   useEffect(() => {
     if (!reqParam) return
     const form = requests.find((r) => r.id === reqParam)
     if (form) setSelectedKey(form.student.full_name)
   }, [reqParam, requests])
 
+  // On phones the detail pane renders BELOW the list, so scroll it into view
+  // when a student is picked (on desktop it's already visible side-by-side).
   useEffect(() => {
     if (selectedKey && typeof window !== 'undefined' && window.innerWidth < 768) {
       detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -69,6 +84,8 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
     setItems((prev) => prev.filter((r) => r.id !== id))
   }
 
+  // "Approve all N forms" — one click approves every still-pending form of
+  // the selected student (single DB update via approveAll).
   function approveGroup(g: Group) {
     const ids = g.forms.filter((f) => f.status === 'verified_by_registrar').map((f) => f.id)
     if (!ids.length) return

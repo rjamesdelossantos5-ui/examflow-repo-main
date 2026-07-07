@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import type { Department } from '@/lib/supabase/types'
 import { createDepartment, updateDepartment, deleteDepartment } from './actions'
 
+// Admin department list: inline add / rename / delete, one row per
+// department. All writes go through the server actions in ./actions.
 export default function DeptManager({ departments }: { departments: Department[] }) {
   const [editing, setEditing] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)

@@ -15,11 +15,17 @@ const ROLE_LABELS: Record<UserRole, string> = {
   student: 'Student',
 }
 
+// "Maria Santos" → "MS" for the round avatar chip.
 function initials(name: string) {
   const parts = name.trim().split(/\s+/)
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U'
 }
 
+/**
+ * Header account chip + dropdown (My Account, theme toggle, Sign Out).
+ * Sign Out is deliberately two-step — a confirm dialog — so a stray tap on a
+ * phone can't log the user out.
+ */
 export default function UserMenu({
   userName,
   email,
@@ -33,6 +39,7 @@ export default function UserMenu({
   const [confirmLogout, setConfirmLogout] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  // Close the dropdown on any click outside of it.
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)

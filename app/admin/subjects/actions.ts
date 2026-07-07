@@ -27,6 +27,10 @@ export interface ParsedRow {
   error?: string
 }
 
+// Pre-import check for the Excel preview: resolves department names and
+// teacher emails to their DB ids in one pass (two lookups total, not two per
+// row) and marks anything unknown with a row-level error so the admin can fix
+// the file BEFORE anything is written.
 export async function validateRows(rows: ParsedRow[]): Promise<ParsedRow[]> {
   const supabase = await requireAdmin()
   if (!supabase) return rows.map((r) => ({ ...r, error: 'Unauthorized' }))
@@ -59,6 +63,10 @@ export async function validateRows(rows: ParsedRow[]): Promise<ParsedRow[]> {
   })
 }
 
+// Writes the validated rows. subject_code is the natural key: an existing
+// code updates that subject in place (keeping its id, so existing exam
+// requests stay linked), a new code inserts. 'replace' clears the whole
+// subject list first — the start-of-semester reset.
 export async function importSubjects(rows: ParsedRow[], mode: 'replace' | 'upsert') {
   const supabase = await requireAdmin()
   if (!supabase) return { error: 'Unauthorized', added: 0, updated: 0, skipped: 0 }

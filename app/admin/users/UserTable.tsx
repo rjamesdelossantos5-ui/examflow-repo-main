@@ -13,6 +13,12 @@ const ROLE_LABELS: Record<string, string> = {
   student: 'Student',
 }
 
+/**
+ * Admin user management: create accounts (any role), activate/deactivate,
+ * delete, and grant Program Heads the "override" power (accept a request that
+ * the registrar/teacher haven't acted on yet). All mutations go through the
+ * server actions in ./actions, which re-check the admin role server-side.
+ */
 export default function UserTable({
   users,
   departments,

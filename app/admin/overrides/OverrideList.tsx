@@ -26,6 +26,12 @@ const STAGE_LABEL: Record<string, string> = {
   approved_by_teacher: 'Waiting for Program Head',
 }
 
+/**
+ * Admin inbox for Program-Head override requests. Approve = the PH may accept
+ * the student's request even though the Registrar/Teacher haven't acted yet
+ * (used when a reviewer is absent near the exam date). Decided rows disappear
+ * from the list immediately.
+ */
 export default function OverrideList({ initial }: { initial: OverrideRow[] }) {
   const [rows, setRows] = useState(initial)
   const [busy, setBusy] = useState<string | null>(null)

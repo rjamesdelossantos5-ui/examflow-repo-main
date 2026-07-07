@@ -5,6 +5,7 @@ export interface NavItem {
   href: string
 }
 
+// Top-nav tabs per role (kept in one map so a new page only needs one edit).
 export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
   student: [],
   registrar: [
@@ -30,6 +31,7 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
   ],
 }
 
+// Where each role lands right after login (see app/login/actions.ts).
 export const ROLE_HOME: Record<UserRole, string> = {
   admin: '/admin',
   registrar: '/registrar',

@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
+// Admin decisions on Program-Head override requests (a PH asking to
+// fast-track a request stuck earlier in the pipeline).
+
+// Every action re-checks the caller is an admin server-side — the UI hiding
+// a button is not a security boundary.
 async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -12,6 +17,9 @@ async function requireAdmin() {
   return { supabase, userId: user.id }
 }
 
+// Shared approve/deny path. The .eq('status', 'pending') guard means a
+// request that was already decided (double-click, second admin) updates 0
+// rows and reports "already handled" instead of silently re-deciding.
 async function decide(id: string, status: 'approved' | 'denied') {
   const ctx = await requireAdmin()
   if (!ctx) return { error: 'Unauthorized' }
