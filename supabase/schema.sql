@@ -1,5 +1,15 @@
 -- EXAMFLOW Database Schema
--- Run this in the Supabase SQL editor
+--
+-- ⚠️  FRESH DATABASE ONLY. This file uses `create type` / `create table` /
+-- `create policy`, which ERROR if the object already exists (Postgres has no
+-- `create type if not exists`). Running it on a database that already has these
+-- objects fails on the first `create type` — that failure is harmless (nothing
+-- is changed) but nothing gets applied either.
+--
+-- To update an EXISTING database, run the individual migration_*.sql files
+-- instead — those are written to be re-run safely.
+--
+-- Run this in the Supabase SQL editor (new project only).
 
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
