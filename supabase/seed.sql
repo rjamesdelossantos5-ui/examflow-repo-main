@@ -4,6 +4,36 @@
 
 create extension if not exists pgcrypto;
 
+create or replace function _seed_user(p_email text, p_password text, p_name text, p_role text)
+returns uuid language plpgsql as $$
+declare uid uuid;
+begin
+  delete from auth.users where email = p_email;
+  insert into auth.users
+    (instance_id, id, aud, role, email, encrypted_password,
+     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values
+    ('00000000-0000-0000-0000-000000000000', uuid_generate_v4(),
+     'authenticated', 'authenticated', p_email,
+     crypt(p_password, gen_salt('bf')), now(),
+     '{"provider":"email","providers":["email"]}',
+     jsonb_build_object('full_name', p_name, 'role', p_role),
+     now(), now())
+  returning id into uid;
+
+  -- Supabase Auth verifies email/password logins against auth.identities, not
+  -- just auth.users. Without this row the account exists but every login
+  -- attempt fails with "Invalid email or password".
+  insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+  values (
+    gen_random_uuid(), uid,
+    jsonb_build_object('sub', uid::text, 'email', p_email),
+    'email', uid::text, now(), now(), now()
+  );
+
+  return uid;
+end $$;
+
 DO $$
 DECLARE
   admin_id uuid;
@@ -21,73 +51,12 @@ ON CONFLICT (name) DO NOTHING;
 
 SELECT id INTO dept_id FROM departments WHERE name = 'College of Computer Studies';
 
--- ── Helper: upsert one auth user, return its id ─
--- We delete + re-insert so passwords are always reset
-
-DELETE FROM auth.users WHERE email = 'admin@examflow.com';
-INSERT INTO auth.users
-  (instance_id, id, aud, role, email, encrypted_password,
-   email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-VALUES
-  ('00000000-0000-0000-0000-000000000000', uuid_generate_v4(),
-   'authenticated', 'authenticated', 'admin@examflow.com',
-   crypt('Admin@123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}',
-   jsonb_build_object('full_name','Admin User','role','admin'),
-   now(), now());
-SELECT id INTO admin_id FROM auth.users WHERE email = 'admin@examflow.com';
-
-DELETE FROM auth.users WHERE email = 'registrar@examflow.com';
-INSERT INTO auth.users
-  (instance_id, id, aud, role, email, encrypted_password,
-   email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-VALUES
-  ('00000000-0000-0000-0000-000000000000', uuid_generate_v4(),
-   'authenticated', 'authenticated', 'registrar@examflow.com',
-   crypt('Registrar@123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}',
-   jsonb_build_object('full_name','Maria Santos','role','registrar'),
-   now(), now());
-SELECT id INTO reg_id FROM auth.users WHERE email = 'registrar@examflow.com';
-
-DELETE FROM auth.users WHERE email = 'teacher@examflow.com';
-INSERT INTO auth.users
-  (instance_id, id, aud, role, email, encrypted_password,
-   email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-VALUES
-  ('00000000-0000-0000-0000-000000000000', uuid_generate_v4(),
-   'authenticated', 'authenticated', 'teacher@examflow.com',
-   crypt('Teacher@123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}',
-   jsonb_build_object('full_name','Juan Dela Cruz','role','subject_teacher'),
-   now(), now());
-SELECT id INTO teach_id FROM auth.users WHERE email = 'teacher@examflow.com';
-
-DELETE FROM auth.users WHERE email = 'programhead@examflow.com';
-INSERT INTO auth.users
-  (instance_id, id, aud, role, email, encrypted_password,
-   email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-VALUES
-  ('00000000-0000-0000-0000-000000000000', uuid_generate_v4(),
-   'authenticated', 'authenticated', 'programhead@examflow.com',
-   crypt('PHead@123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}',
-   jsonb_build_object('full_name','Dr. Reyes','role','program_head'),
-   now(), now());
-SELECT id INTO ph_id FROM auth.users WHERE email = 'programhead@examflow.com';
-
-DELETE FROM auth.users WHERE email = 'student@examflow.com';
-INSERT INTO auth.users
-  (instance_id, id, aud, role, email, encrypted_password,
-   email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-VALUES
-  ('00000000-0000-0000-0000-000000000000', uuid_generate_v4(),
-   'authenticated', 'authenticated', 'student@examflow.com',
-   crypt('Student@123', gen_salt('bf')), now(),
-   '{"provider":"email","providers":["email"]}',
-   jsonb_build_object('full_name','Jose Rizal','role','student'),
-   now(), now());
-SELECT id INTO stu_id FROM auth.users WHERE email = 'student@examflow.com';
+-- ── Accounts ───────────────────────────────────
+admin_id := _seed_user('admin@examflow.com',      'Admin@123',     'Admin User',   'admin');
+reg_id   := _seed_user('registrar@examflow.com',  'Registrar@123', 'Maria Santos', 'registrar');
+teach_id := _seed_user('teacher@examflow.com',    'Teacher@123',   'Juan Dela Cruz', 'subject_teacher');
+ph_id    := _seed_user('programhead@examflow.com','PHead@123',     'Dr. Reyes',    'program_head');
+stu_id   := _seed_user('student@examflow.com',    'Student@123',   'Jose Rizal',   'student');
 
 -- ── Fix roles (trigger defaults everyone to 'student') ─
 UPDATE profiles SET role = 'admin'   WHERE id = admin_id;
@@ -109,3 +78,5 @@ VALUES ('IT101', 'Introduction to Programming', dept_id, teach_id)
 ON CONFLICT (subject_code, department_id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id;
 
 END $$;
+
+drop function if exists _seed_user(text, text, text, text);

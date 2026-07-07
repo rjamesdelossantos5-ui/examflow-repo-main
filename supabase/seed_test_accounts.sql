@@ -53,6 +53,18 @@ begin
      jsonb_build_object('full_name', p_name, 'role', p_role),
      now(), now())
   returning id into uid;
+
+  -- Supabase Auth verifies email/password logins against auth.identities, not
+  -- just auth.users. Without a matching identity row, the account exists but
+  -- every login attempt fails with "Invalid email or password". Signup via the
+  -- normal /login flow creates this row automatically; a raw SQL insert has to
+  -- create it explicitly.
+  insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+  values (
+    gen_random_uuid(), uid,
+    jsonb_build_object('sub', uid::text, 'email', p_email),
+    'email', uid::text, now(), now(), now()
+  );
   return uid;
 end $$;
 
