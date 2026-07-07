@@ -52,6 +52,7 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
   const [rows, setRows] = useState<StudentRow[]>(initial)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [exportMessage, setExportMessage] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set())
@@ -100,6 +101,11 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
   }, [])
 
   async function exportExcel() {
+    if (rows.length === 0) {
+      setExportMessage('No accepted students to export yet.')
+      return
+    }
+    setExportMessage(null)
     await exportSchoolFormat(rows.map((r) => ({
       exam_type: r.exam_type,
       excused_reason: r.excused_reason,
@@ -116,6 +122,12 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
 
   return (
     <div>
+      {exportMessage && (
+        <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-300">
+          {exportMessage} <button className="underline ml-1" onClick={() => setExportMessage(null)}>Dismiss</button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div>
           <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Accepted Students</h2>

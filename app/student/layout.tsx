@@ -3,9 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getNotifications } from '@/lib/notifications'
 
-// No top-tabs for students — the dashboard's "+ New Request" button and the
-// clickable EXAMFLOW logo (home) cover navigation.
-const NAV: { label: string; href: string }[] = []
+const NAV = [
+  { label: 'My Requests', href: '/student', icon: 'inbox' as const },
+  { label: 'History', href: '/student/history', icon: 'history' as const },
+]
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()

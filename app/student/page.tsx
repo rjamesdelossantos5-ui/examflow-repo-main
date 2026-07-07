@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon, type IconName } from '@/components/Icon'
-import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import { computeWindow, keepActive, TERM_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
@@ -56,7 +56,10 @@ export default async function StudentPage() {
   const cookieStore = await cookies()
   const bannerDismissed = cookieStore.get('ef_banner_dismissed')?.value === '1'
   const modalSeen = cookieStore.get('ef_modal_seen')?.value === '1'
-  const list = requests ?? []
+  // Once a term ends (a different one becomes active), its requests move to
+  // History instead of sitting here forever — same "current term only" rule
+  // already used for every staff queue.
+  const list = keepActive(requests ?? [], activePeriod?.id ?? null)
   const counts = {
     total: list.length,
     inProgress: list.filter((r) => IN_PROGRESS.includes(r.status as RequestStatus)).length,
@@ -157,7 +160,7 @@ export default async function StudentPage() {
             <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)' }}>
               <Icon name="file" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
             </div>
-            <p className="font-medium" style={{ color: 'var(--card-foreground)' }}>No requests yet</p>
+            <p className="font-medium" style={{ color: 'var(--card-foreground)' }}>No requests yet {activePeriod ? `for ${TERM_LABEL[activePeriod.term]}` : ''}</p>
             <p className="text-sm ef-muted mt-1">Start by submitting your first special exam request.</p>
             <Link
               href="/student/submit"
@@ -166,6 +169,12 @@ export default async function StudentPage() {
             >
               + Submit a Request
             </Link>
+            {(requests ?? []).length > 0 && (
+              <p className="text-sm ef-muted mt-3">
+                Looking for an old request? Check your{' '}
+                <Link href="/student/history" className="underline font-medium" style={{ color: 'var(--card-foreground)' }}>History</Link>.
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-2.5">
