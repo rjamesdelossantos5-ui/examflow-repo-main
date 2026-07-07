@@ -169,9 +169,6 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
                   onClick={() => toggle(g.key)}
                   className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
                 >
-                  <span className="w-9 h-9 rounded-lg grid place-items-center font-bold text-sm shrink-0" style={{ background: 'var(--sti-navy)', color: 'var(--sti-gold)' }}>
-                    {g.student.student_name.slice(0, 1).toUpperCase()}
-                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold truncate" style={{ color: 'var(--card-foreground)' }}>{g.student.student_name}</p>
                     <p className="text-xs ef-muted truncate">
