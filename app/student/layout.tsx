@@ -25,6 +25,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   return (
     <DashboardLayout
       role="student"
+      userId={user.id}
       userName={profile.full_name}
       email={profile.email}
       navItems={NAV}

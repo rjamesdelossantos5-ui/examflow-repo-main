@@ -9,14 +9,14 @@ const label = 'block text-sm font-medium ef-muted mb-1'
 
 function fmt(iso: string | null) {
   if (!iso) return null
-  return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
-// datetime-local wants 'yyyy-MM-ddTHH:mm' in LOCAL time.
+// <input type="date"> wants 'yyyy-MM-dd' in LOCAL time.
 function toLocalInput(iso: string | null) {
   if (!iso) return ''
   const d = new Date(iso)
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 export default function SettingsForm({ active, periods }: { active: ExamPeriod | null; periods: ExamPeriod[] }) {
@@ -177,7 +177,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
     e.preventDefault()
     onError(null); setSaved(false); setInfo(null)
     if (!active) { onError('Set and activate a submission window first.'); return }
-    if (!examStart) { onError('Set the exam start date & time.'); return }
+    if (!examStart) { onError('Set the exam date.'); return }
     if (alreadySet && unchanged()) { setInfo('You haven’t changed anything, so there’s nothing to save.'); return }
     setConfirmOpen(true) // in-app confirmation instead of a browser popup
   }
@@ -186,8 +186,8 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
     setConfirmOpen(false)
     startTransition(async () => {
       const res = await saveExamSchedule({
-        examStart: new Date(examStart).toISOString(),
-        examEnd: examEnd ? new Date(examEnd).toISOString() : '',
+        examStart: new Date(examStart + 'T00:00:00').toISOString(),
+        examEnd: examEnd ? new Date(examEnd + 'T00:00:00').toISOString() : '',
         examLocation: location,
         examBring: bring,
       })
@@ -196,8 +196,8 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
     })
   }
 
-  const newStartLabel = examStart ? fmt(new Date(examStart).toISOString()) : '—'
-  const newEndLabel = examEnd ? fmt(new Date(examEnd).toISOString()) : null
+  const newStartLabel = examStart ? fmt(new Date(examStart + 'T00:00:00').toISOString()) : '—'
+  const newEndLabel = examEnd ? fmt(new Date(examEnd + 'T00:00:00').toISOString()) : null
 
   return (
     <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5">
@@ -217,12 +217,12 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className={label}>Exam start *</label>
-          <input type="datetime-local" value={examStart} onChange={(e) => setExamStart(e.target.value)} disabled={!active} className={input} />
+          <label className={label}>Exam date *</label>
+          <input type="date" value={examStart} onChange={(e) => setExamStart(e.target.value)} disabled={!active} className={input} />
         </div>
         <div>
-          <label className={label}>Exam end (optional)</label>
-          <input type="datetime-local" value={examEnd} onChange={(e) => setExamEnd(e.target.value)} disabled={!active} className={input} />
+          <label className={label}>Last day (optional, if multi-day)</label>
+          <input type="date" value={examEnd} onChange={(e) => setExamEnd(e.target.value)} disabled={!active} className={input} />
         </div>
       </div>
 

@@ -14,8 +14,8 @@ interface Props {
   examBring: string | null
 }
 
-function fmtDateTime(iso: string) {
-  return new Date(iso).toLocaleString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
 // One-time popup for "the Program Head just set/changed the exam schedule".
@@ -26,8 +26,8 @@ export default function ScheduleAnnouncementModal(props: Props) {
   if (!visible) return null
 
   const examRange = props.examEndDay
-    ? `${fmtDateTime(props.examDay)} → ${fmtDateTime(props.examEndDay)}`
-    : fmtDateTime(props.examDay)
+    ? `${fmtDate(props.examDay)} → ${fmtDate(props.examEndDay)}`
+    : fmtDate(props.examDay)
 
   function handleOk() {
     setVisible(false)
@@ -50,6 +50,9 @@ export default function ScheduleAnnouncementModal(props: Props) {
             {props.examBring && <p><span className="ef-muted">Bring: </span><span style={{ color: 'var(--card-foreground)' }}>{props.examBring}</span></p>}
           </div>
         )}
+        <p className="text-xs ef-muted mt-3">
+          Please visit the Registrar&apos;s office or your Program Head for further details.
+        </p>
         <button
           onClick={handleOk}
           className="w-full mt-5 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"

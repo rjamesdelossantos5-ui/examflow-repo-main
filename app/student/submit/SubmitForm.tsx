@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { submitRequest } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import { Icon } from '@/components/Icon'
+import { compressImage } from '@/lib/compressImage'
 
 // One (subject + section → teacher) row. The student picks a subject, then a
 // section available for it, and the teacher for that section fills in.
@@ -194,8 +195,15 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium ef-muted mb-1">Full name (Lastname, Firstname Middle) *</label>
-            <input name="full_name" required defaultValue={eff.full_name} className={inputClass} placeholder="Dela Cruz, Juan Santos" />
+            <label className="block text-sm font-medium ef-muted mb-1">Full name</label>
+            <input
+              name="full_name"
+              required
+              readOnly
+              value={eff.full_name}
+              className={`${inputClass} cursor-not-allowed opacity-70`}
+            />
+            <p className="mt-1 text-xs ef-muted">Matches your account — contact the Registrar if this is wrong.</p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -368,11 +376,37 @@ function Chevron() {
 function FileField({ name, label, hint, inputClass, kept = false }: { name: string; label: string; hint: string; inputClass: string; kept?: boolean }) {
   const [fileName, setFileName] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   function validate(file: File) {
     if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) return 'Only JPG, PNG, or PDF allowed'
     if (file.size > MAX_MB * 1024 * 1024) return `Max ${MAX_MB} MB`
     return null
+  }
+
+  async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    const err = validate(f)
+    if (err) {
+      setFileError(err)
+      setFileName(null)
+      return
+    }
+    setFileError(null)
+
+    // Phone photos are routinely several MB — shrinking them client-side
+    // before upload is what keeps submission fast on mobile data.
+    setBusy(true)
+    const compressed = await compressImage(f)
+    setBusy(false)
+    if (compressed !== f && inputRef.current) {
+      const dt = new DataTransfer()
+      dt.items.add(compressed)
+      inputRef.current.files = dt.files
+    }
+    setFileName(compressed.name)
   }
 
   return (
@@ -382,22 +416,17 @@ function FileField({ name, label, hint, inputClass, kept = false }: { name: stri
         <p className="mb-1 text-xs text-green-600 dark:text-green-400">✓ Your previous file is kept. Upload only to replace it.</p>
       )}
       <input
+        ref={inputRef}
         type="file"
         name={name}
         accept={ALLOWED}
         required={!kept}
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) {
-            const err = validate(f)
-            setFileError(err)
-            setFileName(err ? null : f.name)
-          }
-        }}
+        onChange={handleChange}
         className={`${inputClass} file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[var(--sti-gold)]/20 file:text-[var(--card-foreground)] file:cursor-pointer`}
       />
+      {busy && <p className="mt-1 text-xs ef-muted">Optimizing photo…</p>}
       {fileError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fileError}</p>}
-      {fileName && !fileError && <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ {fileName}</p>}
+      {fileName && !fileError && !busy && <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ {fileName}</p>}
       <p className="mt-1 text-xs ef-muted">{hint}</p>
     </div>
   )

@@ -154,7 +154,7 @@ export default async function RequestDetailPage({
             {TERM_LABEL[period.term]} Special Exam{period.schoolYear ? ` · ${period.schoolYear}` : ''}
           </h2>
           <dl className="space-y-1.5 text-sm">
-            {period.examDay && <p><span className="ef-muted">When: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{new Date(period.examDay).toLocaleString()}{period.examEndDay ? ` → ${new Date(period.examEndDay).toLocaleString()}` : ''}</span></p>}
+            {period.examDay && <p><span className="ef-muted">When: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{new Date(period.examDay).toLocaleDateString()}{period.examEndDay ? ` → ${new Date(period.examEndDay).toLocaleDateString()}` : ''}</span></p>}
             {period.examLocation && <p><span className="ef-muted">Where: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{period.examLocation}</span></p>}
             {period.examBring && <p><span className="ef-muted">Bring: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{period.examBring}</span></p>}
           </dl>

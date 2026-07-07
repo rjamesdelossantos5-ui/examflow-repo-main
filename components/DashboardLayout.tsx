@@ -18,6 +18,7 @@ interface NavItem {
 
 interface Props {
   role: UserRole
+  userId?: string
   userName: string
   email?: string
   navItems: readonly NavItem[]
@@ -26,8 +27,13 @@ interface Props {
   children: React.ReactNode
 }
 
-export default function DashboardLayout({ role, userName, email, navItems, notifications, children }: Props) {
+export default function DashboardLayout({ role, userId, userName, email, navItems, notifications, children }: Props) {
   const pathname = usePathname()
+  // Students only ever care about their OWN requests — scoping their realtime
+  // subscription avoids a full page refresh every time ANY other student
+  // submits/updates something. Staff roles still need the unfiltered feed
+  // (they review everyone's requests), so no filter for them.
+  const liveFilter = role === 'student' && userId ? `student_id=eq.${userId}` : undefined
 
   // Pick the single most-specific matching nav item (longest matching href),
   // so /registrar/history doesn't also light up /registrar.
@@ -37,7 +43,7 @@ export default function DashboardLayout({ role, userName, email, navItems, notif
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
-      <LiveRefresh />
+      <LiveRefresh filter={liveFilter} />
       {/* Brand bar */}
       <header className="relative z-50" style={{ backgroundColor: 'var(--header)' }}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">

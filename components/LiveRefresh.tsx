@@ -14,8 +14,16 @@ const POLL_MS = 60000
  *   2. A 60s fallback poll that ONLY fires when Realtime isn't connected, so
  *      when Realtime works there's no background query load at all.
  *   3. Refresh when the tab regains focus — instant when you switch back.
+ *
+ * `filter` scopes the subscription to rows the current viewer actually cares
+ * about (e.g. a student's own requests) instead of every change on the whole
+ * table. Without it, ANY submission/update by ANY user triggers a full
+ * router.refresh() (re-fetch + re-render the page) on every OTHER open
+ * dashboard too — with dozens of concurrent users this was a major source of
+ * the "whole site feels laggy on mobile" reports, since a low-end phone pays
+ * for a full page refresh it has no reason to do.
  */
-export default function LiveRefresh() {
+export default function LiveRefresh({ filter }: { filter?: string } = {}) {
   const router = useRouter()
 
   useEffect(() => {
@@ -33,7 +41,13 @@ export default function LiveRefresh() {
 
     const channel = supabase
       .channel('examflow-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_exam_requests' }, scheduleRefresh)
+      .on(
+        'postgres_changes',
+        filter
+          ? { event: '*', schema: 'public', table: 'special_exam_requests', filter }
+          : { event: '*', schema: 'public', table: 'special_exam_requests' },
+        scheduleRefresh,
+      )
       .subscribe((status) => { realtimeOk = status === 'SUBSCRIBED' })
 
     // Fallback only — skips the refetch entirely while Realtime is connected.
@@ -51,7 +65,7 @@ export default function LiveRefresh() {
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }
-  }, [router])
+  }, [router, filter])
 
   return null
 }

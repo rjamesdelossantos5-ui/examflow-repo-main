@@ -341,8 +341,8 @@ export async function savePeriod(input: PeriodInput) {
 }
 
 interface ScheduleInput {
-  examStart: string // ISO or datetime-local
-  examEnd: string // ISO or datetime-local ('' = single day)
+  examStart: string // ISO, date-only (midnight local)
+  examEnd: string // ISO, date-only ('' = single day)
   examLocation: string
   examBring: string
 }
@@ -358,7 +358,7 @@ export async function saveExamSchedule(input: ScheduleInput) {
   const active = await getActivePeriod(supabase)
   if (!active) return { error: 'Set and activate a submission window first, then schedule the exam.' }
 
-  if (!input.examStart) return { error: 'Set the exam start date & time.' }
+  if (!input.examStart) return { error: 'Set the exam date.' }
   const start = new Date(input.examStart)
   if (isNaN(start.getTime())) return { error: 'Invalid exam start date.' }
   const end = input.examEnd ? new Date(input.examEnd) : null

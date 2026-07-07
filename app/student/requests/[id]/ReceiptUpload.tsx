@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { uploadReceipt } from './actions'
+import { compressImage } from '@/lib/compressImage'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_MB = 5
@@ -10,8 +11,10 @@ export default function ReceiptUpload({ requestId, rejectedReason }: { requestId
   const [serverError, setServerError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const [success, setSuccess] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   function validateFile(file: File): string | null {
     if (!ALLOWED_MIME.includes(file.type)) return 'Only JPG, PNG, or PDF allowed'
@@ -19,13 +22,27 @@ export default function ReceiptUpload({ requestId, rejectedReason }: { requestId
     return null
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     const err = validateFile(file)
-    setFileError(err)
-    setFileName(err ? null : file.name)
+    if (err) {
+      setFileError(err)
+      setFileName(null)
+      return
+    }
+    setFileError(null)
     setServerError(null)
+
+    setBusy(true)
+    const compressed = await compressImage(file)
+    setBusy(false)
+    if (compressed !== file && inputRef.current) {
+      const dt = new DataTransfer()
+      dt.items.add(compressed)
+      inputRef.current.files = dt.files
+    }
+    setFileName(compressed.name)
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -87,6 +104,7 @@ export default function ReceiptUpload({ requestId, rejectedReason }: { requestId
             Receipt file <span className="text-red-500">*</span>
           </label>
           <input
+            ref={inputRef}
             type="file"
             name="payment_receipt"
             accept=".jpg,.jpeg,.png,.pdf"
@@ -95,10 +113,11 @@ export default function ReceiptUpload({ requestId, rejectedReason }: { requestId
             className="w-full rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[var(--sti-gold)]/20 file:text-[var(--card-foreground)] file:cursor-pointer"
             style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
           />
+          {busy && <p className="mt-1 text-xs ef-muted">Optimizing photo…</p>}
           {fileError && (
             <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fileError}</p>
           )}
-          {fileName && !fileError && (
+          {fileName && !fileError && !busy && (
             <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ {fileName}</p>
           )}
           <p className="mt-1 text-xs ef-muted">JPG, PNG, or PDF · max {MAX_MB} MB</p>
@@ -106,7 +125,7 @@ export default function ReceiptUpload({ requestId, rejectedReason }: { requestId
 
         <button
           type="submit"
-          disabled={isPending || !!fileError || !fileName}
+          disabled={isPending || busy || !!fileError || !fileName}
           className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >

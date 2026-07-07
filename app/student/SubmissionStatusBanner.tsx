@@ -22,10 +22,6 @@ function fmtDate(iso: string | null) {
   if (!iso) return null
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
 }
-function fmtDateTime(iso: string | null) {
-  if (!iso) return null
-  return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-}
 
 /**
  * Compact banner at the top of the student dashboard — status header, a
@@ -57,8 +53,8 @@ export default function SubmissionStatusBanner(props: Props) {
   const hasTerm = !!props.termLabel
   const examRange = props.examDay
     ? props.examEndDay
-      ? `${fmtDateTime(props.examDay)} → ${fmtDateTime(props.examEndDay)}`
-      : fmtDateTime(props.examDay)
+      ? `${fmtDate(props.examDay)} → ${fmtDate(props.examEndDay)}`
+      : fmtDate(props.examDay)
     : hasTerm ? TBA : null
 
   function handleDismiss() {
