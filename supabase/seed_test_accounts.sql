@@ -16,12 +16,12 @@
 -- Accounts (all password Exam@123):
 --   admin@examflow.com          admin
 --   registrar@examflow.com      registrar
---   ict.teacher1@examflow.com   Galamiton (ICT)
---   ict.teacher2@examflow.com   Gamino    (ICT)
---   shs.teacher1@examflow.com   Pangilinan (SHS)
---   shs.teacher2@examflow.com   Libaton    (SHS)
---   ict.head@examflow.com       ICT Department Head
---   shs.head@examflow.com       Senior High School Head
+--   ict.teacher1@examflow.com   Joshua Galamiton (ICT)
+--   ict.teacher2@examflow.com   Kid Valles       (ICT)
+--   shs.teacher1@examflow.com   Maria Clara      (SHS)
+--   shs.teacher2@examflow.com   Alice Go         (SHS)
+--   ict.head@examflow.com       Ms. Lara Camille Vergara (ICT Head)
+--   shs.head@examflow.com       Ms. Grace Pangilinan     (SHS Head)
 --   student1@examflow.com       student (course BSIT)
 --   student2@examflow.com       student (course STEM)
 --
@@ -29,10 +29,10 @@
 -- BSIT (tertiary) and STEM (senior high) — matching the offerings below.
 --
 -- Offerings:
---   CP101  BSIT 2-201 → Galamiton   BSIT 2-202 → Gamino
---   GD101  BSIT 3-201 → Galamiton   BSIT 3-202 → Gamino
---   ELS01  STEM 11-A  → Pangilinan  STEM 11-B  → Libaton
---   PHY01  STEM 12-A  → Pangilinan  STEM 12-B  → Libaton
+--   CP101  BSIT 2-201 → Galamiton   BSIT 2-202 → Valles
+--   GD101  BSIT 3-201 → Galamiton   BSIT 3-202 → Valles
+--   ELS01  STEM 11-A  → Maria Clara STEM 11-B  → Alice Go
+--   PHY01  STEM 12-A  → Maria Clara STEM 12-B  → Alice Go
 -- ─────────────────────────────────────────────────────────────
 
 create extension if not exists pgcrypto;
@@ -78,7 +78,7 @@ end $$;
 DO $$
 DECLARE
   ict_id uuid; shs_id uuid;
-  t_g uuid; t_gm uuid; t_p uuid; t_l uuid;   -- Galamiton, Gamino, Pangilinan, Libaton
+  t_g uuid; t_gm uuid; t_p uuid; t_l uuid;   -- Galamiton, Valles, Maria Clara, Alice Go
   admin_id uuid; reg_id uuid; ph_ict uuid; ph_shs uuid; stu1 uuid; stu2 uuid;
   cp uuid; gd uuid; els uuid; phy uuid;      -- subject ids
   pw text := 'Exam@123';
@@ -93,12 +93,12 @@ SELECT id INTO shs_id FROM departments WHERE name = 'Senior High School';
 -- ── Accounts ──────────────────────────────────
 admin_id := _seed_user('admin@examflow.com',        pw, 'System Admin',        'admin');
 reg_id   := _seed_user('registrar@examflow.com',    pw, 'Maria Santos',        'registrar');
-t_g      := _seed_user('ict.teacher1@examflow.com', pw, 'Prof. Galamiton',     'subject_teacher');
-t_gm     := _seed_user('ict.teacher2@examflow.com', pw, 'Prof. Gamino',        'subject_teacher');
-t_p      := _seed_user('shs.teacher1@examflow.com', pw, 'Prof. Pangilinan',    'subject_teacher');
-t_l      := _seed_user('shs.teacher2@examflow.com', pw, 'Prof. Libaton',       'subject_teacher');
-ph_ict   := _seed_user('ict.head@examflow.com',     pw, 'Dr. Reyes (ICT Head)','program_head');
-ph_shs   := _seed_user('shs.head@examflow.com',     pw, 'Ms. Flores (SHS Head)','program_head');
+t_g      := _seed_user('ict.teacher1@examflow.com', pw, 'Instructor Joshua Galamiton', 'subject_teacher');
+t_gm     := _seed_user('ict.teacher2@examflow.com', pw, 'Instructor Kid Valles',       'subject_teacher');
+t_p      := _seed_user('shs.teacher1@examflow.com', pw, 'Instructor Maria Clara',      'subject_teacher');
+t_l      := _seed_user('shs.teacher2@examflow.com', pw, 'Instructor Alice Go',         'subject_teacher');
+ph_ict   := _seed_user('ict.head@examflow.com',     pw, 'Ms. Lara Camille Vergara',    'program_head');
+ph_shs   := _seed_user('shs.head@examflow.com',     pw, 'Ms. Grace Pangilinan',        'program_head');
 stu1     := _seed_user('student1@examflow.com',     pw, 'Jose Rizal',          'student');
 stu2     := _seed_user('student2@examflow.com',     pw, 'Pedro Penduko',       'student');
 

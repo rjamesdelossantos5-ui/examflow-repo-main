@@ -107,6 +107,7 @@ create table special_exam_requests (
   snap_course        text,
   snap_year_level    int,
   snap_section       text,
+  snap_contact_number text,
   submitted_at       timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
@@ -388,8 +389,9 @@ create policy "media_select" on application_media
       select id from special_exam_requests
       where student_id = auth.uid()
         or current_user_role() in ('registrar', 'program_head', 'admin')
-        or (current_user_role() = 'subject_teacher' and
-            subject_id in (select id from subjects where teacher_id = auth.uid()))
+        or (current_user_role() = 'subject_teacher' and (
+            teacher_id = auth.uid() or
+            subject_id in (select id from subjects where teacher_id = auth.uid())))
     )
   );
 

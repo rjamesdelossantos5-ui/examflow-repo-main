@@ -207,7 +207,8 @@ async function fetchRows(supabase: ReturnType<typeof createClient>): Promise<Stu
     .from('special_exam_requests')
     .select(`
       *,
-      profiles!student_id(full_name, student_number, course, year_level, section),
+      student:profiles!student_id(full_name, student_number, course, year_level, section),
+      routed_teacher:profiles!teacher_id(full_name),
       subjects(
         subject_code, subject_name,
         profiles!teacher_id(full_name),
@@ -224,13 +225,14 @@ async function fetchRows(supabase: ReturnType<typeof createClient>): Promise<Stu
       profiles: { full_name: string } | null
       departments: { name: string } | null
     }
-    const student = r.profiles as unknown as {
+    const student = r.student as unknown as {
       full_name: string
       student_number: string | null
       course: string | null
       year_level: number | null
       section: string | null
     } | null
+    const routedTeacher = r.routed_teacher as unknown as { full_name: string } | null
     const s = r as { snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null; snap_year_level?: number | null; snap_section?: string | null }
     return {
       id: r.id,
@@ -247,7 +249,7 @@ async function fetchRows(supabase: ReturnType<typeof createClient>): Promise<Stu
       section: s.snap_section ?? student?.section ?? null,
       subject_code: subj?.subject_code ?? '',
       subject_name: subj?.subject_name ?? '',
-      teacher_name: subj?.profiles?.full_name ?? null,
+      teacher_name: routedTeacher?.full_name ?? subj?.profiles?.full_name ?? null,
       department_name: subj?.departments?.name ?? null,
     }
   }).filter((r) => r.status === 'scheduled' || (r.status === 'accepted' && r.exam_type === 'excused'))

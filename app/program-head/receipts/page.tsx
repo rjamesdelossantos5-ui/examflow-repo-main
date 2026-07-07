@@ -20,7 +20,8 @@ export default async function ProgramHeadReceiptsPage() {
     .from('special_exam_requests')
     .select(`
       *,
-      profiles!student_id(full_name, student_number, course, year_level, section),
+      student:profiles!student_id(full_name, student_number, course, year_level, section),
+      routed_teacher:profiles!teacher_id(full_name),
       subjects(
         subject_code, subject_name, department_id,
         profiles!teacher_id(full_name)
@@ -38,7 +39,8 @@ export default async function ProgramHeadReceiptsPage() {
       subject_name: string
       profiles: { full_name: string } | null
     }
-    const p = r.profiles as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null } | null
+    const p = r.student as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null } | null
+    const routedTeacher = r.routed_teacher as unknown as { full_name: string } | null
     const s = r as { snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null; snap_year_level?: number | null; snap_section?: string | null }
     return {
       ...r,
@@ -52,7 +54,7 @@ export default async function ProgramHeadReceiptsPage() {
       subject: {
         subject_code: subj?.subject_code ?? '',
         subject_name: subj?.subject_name ?? '',
-        teacher: subj?.profiles ?? null,
+        teacher: routedTeacher ?? subj?.profiles ?? null,
       },
       // Second approval only concerns the cashier receipt.
       media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[])
