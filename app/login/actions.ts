@@ -44,8 +44,10 @@ export async function login(formData: FormData) {
     return redirect('/login?error=Account+is+inactive')
   }
 
-  // A dismissed dashboard banner should reappear on every fresh login.
-  ;(await cookies()).delete('ef_banner_dismissed')
+  // A dismissed dashboard banner/popup should reappear on every fresh login.
+  const cookieStore = await cookies()
+  cookieStore.delete('ef_banner_dismissed')
+  cookieStore.delete('ef_modal_seen')
 
   revalidatePath('/', 'layout')
   redirect(ROLE_HOME[profile.role] ?? '/login')
@@ -79,7 +81,9 @@ export async function signIn(formData: FormData): Promise<{ error: string } | vo
     return { error: 'Your account is inactive. Please contact the registrar.' }
   }
 
-  ;(await cookies()).delete('ef_banner_dismissed')
+  const cookieStore = await cookies()
+  cookieStore.delete('ef_banner_dismissed')
+  cookieStore.delete('ef_modal_seen')
 
   revalidatePath('/', 'layout')
   redirect(ROLE_HOME[profile.role] ?? '/login')

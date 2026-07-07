@@ -8,6 +8,7 @@ import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
+import SubmissionStatusModal from './SubmissionStatusModal'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — My Requests' }
@@ -51,7 +52,9 @@ export default async function StudentPage() {
   ])
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
-  const bannerDismissed = (await cookies()).get('ef_banner_dismissed')?.value === '1'
+  const cookieStore = await cookies()
+  const bannerDismissed = cookieStore.get('ef_banner_dismissed')?.value === '1'
+  const modalSeen = cookieStore.get('ef_modal_seen')?.value === '1'
   const list = requests ?? []
   const counts = {
     total: list.length,
@@ -61,6 +64,15 @@ export default async function StudentPage() {
 
   return (
     <div className="space-y-6">
+      <SubmissionStatusModal
+        termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+        open={win.open}
+        notStarted={win.notStarted}
+        daysRemaining={win.daysRemaining}
+        start={win.start}
+        end={win.end}
+        show={!modalSeen}
+      />
       <SubmissionStatusBanner
         termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
         open={win.open}
