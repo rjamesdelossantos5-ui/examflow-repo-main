@@ -47,9 +47,10 @@ interface Prefill {
   course: string | null
   yearLevel: number | null
   section: string | null
+  contactNumber: string | null
 }
 
-export default function SubmitForm({ subjects, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [] }: { subjects: Subject[]; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[] }) {
+export default function SubmitForm({ subjects, teacherBySubject = {}, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [] }: { subjects: Subject[]; teacherBySubject?: Record<string, string>; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[] }) {
   const kept = new Set(existingDocs)
   // Effective values: a resubmit's saved snapshot overrides the profile defaults.
   const eff = {
@@ -64,7 +65,10 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
   const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>(prefill?.excusedReason ?? '')
   const [course, setCourse] = useState(COURSES.some((c) => c.code === eff.course) ? eff.course : '')
   const [section, setSection] = useState(eff.section ?? '')
+  const [subjectId, setSubjectId] = useState(prefill?.subjectId ?? '')
   const [confirming, setConfirming] = useState(false)
+
+  const teacherName = subjectId ? teacherBySubject[subjectId] : null
 
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -109,11 +113,20 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
         {/* Your information */}
         <div className="space-y-4 pb-2 border-b ef-border">
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Your Information</h2>
+          {termLabel && (
+            <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
+              <span className="ef-muted">Term / SY: </span><strong>{termLabel}</strong>
+            </div>
+          )}
           <div>
-            <label className="block text-sm font-medium ef-muted mb-1">Full name *</label>
-            <input name="full_name" required defaultValue={eff.full_name} className={inputClass} placeholder="Juan Dela Cruz" />
+            <label className="block text-sm font-medium ef-muted mb-1">Full name (Lastname, Firstname Middle) *</label>
+            <input name="full_name" required defaultValue={eff.full_name} className={inputClass} placeholder="Dela Cruz, Juan Santos" />
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium ef-muted mb-1">Contact number *</label>
+              <input name="contact_number" required defaultValue={prefill?.contactNumber ?? ''} className={inputClass} placeholder="09XX XXX XXXX" inputMode="tel" />
+            </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Student number</label>
               <input name="student_number" defaultValue={eff.student_number} className={inputClass} placeholder="2024-00001" />
@@ -190,11 +203,11 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
           </div>
         </div>
 
-        {/* Subject */}
+        {/* Subject + its teacher */}
         <div>
           <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
           <div className="relative">
-            <select name="subject_id" required defaultValue={prefill?.subjectId ?? ''} className={selectClass} style={selectStyle}>
+            <select name="subject_id" required value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={selectClass} style={selectStyle}>
               <option value="">— Select a subject —</option>
               {subjects.map((s) => (
                 <option key={s.id} value={s.id}>{s.subject_code} — {s.subject_name}</option>
@@ -202,6 +215,13 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
             </select>
             <Chevron />
           </div>
+          {subjectId && (
+            <div className="mt-2 rounded-lg px-3 py-2 text-sm border ef-border">
+              <span className="ef-muted">Teacher: </span>
+              <strong style={{ color: 'var(--card-foreground)' }}>{teacherName ?? 'Not assigned yet'}</strong>
+              <p className="text-xs ef-muted mt-0.5">Your request goes to this subject&apos;s teacher.</p>
+            </div>
+          )}
         </div>
 
         {/* Excused reason cards */}

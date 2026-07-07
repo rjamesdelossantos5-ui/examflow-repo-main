@@ -71,6 +71,7 @@ export async function submitRequest(formData: FormData) {
     snap_course: String(formData.get('course') ?? '').trim().slice(0, 60) || null,
     snap_year_level: Number.isInteger(yearNum) && yearNum! >= 1 && yearNum! <= 6 ? yearNum : null,
     snap_section: String(formData.get('section') ?? '').trim().slice(0, 20) || null,
+    snap_contact_number: String(formData.get('contact_number') ?? '').trim().slice(0, 40) || null,
   }
 
   const parentId = formData.get('parent_id') as File | null

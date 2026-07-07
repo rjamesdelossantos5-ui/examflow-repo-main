@@ -171,6 +171,7 @@ export default async function RequestDetailPage({
         <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
           {[
             ['Name', req.snap_name],
+            ['Contact No.', (req as { snap_contact_number?: string | null }).snap_contact_number],
             ['Student No.', req.snap_student_number],
             ['Course', req.snap_course],
             ['Year', req.snap_year_level],
