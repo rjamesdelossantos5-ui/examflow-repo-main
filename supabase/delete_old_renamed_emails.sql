@@ -2,7 +2,6 @@
 -- Removes the OLD-named accounts now that seed_test_accounts.sql creates
 -- the same people under their surname-based emails instead:
 --
---   registrar@examflow.com     -> santos@examflow.com
 --   ict.teacher1@examflow.com  -> galamiton@examflow.com
 --   ict.teacher2@examflow.com  -> valles@examflow.com
 --   ict.head@examflow.com      -> vergara@examflow.com
@@ -12,7 +11,7 @@
 --   student1@examflow.com      -> rizal@examflow.com
 --   student2@examflow.com      -> penduko@examflow.com
 --
--- Keeps: admin@examflow.com (never renamed).
+-- Keeps: admin@examflow.com and registrar@examflow.com (both left alone).
 -- Run once in the Supabase SQL editor, AFTER seed_test_accounts.sql has
 -- successfully created the new-named accounts.
 -- ─────────────────────────────────────────────────────────────
@@ -24,7 +23,7 @@ BEGIN
   SELECT array_agg(id) INTO ids
   FROM profiles
   WHERE email IN (
-    'registrar@examflow.com', 'ict.teacher1@examflow.com', 'ict.teacher2@examflow.com',
+    'ict.teacher1@examflow.com', 'ict.teacher2@examflow.com',
     'ict.head@examflow.com', 'shs.head@examflow.com', 'shs.teacher1@examflow.com',
     'shs.teacher2@examflow.com', 'student1@examflow.com', 'student2@examflow.com'
   );
