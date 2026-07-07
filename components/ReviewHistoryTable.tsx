@@ -22,10 +22,26 @@ export interface HistoryRow {
  */
 export default function ReviewHistoryTable({ title, rows }: { title: string; rows: HistoryRow[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+
+  const q = query.trim().toLowerCase()
+  const filtered = q ? rows.filter((r) => r.student.toLowerCase().includes(q)) : rows
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>{title}</h2>
+      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>{title}</h2>
+        <div className="relative w-full sm:w-64">
+          <Icon name="user" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ef-muted" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search student name…"
+            className="w-full rounded-lg pl-9 pr-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
+          />
+        </div>
+      </div>
       <div className="ef-card rounded-xl shadow-sm overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
@@ -38,7 +54,7 @@ export default function ReviewHistoryTable({ title, rows }: { title: string; row
             </tr>
           </thead>
           <tbody className="divide-y">
-            {rows.map((r) => {
+            {filtered.map((r) => {
               const rejected = r.status === 'rejected'
               const expanded = openId === r.id
               return (
@@ -51,8 +67,8 @@ export default function ReviewHistoryTable({ title, rows }: { title: string; row
                 />
               )
             })}
-            {rows.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center ef-muted">No history yet.</td></tr>
+            {filtered.length === 0 && (
+              <tr><td colSpan={5} className="px-4 py-8 text-center ef-muted">{rows.length === 0 ? 'No history yet.' : 'No student matches your search.'}</td></tr>
             )}
           </tbody>
         </table>

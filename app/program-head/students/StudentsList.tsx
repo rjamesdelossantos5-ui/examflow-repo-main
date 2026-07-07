@@ -29,7 +29,11 @@ interface StudentRow {
 export default function StudentsList({ initial }: { initial: StudentRow[] }) {
   const [rows, setRows] = useState<StudentRow[]>(initial)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
   const [, startTransition] = useTransition()
+
+  const q = query.trim().toLowerCase()
+  const visible = q ? rows.filter((r) => r.student_name.toLowerCase().includes(q)) : rows
 
   function handleDelete(id: string) {
     if (!confirm('Delete this record permanently? This removes the form and its uploaded files.')) return
@@ -85,13 +89,25 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
           <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Accepted Students</h2>
           <p className="text-sm ef-muted">Live list — updates in real time</p>
         </div>
-        <button
-          onClick={exportExcel}
-          className="px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity shrink-0"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-        >
-          ⬇ Export to Excel
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative w-full sm:w-56">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search student name…"
+              className="w-full rounded-lg px-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
+              style={{ color: 'var(--card-foreground)' }}
+            />
+          </div>
+          <button
+            onClick={exportExcel}
+            className="px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity shrink-0"
+            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          >
+            ⬇ Export to Excel
+          </button>
+        </div>
       </div>
 
       <div className="ef-card rounded-xl shadow-sm overflow-x-auto">
@@ -110,7 +126,7 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {rows.map((r) => (
+            {visible.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50">
                 <td className="px-3 py-2 font-medium">{r.student_name}</td>
                 <td className="px-3 py-2 text-gray-500 text-xs">{r.student_number ?? '—'}</td>
@@ -134,8 +150,8 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No accepted students yet.</td></tr>
+            {visible.length === 0 && (
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">{rows.length === 0 ? 'No accepted students yet.' : 'No student matches your search.'}</td></tr>
             )}
           </tbody>
         </table>
