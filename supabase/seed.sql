@@ -6,8 +6,23 @@ create extension if not exists pgcrypto;
 
 create or replace function _seed_user(p_email text, p_password text, p_name text, p_role text)
 returns uuid language plpgsql as $$
-declare uid uuid;
+declare
+  uid uuid;
+  old_id uuid;
 begin
+  -- If this email already has an account with real activity against it
+  -- (progress_logs, override_requests, requests), clear those first —
+  -- otherwise deleting auth.users fails with a foreign-key violation (those
+  -- tables reference profiles with "on delete restrict"/no action).
+  select id into old_id from auth.users where email = p_email;
+  if old_id is not null then
+    delete from special_exam_requests where student_id = old_id or teacher_id = old_id;
+    delete from progress_logs where actor_id = old_id;
+    if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'override_requests') then
+      execute 'delete from override_requests where requested_by = $1 or decided_by = $1' using old_id;
+    end if;
+  end if;
+
   delete from auth.users where email = p_email;
   insert into auth.users
     (instance_id, id, aud, role, email, encrypted_password,
