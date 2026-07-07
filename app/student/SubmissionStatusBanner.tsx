@@ -28,11 +28,11 @@ function fmtDateTime(iso: string | null) {
 }
 
 /**
- * Compact single-line banner at the top of the student dashboard — status +
- * printed-form reminder + exam details all on one row so it doesn't dominate
- * the page. Dismissible — the dismissal only lasts for the current login; it
- * always reappears on the next sign-in (the cookie backing it is cleared at
- * login time).
+ * Compact banner at the top of the student dashboard — status header, a
+ * clearly-amber printed-form warning, and exam details, each its own short
+ * line instead of the old multi-paragraph boxes. Dismissible — the dismissal
+ * only lasts for the current login; it always reappears on the next sign-in
+ * (the cookie backing it is cleared at login time).
  */
 export default function SubmissionStatusBanner(props: Props) {
   const [dismissed, setDismissed] = useState(!!props.initiallyDismissed)
@@ -67,30 +67,7 @@ export default function SubmissionStatusBanner(props: Props) {
   }
 
   return (
-    <div className="ef-card rounded-xl shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 relative pr-10">
-      <span className="inline-flex items-center gap-2">
-        <span className="w-7 h-7 rounded-full grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${tone} 16%, transparent)`, color: tone }}>
-          <Icon name="calendar" className="w-4 h-4" />
-        </span>
-        <span>
-          <span className="font-bold text-sm" style={{ color: 'var(--card-foreground)' }}>{title}</span>
-          <span className="text-sm font-semibold ml-2" style={{ color: tone }}>{headline}</span>
-        </span>
-      </span>
-
-      <span className="inline-flex items-center gap-1.5 text-xs ef-muted">
-        <Icon name="clock" className="w-3.5 h-3.5 shrink-0" />
-        Get the printed form from the <strong style={{ color: 'var(--card-foreground)' }}>Registrar&apos;s office</strong> too — this alone doesn&apos;t finish your request.
-      </span>
-
-      {hasTerm && (
-        <span className="text-xs ef-muted">
-          Exam: <strong style={{ color: 'var(--card-foreground)' }}>{examRange}</strong>
-          {' · '}{props.examLocation || TBA}
-          {props.examBring ? ` · Bring: ${props.examBring}` : ''}
-        </span>
-      )}
-
+    <div className="ef-card rounded-xl shadow-sm py-3 relative">
       <button
         onClick={handleDismiss}
         aria-label="Dismiss"
@@ -98,6 +75,36 @@ export default function SubmissionStatusBanner(props: Props) {
       >
         <Icon name="x" className="w-3.5 h-3.5" />
       </button>
+
+      <div className="px-4 flex items-center gap-2 pr-9">
+        <span className="w-7 h-7 rounded-full grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${tone} 16%, transparent)`, color: tone }}>
+          <Icon name="calendar" className="w-4 h-4" />
+        </span>
+        <span className="font-bold text-sm" style={{ color: 'var(--card-foreground)' }}>{title}</span>
+        <span className="text-sm font-semibold" style={{ color: tone }}>{headline}</span>
+      </div>
+
+      <div className="mx-4 mt-2.5 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'color-mix(in srgb, #f59e0b 18%, transparent)', border: '1px solid rgba(245,158,11,0.5)' }}>
+        <Icon name="clock" className="w-4 h-4 shrink-0" style={{ color: '#b45309' }} />
+        <p className="text-xs font-semibold" style={{ color: '#92400e' }}>
+          Don&apos;t forget: get the printed form from the Registrar&apos;s office — submitting here alone does not finish your request.
+        </p>
+      </div>
+
+      {hasTerm && (
+        <p className="px-4 mt-2 text-sm">
+          <span className="ef-muted">Exam: </span>
+          <strong style={{ color: 'var(--card-foreground)' }}>{examRange}</strong>
+          <span className="ef-muted"> · </span>
+          <span style={{ color: 'var(--card-foreground)' }}>{props.examLocation || TBA}</span>
+          {props.examBring && (
+            <>
+              <span className="ef-muted"> · Bring: </span>
+              <span style={{ color: 'var(--card-foreground)' }}>{props.examBring}</span>
+            </>
+          )}
+        </p>
+      )}
     </div>
   )
 }
