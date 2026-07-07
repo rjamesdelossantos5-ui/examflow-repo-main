@@ -50,6 +50,11 @@ create table profiles (
   -- When the student last opened their notification bell — items older than
   -- this stop counting toward the bell badge (see lib/notifications.ts).
   notifications_seen_at timestamptz,
+  -- Signature ("<periodId>:<scheduleUpdatedAt>") of the exam schedule the
+  -- student has already acknowledged via the one-time popup — persists across
+  -- logins (unlike the submission-window popup, which resets every login),
+  -- and only re-prompts when the schedule actually changes.
+  schedule_ack text,
   created_at     timestamptz not null default now()
 );
 
@@ -338,6 +343,10 @@ create table if not exists exam_periods (
   exam_end_day     timestamptz,        -- END of the window (null = single day)
   exam_location    text,
   exam_bring       text,
+  -- Stamped whenever the PH sets/changes the exam schedule (saveExamSchedule)
+  -- — used to know if a student's already-seen schedule is now stale, both
+  -- for the bell notification and the one-time popup.
+  schedule_updated_at timestamptz,
   is_active        boolean not null default false,
   created_at       timestamptz not null default now(),
   unique (term, school_year)

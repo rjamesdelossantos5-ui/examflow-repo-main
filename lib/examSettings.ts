@@ -29,6 +29,7 @@ export interface ExamPeriod {
   examBring: string | null
   isActive: boolean
   createdAt: string
+  scheduleUpdatedAt: string | null
 }
 
 interface PeriodRow {
@@ -43,6 +44,7 @@ interface PeriodRow {
   exam_bring: string | null
   is_active: boolean
   created_at: string
+  schedule_updated_at: string | null
 }
 
 function toPeriod(r: PeriodRow): ExamPeriod {
@@ -58,6 +60,7 @@ function toPeriod(r: PeriodRow): ExamPeriod {
     examBring: r.exam_bring,
     isActive: r.is_active,
     createdAt: r.created_at,
+    scheduleUpdatedAt: r.schedule_updated_at ?? null,
   }
 }
 

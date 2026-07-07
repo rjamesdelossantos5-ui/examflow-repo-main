@@ -195,6 +195,10 @@ create policy "storage_allow_read" on storage.objects
 -- ── migration_notifications_seen.sql ───────────
 alter table profiles add column if not exists notifications_seen_at timestamptz;
 
+-- ── migration_schedule_notify.sql ───────────────
+alter table exam_periods add column if not exists schedule_updated_at timestamptz;
+alter table profiles add column if not exists schedule_ack text;
+
 -- ── migration_indexes.sql ──────────────────────
 create index if not exists idx_requests_status_submitted on special_exam_requests (status, submitted_at desc);
 create index if not exists idx_requests_student on special_exam_requests (student_id);

@@ -372,6 +372,7 @@ export async function saveExamSchedule(input: ScheduleInput) {
       exam_end_day: end ? end.toISOString() : null,
       exam_location: String(input.examLocation ?? '').trim().slice(0, 300) || null,
       exam_bring: String(input.examBring ?? '').trim().slice(0, 1000) || null,
+      schedule_updated_at: new Date().toISOString(),
     })
     .eq('id', active.id)
   if (error) return { error: error.message }

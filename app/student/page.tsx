@@ -9,6 +9,7 @@ import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
 import SubmissionStatusModal from './SubmissionStatusModal'
+import ScheduleAnnouncementModal from './ScheduleAnnouncementModal'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — My Requests' }
@@ -38,7 +39,7 @@ export default async function StudentPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name')
+    .select('full_name, schedule_ack')
     .eq('id', user.id)
     .single()
 
@@ -62,17 +63,43 @@ export default async function StudentPage() {
     rejected: list.filter((r) => r.status === 'rejected').length,
   }
 
+  // One-time schedule popup: only while the student has a live (non-rejected)
+  // request in the active period, and only if they haven't already
+  // acknowledged THIS exact schedule (signature changes whenever the PH
+  // updates it, so a genuine change re-prompts even if an older one was seen).
+  const hasLiveRequest = activePeriod
+    ? list.some((r) => r.status !== 'rejected' && (!r.period_id || r.period_id === activePeriod.id))
+    : false
+  const scheduleSignature = activePeriod?.scheduleUpdatedAt ? `${activePeriod.id}:${activePeriod.scheduleUpdatedAt}` : null
+  const showSchedulePopup = !!(
+    activePeriod?.examDay && scheduleSignature && hasLiveRequest && profile?.schedule_ack !== scheduleSignature
+  )
+
   return (
     <div className="space-y-6">
-      <SubmissionStatusModal
-        termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
-        open={win.open}
-        notStarted={win.notStarted}
-        daysRemaining={win.daysRemaining}
-        start={win.start}
-        end={win.end}
-        show={!modalSeen}
-      />
+      {/* Only one popup at a time — the schedule announcement is the rarer,
+          more directly actionable one, so it takes priority. */}
+      {showSchedulePopup ? (
+        <ScheduleAnnouncementModal
+          show
+          signature={scheduleSignature!}
+          termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+          examDay={activePeriod!.examDay!}
+          examEndDay={activePeriod?.examEndDay ?? null}
+          examLocation={activePeriod?.examLocation ?? null}
+          examBring={activePeriod?.examBring ?? null}
+        />
+      ) : (
+        <SubmissionStatusModal
+          termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+          open={win.open}
+          notStarted={win.notStarted}
+          daysRemaining={win.daysRemaining}
+          start={win.start}
+          end={win.end}
+          show={!modalSeen}
+        />
+      )}
       <SubmissionStatusBanner
         termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
         open={win.open}

@@ -176,7 +176,7 @@ export async function getNotifications(
     // taking part in (only while they still have a live request in it, and only
     // while it's newer than the student's last-seen mark).
     const active = await getActivePeriodCached()
-    if (active?.examDay && new Date(active.createdAt).getTime() > seenMs) {
+    if (active?.examDay && active.scheduleUpdatedAt && new Date(active.scheduleUpdatedAt).getTime() > seenMs) {
       const hasLiveRequest = (allData ?? []).some(
         (r) => r.status !== 'rejected' && (!r.period_id || r.period_id === active.id),
       )
