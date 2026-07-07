@@ -79,17 +79,27 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const [section, setSection] = useState(eff.section ?? '')
   const [confirming, setConfirming] = useState(false)
 
-  // Distinct subjects across all offerings.
+  // A section name like "BSIT 2-201" or "STEM 11-A" leads with the course /
+  // strand code. Comparing that prefix to the chosen course is how "BSIT"
+  // students only see BSIT sections (and never SHS ones, etc.) — the class
+  // offering data doesn't need a separate department field for this to work.
+  const coursePrefix = (section: string) => (section.match(/^[A-Za-z]+/)?.[0] ?? '').toUpperCase()
+  const normalizeCourse = (c: string) => c.toUpperCase().replace(/[^A-Z]/g, '')
+
+  // Only offerings whose section matches the chosen course. Nothing shows until
+  // a course is picked, so a subject never leaks in from another program.
+  const courseOfferings = course ? offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course)) : []
+
   const subjectOptions = Array.from(
-    new Map(offerings.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
+    new Map(courseOfferings.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
   )
   // Sections available for the chosen subject (and year, when the offering
   // specifies one).
   const yearNum = yearLevel ? Number(yearLevel) : null
-  const sectionOptions = offerings.filter(
+  const sectionOptions = courseOfferings.filter(
     (o) => o.subjectId === subjectId && (yearNum == null || o.yearLevel == null || o.yearLevel === yearNum),
   )
-  const teacherName = offerings.find((o) => o.subjectId === subjectId && o.section === section)?.teacherName ?? null
+  const teacherName = courseOfferings.find((o) => o.subjectId === subjectId && o.section === section)?.teacherName ?? null
 
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -129,6 +139,56 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
       <form ref={formRef} action={submitRequest} className="ef-card rounded-xl shadow-sm p-6 space-y-6">
         {prefill?.fromId && <input type="hidden" name="resubmit_from" value={prefill.fromId} />}
+
+        {/* Exam type — first thing the student decides */}
+        <div>
+          <label className="block text-sm font-medium ef-muted mb-2">Exam Type *</label>
+          <div className="grid grid-cols-2 gap-3">
+            {(['paid', 'excused'] as const).map((t) => (
+              <label
+                key={t}
+                className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                  examType === t ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
+                }`}
+              >
+                <input type="radio" name="exam_type" value={t} checked={examType === t} onChange={() => setExamType(t)} className="sr-only" />
+                <Icon name={t === 'paid' ? 'receipt' : 'file'} className="w-6 h-6 mb-2" style={{ color: 'var(--card-foreground)' }} />
+                <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>
+                  {t === 'paid' ? 'Paid' : 'Excused'}
+                </div>
+                <div className="text-xs ef-muted">{t === 'paid' ? 'Unexcused absence' : 'With valid reason'}</div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Excused reason — right under Exam Type, since it only applies when Excused is chosen */}
+        {examType === 'excused' && (
+          <div>
+            <label className="block text-sm font-medium ef-muted mb-2">Reason for Absence *</label>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {REASONS.map((r) => (
+                <label
+                  key={r.value}
+                  className={`cursor-pointer rounded-xl border-2 p-3 text-center transition-all ${
+                    reason === r.value ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
+                  }`}
+                >
+                  <input type="radio" name="excused_reason" value={r.value} required checked={reason === r.value} onChange={() => setReason(r.value)} className="sr-only" />
+                  <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>{r.label}</div>
+                  <div className="text-[10px] ef-muted leading-tight mt-0.5">{r.desc}</div>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        {examType === 'excused' && reason === 'other' && (
+          <div>
+            <label className="block text-sm font-medium ef-muted mb-1">Please specify *</label>
+            <input name="other_reason" required maxLength={500} defaultValue={prefill?.otherReason ?? ''} className={inputClass} placeholder="Briefly describe the reason" />
+          </div>
+        )}
+
         {/* Your information */}
         <div className="space-y-4 pb-2 border-b ef-border">
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Your Information</h2>
@@ -153,7 +213,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Course / Program *</label>
               <div className="relative">
-                <select name="course" required value={course} onChange={(e) => setCourse(e.target.value)} className={selectClass} style={selectStyle}>
+                <select name="course" required value={course} onChange={(e) => { setCourse(e.target.value); setSubjectId(''); setSection('') }} className={selectClass} style={selectStyle}>
                   <option value="">— Select course —</option>
                   {COURSES.map((c) => (
                     <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
@@ -182,35 +242,21 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           </div>
         </div>
 
-        {/* Exam type */}
-        <div>
-          <label className="block text-sm font-medium ef-muted mb-2">Exam Type *</label>
-          <div className="grid grid-cols-2 gap-3">
-            {(['paid', 'excused'] as const).map((t) => (
-              <label
-                key={t}
-                className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
-                  examType === t ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
-                }`}
-              >
-                <input type="radio" name="exam_type" value={t} checked={examType === t} onChange={() => setExamType(t)} className="sr-only" />
-                <Icon name={t === 'paid' ? 'receipt' : 'file'} className="w-6 h-6 mb-2" style={{ color: 'var(--card-foreground)' }} />
-                <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>
-                  {t === 'paid' ? 'Paid' : 'Excused'}
-                </div>
-                <div className="text-xs ef-muted">{t === 'paid' ? 'Unexcused absence' : 'With valid reason'}</div>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Subject → Section → Teacher (dynamic from the class offerings) */}
+        {/* Subject → Section → Teacher (dynamic from the class offerings, scoped to the chosen course) */}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
             <div className="relative">
-              <select name="subject_id" required value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setSection('') }} className={selectClass} style={selectStyle}>
-                <option value="">— Select a subject —</option>
+              <select
+                name="subject_id"
+                required
+                value={subjectId}
+                onChange={(e) => { setSubjectId(e.target.value); setSection('') }}
+                disabled={!course}
+                className={`${selectClass} disabled:opacity-50`}
+                style={selectStyle}
+              >
+                <option value="">{course ? '— Select a subject —' : 'Select a course first'}</option>
                 {subjectOptions.map((s) => (
                   <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
                 ))}
@@ -248,35 +294,6 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             </div>
           )}
         </div>
-
-        {/* Excused reason cards */}
-        {examType === 'excused' && (
-          <div>
-            <label className="block text-sm font-medium ef-muted mb-2">Reason for Absence *</label>
-            <div className="grid sm:grid-cols-3 gap-3">
-              {REASONS.map((r) => (
-                <label
-                  key={r.value}
-                  className={`cursor-pointer rounded-xl border-2 p-3 text-center transition-all ${
-                    reason === r.value ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
-                  }`}
-                >
-                  <input type="radio" name="excused_reason" value={r.value} required checked={reason === r.value} onChange={() => setReason(r.value)} className="sr-only" />
-                  <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>{r.label}</div>
-                  <div className="text-[10px] ef-muted leading-tight mt-0.5">{r.desc}</div>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Specify other */}
-        {examType === 'excused' && reason === 'other' && (
-          <div>
-            <label className="block text-sm font-medium ef-muted mb-1">Please specify *</label>
-            <input name="other_reason" required maxLength={500} defaultValue={prefill?.otherReason ?? ''} className={inputClass} placeholder="Briefly describe the reason" />
-          </div>
-        )}
 
         {/* Parent documents */}
         <div className="space-y-4 pt-2 border-t ef-border">

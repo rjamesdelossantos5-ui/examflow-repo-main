@@ -69,15 +69,21 @@ export default async function SubmitPage({
     teacherName: o.profiles?.full_name ?? null,
   }))
 
-  // Fallback for data with no offerings yet: one section per subject (the
-  // student's own section), teacher from the subject.
+  // Fallback for data with no class_offerings rows yet (the offerings table is
+  // empty — e.g. it hasn't been seeded): one section per subject from the
+  // student's own profile, teacher from the subject's legacy teacher_id. The
+  // section is prefixed with the student's course so the course-based filter
+  // on the form still works in this degraded mode.
   if (offerings.length === 0) {
     type SubRow = { id: string; subject_code: string; subject_name: string; profiles: { full_name: string } | null }
+    const fallbackSection = profile?.course
+      ? `${profile.course} ${profile?.section || 'N/A'}`
+      : profile?.section || 'N/A'
     offerings = ((subjectRows ?? []) as unknown as SubRow[]).map((s) => ({
       subjectId: s.id,
       subjectCode: s.subject_code,
       subjectName: s.subject_name,
-      section: profile?.section || 'N/A',
+      section: fallbackSection,
       yearLevel: null,
       teacherName: s.profiles?.full_name ?? null,
     }))
