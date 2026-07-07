@@ -9,6 +9,7 @@ import { Icon } from '@/components/Icon'
 import { getSignedUrl } from '@/app/media-actions'
 import RejectReasonPicker from '@/components/RejectReasonPicker'
 import { PH_REJECT_EXCUSED, PH_REJECT_PAID, PH_RECEIPT_REJECT } from '@/lib/rejectReasons'
+import { ordinalYear } from '@/lib/ordinal'
 
 interface MediaItem {
   id: string
@@ -242,7 +243,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
       <div>
         <h3 className="font-bold text-base" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
         {r.student.student_number && <p className="text-gray-400 text-xs">#{r.student.student_number}</p>}
-        <p className="text-gray-500 text-xs">{r.student.course} · Year {r.student.year_level} · {r.student.section}</p>
+        <p className="text-gray-500 text-xs">{r.student.course} · {ordinalYear(r.student.year_level)} · {r.student.section}</p>
         <p className="mt-1">{r.subject.subject_code} — {r.subject.subject_name}</p>
         {r.subject.teacher && <p className="text-gray-400 text-xs">Teacher: {r.subject.teacher.full_name}</p>}
       </div>

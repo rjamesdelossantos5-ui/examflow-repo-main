@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { keepActive, computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
+import { getMyProfileMeta } from '@/lib/myProfile'
 import StaffWindowBanner from '@/components/StaffWindowBanner'
 import TeacherQueue from './TeacherQueue'
 
@@ -27,7 +28,7 @@ export default async function TeacherPage() {
 
   // RLS already filters by teacher. Media isn't shown to teachers, but we pass
   // it through; signed URLs are fetched lazily where documents are viewable.
-  const activePeriod = await getActivePeriodCached()
+  const [activePeriod, meta] = await Promise.all([getActivePeriodCached(), getMyProfileMeta()])
   const activeId = activePeriod?.id ?? null
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const requests = keepActive(raw ?? [], activeId).map((r) => {
@@ -46,6 +47,7 @@ export default async function TeacherPage() {
         section: s.snap_section ?? prof?.section ?? null,
         contact_number: s.snap_contact_number ?? null,
       },
+      teacherName: meta?.full_name ?? null,
       subject: r.subjects as unknown as { subject_code: string; subject_name: string },
       media: (r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[],
       logs: r.progress_logs ?? [],

@@ -18,7 +18,8 @@ export default async function RegistrarPage() {
     .select(`
       *,
       profiles!student_id(full_name, student_number, course, year_level, section),
-      subjects(subject_code, subject_name),
+      routed_teacher:profiles!teacher_id(full_name),
+      subjects(subject_code, subject_name, profiles!teacher_id(full_name)),
       application_media(id, media_type, storage_path, file_name, mime_type),
       progress_logs(id, action, created_at, actor_role)
     `)
@@ -32,6 +33,8 @@ export default async function RegistrarPage() {
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const requests = keepActive(raw ?? [], activeId).map((r) => {
     const prof = r.profiles as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null } | null
+    const routedTeacher = r.routed_teacher as unknown as { full_name: string } | null
+    const subj = r.subjects as unknown as { subject_code: string; subject_name: string; profiles: { full_name: string } | null } | null
     const s = r as {
       snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null
       snap_year_level?: number | null; snap_section?: string | null; snap_contact_number?: string | null
@@ -46,6 +49,7 @@ export default async function RegistrarPage() {
         section: s.snap_section ?? prof?.section ?? null,
         contact_number: s.snap_contact_number ?? null,
       },
+      teacherName: routedTeacher?.full_name ?? subj?.profiles?.full_name ?? null,
       subject: r.subjects as unknown as { subject_code: string; subject_name: string },
       // Registrar verifies identity documents only. The medical/death certificate
       // is private and shown to the Program Head, not the Registrar.

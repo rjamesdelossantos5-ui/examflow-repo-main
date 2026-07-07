@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import { getSignedUrl } from '@/app/media-actions'
 import RejectReasonPicker from '@/components/RejectReasonPicker'
+import { ordinalYear } from '@/lib/ordinal'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface MediaItem {
@@ -27,6 +28,7 @@ interface Props {
   requestId: string
   studentName: string
   studentInfo?: StudentInfo
+  teacherName?: string | null
   subjectName: string
   subjectCode: string
   examType: string
@@ -53,6 +55,7 @@ export default function RequestReviewPanel({
   requestId,
   studentName,
   studentInfo,
+  teacherName,
   subjectName,
   subjectCode,
   examType,
@@ -111,7 +114,15 @@ export default function RequestReviewPanel({
       <div className="space-y-4">
         <div>
           <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>{studentName}</h3>
-          <p className="text-sm ef-muted">{subjectCode} — {subjectName}</p>
+          {studentInfo?.student_number && <p className="text-xs text-gray-400">#{studentInfo.student_number}</p>}
+          {(studentInfo?.course || studentInfo?.year_level) && (
+            <p className="text-sm text-gray-500">
+              {studentInfo?.course}{studentInfo?.course && studentInfo?.year_level ? ' · ' : ''}
+              {studentInfo?.year_level ? ordinalYear(studentInfo.year_level) : ''}
+              {studentInfo?.section ? ` · ${studentInfo.section}` : ''}
+            </p>
+          )}
+          <p className="mt-1 text-sm ef-muted">{subjectCode} — {subjectName}</p>
           <div className="flex gap-3 mt-2 text-sm">
             <span className={`px-2 py-0.5 rounded font-semibold text-xs ${examType === 'paid' ? 'bg-yellow-50 text-yellow-700' : 'bg-teal-50 text-teal-700'}`}>
               {examType === 'paid' ? 'Paid' : 'Excused'}
@@ -124,19 +135,20 @@ export default function RequestReviewPanel({
 
         {/* Form details — what the student filled in */}
         {studentInfo && (
-          <div>
-            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Form Details</h4>
-            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+          <div className="rounded-xl border ef-border p-3.5">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2.5">Form Details</h4>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
               {[
                 ['Contact No.', studentInfo.contact_number],
                 ['Student No.', studentInfo.student_number],
                 ['Course', studentInfo.course],
-                ['Year', studentInfo.year_level],
+                ['Year', studentInfo.year_level ? ordinalYear(studentInfo.year_level) : null],
                 ['Section', studentInfo.section],
+                ['Teacher', teacherName],
               ].map(([label, value]) => (
                 <div key={label as string}>
-                  <dt className="text-[11px] text-gray-400">{label}</dt>
-                  <dd className="font-medium text-gray-700">{value ?? '—'}</dd>
+                  <dt className="text-[11px] text-gray-400 uppercase tracking-wide">{label}</dt>
+                  <dd className="font-medium" style={{ color: 'var(--card-foreground)' }}>{value ?? '—'}</dd>
                 </div>
               ))}
             </dl>

@@ -6,6 +6,7 @@ import StatusBadge from '@/components/StatusBadge'
 import { Icon } from '@/components/Icon'
 import { exportSchoolFormat } from './exportExcel'
 import { deleteFinishedRequest } from '../actions'
+import { ordinalYear } from '@/lib/ordinal'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface StudentGroup {
@@ -162,7 +163,7 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold truncate" style={{ color: 'var(--card-foreground)' }}>{g.student.student_name}</p>
                     <p className="text-xs ef-muted truncate">
-                      {g.student.student_number ?? '—'} · {g.student.course ?? '—'} · {g.student.year_level ?? '—'}/{g.student.section ?? '—'}
+                      {g.student.student_number ?? '—'} · {g.student.course ?? '—'} · {ordinalYear(g.student.year_level)} · {g.student.section ?? '—'}
                     </p>
                   </div>
                   <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>

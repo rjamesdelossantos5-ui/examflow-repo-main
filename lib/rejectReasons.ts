@@ -45,7 +45,6 @@ export const PH_REJECT_PAID = [
 // Program Head verifying the cashier receipt (paid, second approval).
 export const PH_RECEIPT_REJECT = [
   'Blurred or unreadable receipt',
-  'Wrong amount paid',
   'Not an official receipt',
   'Receipt details do not match',
   OTHER,

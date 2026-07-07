@@ -17,6 +17,7 @@ interface RequestRow {
   submitted_at: string
   resubmitted?: boolean
   student: { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null; contact_number: string | null }
+  teacherName?: string | null
   subject: { subject_code: string; subject_name: string }
   media: { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string; signed_url?: string }[]
   logs: { id: string; action: string; created_at: string; actor_role: string }[]
@@ -150,6 +151,7 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
                       requestId={f.id}
                       studentName={f.student.full_name}
                       studentInfo={f.student}
+                      teacherName={f.teacherName}
                       subjectName={f.subject.subject_name}
                       subjectCode={f.subject.subject_code}
                       examType={f.exam_type}
