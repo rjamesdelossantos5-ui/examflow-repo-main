@@ -383,15 +383,15 @@ create policy "requests_student_select" on special_exam_requests
   );
 
 -- ── application_media ─────────────────────────
+-- Teachers deliberately do NOT get a document-visibility path here: the
+-- teacher queue never shows parent ID / signature / receipts (showDocuments
+-- is false there) — only Registrar/Program Head/Admin review those.
 create policy "media_select" on application_media
   for select using (
     request_id in (
       select id from special_exam_requests
       where student_id = auth.uid()
         or current_user_role() in ('registrar', 'program_head', 'admin')
-        or (current_user_role() = 'subject_teacher' and (
-            teacher_id = auth.uid() or
-            subject_id in (select id from subjects where teacher_id = auth.uid())))
     )
   );
 
