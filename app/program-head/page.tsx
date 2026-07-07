@@ -55,6 +55,7 @@ export default async function ProgramHeadPage() {
       media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[])
         .filter((m) => m.media_type === 'supporting_document'),
       logs: r.progress_logs ?? [],
+      resubmitted: ((r.progress_logs ?? []) as { action?: string }[]).some((l) => typeof l.action === 'string' && l.action.startsWith('Resubmitted')),
     }
   })
 

@@ -370,9 +370,25 @@ create policy "storage_allow_upload" on storage.objects
   for insert to authenticated
   with check (bucket_id = 'exam-documents');
 
+-- The excuse certificate (requests/<id>/supporting_document.<ext>) is sensitive
+-- personal data: only the owning student and the Program Head / Admin can read
+-- it. All other files stay readable by authenticated staff.
 create policy "storage_allow_read" on storage.objects
   for select to authenticated
-  using (bucket_id = 'exam-documents');
+  using (
+    bucket_id = 'exam-documents'
+    and (
+      name not like 'requests/%/supporting_document.%'
+      or exists (
+        select 1 from public.special_exam_requests r
+        where r.id::text = split_part(name, '/', 2)
+          and (
+            r.student_id = auth.uid()
+            or public.current_user_role() in ('program_head', 'admin')
+          )
+      )
+    )
+  );
 
 create policy "storage_allow_update" on storage.objects
   for update to authenticated

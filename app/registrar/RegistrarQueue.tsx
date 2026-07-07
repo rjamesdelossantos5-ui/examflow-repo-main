@@ -15,6 +15,7 @@ interface RequestRow {
   other_reason: string | null
   status: RequestStatus
   submitted_at: string
+  resubmitted?: boolean
   student: { full_name: string }
   subject: { subject_code: string; subject_name: string }
   media: { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string; signed_url?: string }[]
@@ -70,9 +71,12 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
                   <p className="font-semibold truncate" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</p>
                   <p className="text-sm ef-muted truncate">{r.subject.subject_code} — {r.subject.subject_name}</p>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${r.exam_type === 'paid' ? 'bg-yellow-100 text-yellow-700' : 'bg-teal-100 text-teal-700'}`}>
-                  {r.exam_type === 'paid' ? 'Paid' : 'Excused'}
-                </span>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r.exam_type === 'paid' ? 'bg-yellow-100 text-yellow-700' : 'bg-teal-100 text-teal-700'}`}>
+                    {r.exam_type === 'paid' ? 'Paid' : 'Excused'}
+                  </span>
+                  {r.resubmitted && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
+                </div>
               </div>
               <p className="text-xs ef-muted mt-1">{new Date(r.submitted_at).toLocaleDateString()}</p>
             </button>

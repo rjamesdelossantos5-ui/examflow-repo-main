@@ -28,10 +28,10 @@ export const TEACHER_REJECT = [
 // Program Head reviews the excuse certificate (medical / death cert) for an
 // excused request, so certificate-related reasons live here.
 export const PH_REJECT_EXCUSED = [
-  'Blurred or unreadable certificate',
-  'Invalid excuse certificate',
+  'Blurred or unreadable certificate (medical / death)',
+  'Invalid or fake certificate',
   'Certificate does not match the reason',
-  'Insufficient supporting document',
+  'Wrong document uploaded',
   OTHER,
 ]
 

@@ -27,6 +27,7 @@ interface RequestRow {
   other_reason: string | null
   status: RequestStatus
   submitted_at: string
+  resubmitted?: boolean
   final_schedule: string | null
   student: { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null }
   subject: { subject_code: string; subject_name: string; teacher: { full_name: string } | null }
@@ -92,6 +93,7 @@ export default function PHQueue({
                   <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r.exam_type === 'paid' ? 'bg-yellow-100 text-yellow-700' : 'bg-teal-100 text-teal-700'}`}>
                     {r.exam_type === 'paid' ? 'Paid' : 'Excused'}
                   </span>
+                  {r.resubmitted && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                   <StatusBadge status={r.status} />
                 </div>
               </div>

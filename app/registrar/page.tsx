@@ -39,6 +39,7 @@ export default async function RegistrarPage() {
       media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[])
         .filter((m) => ['parent_id', 'parent_id_back', 'parent_signature'].includes(m.media_type)),
       logs: r.progress_logs ?? [],
+      resubmitted: ((r.progress_logs ?? []) as { action?: string }[]).some((l) => typeof l.action === 'string' && l.action.startsWith('Resubmitted')),
     }
   })
 

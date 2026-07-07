@@ -15,6 +15,7 @@ interface RequestRow {
   other_reason: string | null
   status: RequestStatus
   submitted_at: string
+  resubmitted?: boolean
   student: { full_name: string }
   subject: { subject_code: string; subject_name: string }
   media: { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string; signed_url?: string }[]
@@ -72,6 +73,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                     {r.exam_type === 'paid' ? 'Paid' : 'Excused'}
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700">✓ Registrar verified</span>
+                  {r.resubmitted && <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                 </div>
               </div>
               <p className="text-xs ef-muted mt-1">{new Date(r.submitted_at).toLocaleDateString()}</p>

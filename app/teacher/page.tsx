@@ -36,6 +36,7 @@ export default async function TeacherPage() {
       subject: r.subjects as unknown as { subject_code: string; subject_name: string },
       media: (r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[],
       logs: r.progress_logs ?? [],
+      resubmitted: ((r.progress_logs ?? []) as { action?: string }[]).some((l) => typeof l.action === 'string' && l.action.startsWith('Resubmitted')),
     }
   })
 
