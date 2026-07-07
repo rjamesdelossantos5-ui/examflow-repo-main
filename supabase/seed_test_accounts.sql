@@ -22,13 +22,16 @@
 --   shs.teacher2@examflow.com   Libaton    (SHS)
 --   ict.head@examflow.com       ICT Department Head
 --   shs.head@examflow.com       Senior High School Head
---   student1@examflow.com       student
---   student2@examflow.com       student
+--   student1@examflow.com       student (course BSIT)
+--   student2@examflow.com       student (course STEM)
+--
+-- The student-facing Course dropdown is trimmed to exactly 2 for testing:
+-- BSIT (tertiary) and STEM (senior high) — matching the offerings below.
 --
 -- Offerings:
 --   CP101  BSIT 2-201 → Galamiton   BSIT 2-202 → Gamino
 --   GD101  BSIT 3-201 → Galamiton   BSIT 3-202 → Gamino
---   ELS01  STEM 11-A  → Pangilinan  ABM 11-A   → Libaton
+--   ELS01  STEM 11-A  → Pangilinan  STEM 11-B  → Libaton
 --   PHY01  STEM 12-A  → Pangilinan  STEM 12-B  → Libaton
 -- ─────────────────────────────────────────────────────────────
 
@@ -87,8 +90,10 @@ UPDATE profiles SET role='subject_teacher', department_id=ict_id WHERE id IN (t_
 UPDATE profiles SET role='subject_teacher', department_id=shs_id WHERE id IN (t_p, t_l);
 UPDATE profiles SET role='program_head',    department_id=ict_id WHERE id=ph_ict;
 UPDATE profiles SET role='program_head',    department_id=shs_id WHERE id=ph_shs;
+-- stu1 = BSIT (tertiary), stu2 = STEM (senior high) — one of each for testing
+-- the 2-course setup.
 UPDATE profiles SET role='student', student_number='2024-00001', course='BSIT', year_level=2, section='BSIT 2-201', department_id=ict_id WHERE id=stu1;
-UPDATE profiles SET role='student', student_number='2024-00002', course='BSIT', year_level=3, section='BSIT 3-201', department_id=ict_id WHERE id=stu2;
+UPDATE profiles SET role='student', student_number='2024-00002', course='STEM', year_level=1, section='STEM 11-A', department_id=shs_id WHERE id=stu2;
 
 -- ── Subjects (teacher_id null: routing is via class_offerings) ──
 DELETE FROM subjects;
@@ -109,7 +114,7 @@ INSERT INTO class_offerings (subject_id, section, teacher_id, year_level) VALUES
   (gd,  'BSIT 3-201', t_g,  3),
   (gd,  'BSIT 3-202', t_gm, 3),
   (els, 'STEM 11-A',  t_p,  null),
-  (els, 'ABM 11-A',   t_l,  null),
+  (els, 'STEM 11-B',  t_l,  null),
   (phy, 'STEM 12-A',  t_p,  null),
   (phy, 'STEM 12-B',  t_l,  null);
 

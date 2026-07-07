@@ -25,16 +25,12 @@ const REASONS = [
   { value: 'other', label: 'Other', desc: 'Another valid reason', doc: 'Supporting Document' },
 ] as const
 
-// Course catalog — sections depend on the chosen course (no free typing).
-const COURSES: { code: string; name: string; sections: string[] }[] = [
-  { code: 'BSIT', name: 'BS Information Technology', sections: ['A', 'B', 'C', 'D'] },
-  { code: 'BSCS', name: 'BS Computer Science', sections: ['A', 'B', 'C'] },
-  { code: 'BSCpE', name: 'BS Computer Engineering', sections: ['A', 'B'] },
-  { code: 'BSIS', name: 'BS Information Systems', sections: ['A', 'B'] },
-  { code: 'BSBA', name: 'BS Business Administration', sections: ['A', 'B', 'C', 'D'] },
-  { code: 'BSHM', name: 'BS Hospitality Management', sections: ['A', 'B', 'C'] },
-  { code: 'BSTM', name: 'BS Tourism Management', sections: ['A', 'B'] },
-  { code: 'BSA', name: 'BS Accountancy', sections: ['A', 'B'] },
+// Course catalog — trimmed to 2 for testing: one tertiary (BSIT, matches the
+// ICT offerings) and one senior-high strand (STEM, matches the SHS offerings).
+// Sections themselves come from class_offerings, not from a hardcoded list.
+const COURSES: { code: string; name: string }[] = [
+  { code: 'BSIT', name: 'BS Information Technology' },
+  { code: 'STEM', name: 'Science, Technology, Engineering & Mathematics' },
 ]
 const YEARS = [1, 2, 3, 4]
 
