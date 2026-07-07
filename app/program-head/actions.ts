@@ -395,3 +395,30 @@ export async function setActivePeriod(id: string) {
   revalidatePath('/student')
   return { error: null }
 }
+
+// Removes a term that's no longer needed (e.g. one set up during testing).
+// Blocked for the active term (switch active first) and for any term real
+// requests are already tied to (special_exam_requests.period_id references it
+// with no cascade/set-null, so deleting it would either error or silently
+// orphan those requests into "legacy" — neither is safe to do quietly).
+export async function deletePeriod(id: string) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase } = ctx
+
+  const { data: period } = await supabase.from('exam_periods').select('is_active').eq('id', id).single()
+  if (!period) return { error: 'Term not found.' }
+  if (period.is_active) return { error: 'Set another term active before deleting this one.' }
+
+  const { count } = await supabase
+    .from('special_exam_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('period_id', id)
+  if (count) return { error: `Can't delete — ${count} request${count === 1 ? '' : 's'} ${count === 1 ? 'is' : 'are'} already tied to this term.` }
+
+  const { error } = await supabase.from('exam_periods').delete().eq('id', id)
+  if (error) return { error: error.message }
+
+  revalidatePath('/program-head/settings')
+  return { error: null }
+}

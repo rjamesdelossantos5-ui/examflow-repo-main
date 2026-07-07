@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { savePeriod, saveExamSchedule, setActivePeriod } from '../actions'
+import { savePeriod, saveExamSchedule, setActivePeriod, deletePeriod } from '../actions'
 import { computeWindow, TERMS, TERM_LABEL, type ExamPeriod, type Term } from '@/lib/examSettings'
 
 const input = 'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]'
@@ -22,6 +22,15 @@ function toLocalInput(iso: string | null) {
 export default function SettingsForm({ active, periods }: { active: ExamPeriod | null; periods: ExamPeriod[] }) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  function handleDelete(id: string) {
+    startTransition(async () => {
+      const res = await deletePeriod(id)
+      if (res.error) setError(res.error)
+      setConfirmDeleteId(null)
+    })
+  }
 
   return (
     <div className="max-w-lg space-y-8">
@@ -66,15 +75,43 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
                 </div>
                 {p.isActive ? (
                   <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-green-100 text-green-700">Active</span>
+                ) : confirmDeleteId === p.id ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs ef-muted">Delete this term?</span>
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      disabled={isPending}
+                      className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-600 text-white disabled:opacity-50"
+                    >
+                      Yes, delete
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      disabled={isPending}
+                      className="text-xs px-3 py-1.5 rounded-lg font-semibold border ef-border disabled:opacity-50"
+                      style={{ color: 'var(--card-foreground)' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 ) : (
-                  <button
-                    onClick={() => startTransition(async () => { const res = await setActivePeriod(p.id); if (res.error) setError(res.error) })}
-                    disabled={isPending}
-                    className="text-xs px-3 py-1.5 rounded-lg font-semibold border ef-border disabled:opacity-50"
-                    style={{ color: 'var(--card-foreground)' }}
-                  >
-                    Set active
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => startTransition(async () => { const res = await setActivePeriod(p.id); if (res.error) setError(res.error) })}
+                      disabled={isPending}
+                      className="text-xs px-3 py-1.5 rounded-lg font-semibold border ef-border disabled:opacity-50"
+                      style={{ color: 'var(--card-foreground)' }}
+                    >
+                      Set active
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(p.id)}
+                      disabled={isPending}
+                      className="text-xs px-3 py-1.5 rounded-lg font-semibold border border-red-300 text-red-600 disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
