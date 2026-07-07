@@ -200,6 +200,20 @@ alter table exam_periods add column if not exists schedule_updated_at timestampt
 alter table profiles add column if not exists schedule_ack text;
 alter table profiles add column if not exists window_ack text;
 
+-- ── migration_realtime_periods.sql ──────────────
+alter table exam_periods replica identity full;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'exam_periods'
+  ) then
+    alter publication supabase_realtime add table exam_periods;
+  end if;
+end $$;
+
 -- ── migration_indexes.sql ──────────────────────
 create index if not exists idx_requests_status_submitted on special_exam_requests (status, submitted_at desc);
 create index if not exists idx_requests_student on special_exam_requests (student_id);

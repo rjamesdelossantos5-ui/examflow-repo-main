@@ -48,6 +48,12 @@ export default function LiveRefresh({ filter }: { filter?: string } = {}) {
           : { event: '*', schema: 'public', table: 'special_exam_requests' },
         scheduleRefresh,
       )
+      // Submission window / exam schedule changes (savePeriod, saveExamSchedule,
+      // setActivePeriod) live here — without this, a Program Head activating a
+      // window or setting the schedule never reaches an already-open student
+      // dashboard until they manually refresh. Small, low-write table, so this
+      // stays unfiltered for every role.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'exam_periods' }, scheduleRefresh)
       .subscribe((status) => { realtimeOk = status === 'SUBSCRIBED' })
 
     // Fallback only — skips the refetch entirely while Realtime is connected.
