@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Icon, type IconName } from './Icon'
+import { markNotificationsSeen } from '@/app/notificationActions'
 
 export type NotificationTone = 'info' | 'success' | 'warning' | 'danger'
 
@@ -30,6 +32,7 @@ const TONE: Record<NotificationTone, string> = {
 export default function NotificationBell({ items = [] }: { items?: NotificationItem[] }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const router = useRouter()
   const count = items.length
 
   useEffect(() => {
@@ -40,10 +43,22 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
+  // Opening the bell marks the current items "seen" — the badge then clears
+  // (and stays cleared, even across a re-login) until something newer shows up.
+  function handleToggle() {
+    setOpen((v) => {
+      const next = !v
+      if (next && count > 0) {
+        markNotificationsSeen().then(() => router.refresh())
+      }
+      return next
+    })
+  }
+
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         className="relative grid place-items-center w-9 h-9 rounded-full hover:bg-white/10 transition-colors"
         aria-label={count > 0 ? `${count} notification${count > 1 ? 's' : ''}` : 'Notifications'}
       >

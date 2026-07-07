@@ -149,23 +149,35 @@ export async function getNotifications(
   }
 
   // Students: one alert per update on their own requests (someone acted on it),
-  // newest change first.
+  // newest change first. The bell badge clears once opened and stays cleared
+  // (even across a re-login) until something with a newer timestamp shows up —
+  // see notifications_seen_at, set by markNotificationsSeen().
   if (role === 'student') {
-    const { data } = await supabase
+    const { data: profileRow } = await supabase
+      .from('profiles')
+      .select('notifications_seen_at')
+      .eq('id', userId)
+      .single()
+    const seenAt = (profileRow as { notifications_seen_at: string | null } | null)?.notifications_seen_at
+    const seenMs = seenAt ? new Date(seenAt).getTime() : 0
+
+    const { data: allData } = await supabase
       .from('special_exam_requests')
       .select('id, status, exam_type, updated_at, period_id, subjects(subject_code)')
       .eq('student_id', userId)
       .in('status', ['accepted', 'scheduled', 'rejected', 'submitted', 'verified_by_registrar', 'approved_by_teacher', 'receipt_uploaded'])
       .order('updated_at', { ascending: false })
       .limit(MAX_ITEMS)
+    const data = (allData ?? []).filter((r) => new Date(r.updated_at).getTime() > seenMs)
 
     const items: NotificationItem[] = []
 
     // Top item: the special-exam schedule was set for the term this student is
-    // taking part in (only while they still have a live request in it).
+    // taking part in (only while they still have a live request in it, and only
+    // while it's newer than the student's last-seen mark).
     const active = await getActivePeriodCached()
-    if (active?.examDay) {
-      const hasLiveRequest = (data ?? []).some(
+    if (active?.examDay && new Date(active.createdAt).getTime() > seenMs) {
+      const hasLiveRequest = (allData ?? []).some(
         (r) => r.status !== 'rejected' && (!r.period_id || r.period_id === active.id),
       )
       if (hasLiveRequest) {
@@ -180,7 +192,7 @@ export async function getNotifications(
       }
     }
 
-    for (const r of (data ?? [])) {
+    for (const r of data) {
       const code = (r.subjects as unknown as { subject_code: string } | null)?.subject_code ?? 'your subject'
       const href = `/student/requests/${r.id}`
       if (r.status === 'accepted' && r.exam_type === 'paid')

@@ -47,6 +47,9 @@ create table profiles (
   -- When true, a program_head may approve/accept a request even if the
   -- registrar or teacher has not yet acted (admin-granted override).
   can_override   boolean not null default false,
+  -- When the student last opened their notification bell — items older than
+  -- this stop counting toward the bell badge (see lib/notifications.ts).
+  notifications_seen_at timestamptz,
   created_at     timestamptz not null default now()
 );
 

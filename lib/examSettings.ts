@@ -28,6 +28,7 @@ export interface ExamPeriod {
   examLocation: string | null
   examBring: string | null
   isActive: boolean
+  createdAt: string
 }
 
 interface PeriodRow {
@@ -41,6 +42,7 @@ interface PeriodRow {
   exam_location: string | null
   exam_bring: string | null
   is_active: boolean
+  created_at: string
 }
 
 function toPeriod(r: PeriodRow): ExamPeriod {
@@ -55,6 +57,7 @@ function toPeriod(r: PeriodRow): ExamPeriod {
     examLocation: r.exam_location,
     examBring: r.exam_bring,
     isActive: r.is_active,
+    createdAt: r.created_at,
   }
 }
 
