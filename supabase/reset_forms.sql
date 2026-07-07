@@ -19,6 +19,9 @@ delete from special_exam_requests;
 -- Terms / schedules — so no window or exam date is set until you make a new one.
 delete from exam_periods;
 
--- Uploaded files: this clears the object records for the bucket. (You can also
--- empty the "exam-documents" bucket from Storage in the dashboard.)
-delete from storage.objects where bucket_id = 'exam-documents';
+-- NOTE: uploaded files are NOT deleted by this script. Supabase blocks direct
+-- SQL deletes on storage.objects ("Direct deletion from storage tables is not
+-- allowed"). To clear the uploaded documents, go to:
+--   Supabase Dashboard → Storage → exam-documents bucket → select all → Delete
+-- This is optional — leftover files in storage don't affect the app (the rows
+-- pointing to them were just deleted above), they're just unused disk space.
