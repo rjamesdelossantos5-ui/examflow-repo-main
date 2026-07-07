@@ -1,4 +1,8 @@
+'use client'
+
+import { useState } from 'react'
 import { Icon } from '@/components/Icon'
+import { dismissBanner } from './bannerActions'
 
 interface Props {
   termLabel: string | null
@@ -11,6 +15,7 @@ interface Props {
   examEndDay: string | null
   examLocation: string | null
   examBring: string | null
+  initiallyDismissed?: boolean
 }
 
 function fmtDate(iso: string | null) {
@@ -23,12 +28,18 @@ function fmtDateTime(iso: string | null) {
 }
 
 /**
- * Persistent banner at the top of the student dashboard — shown on every visit
- * (not a one-time modal) so the student always sees how long is left to submit,
- * the special-exam schedule, and the reminder to collect the printed form.
+ * Persistent banner at the top of the student dashboard so the student always
+ * sees how long is left to submit, the special-exam schedule, and the
+ * reminder to collect the printed form. Dismissible — the dismissal only
+ * lasts for the current login; it always reappears on the next sign-in
+ * (the cookie backing it is cleared at login time).
  */
 export default function SubmissionStatusBanner(props: Props) {
+  const [dismissed, setDismissed] = useState(!!props.initiallyDismissed)
   const { open, notStarted, daysRemaining, termLabel } = props
+
+  if (dismissed) return null
+
   const tone = open ? '#16a34a' : notStarted ? '#f59e0b' : '#dc2626'
   const base = open ? 'Submission window is open' : notStarted ? 'Submissions open soon' : 'Submissions are closed'
   const title = termLabel ? `${termLabel} — ${base}` : base
@@ -52,9 +63,22 @@ export default function SubmissionStatusBanner(props: Props) {
       : fmtDateTime(props.examDay)
     : hasTerm ? TBA : null
 
+  function handleDismiss() {
+    setDismissed(true)
+    dismissBanner()
+  }
+
   return (
-    <div className="ef-card rounded-2xl shadow-sm overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-4 border-b ef-border">
+    <div className="ef-card rounded-2xl shadow-sm overflow-hidden relative">
+      <button
+        onClick={handleDismiss}
+        aria-label="Dismiss"
+        className="absolute top-3 right-3 w-7 h-7 rounded-full grid place-items-center ef-muted hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+      >
+        <Icon name="x" className="w-4 h-4" />
+      </button>
+
+      <div className="flex items-center gap-3 px-5 py-4 border-b ef-border pr-12">
         <span className="w-11 h-11 rounded-full grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${tone} 16%, transparent)`, color: tone }}>
           <Icon name="calendar" className="w-6 h-6" />
         </span>

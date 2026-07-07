@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import StatusBadge from '@/components/StatusBadge'
@@ -50,6 +51,7 @@ export default async function StudentPage() {
   ])
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
+  const bannerDismissed = (await cookies()).get('ef_banner_dismissed')?.value === '1'
   const list = requests ?? []
   const counts = {
     total: list.length,
@@ -70,6 +72,7 @@ export default async function StudentPage() {
         examEndDay={activePeriod?.examEndDay ?? null}
         examLocation={activePeriod?.examLocation ?? null}
         examBring={activePeriod?.examBring ?? null}
+        initiallyDismissed={bannerDismissed}
       />
       {/* Header */}
       <div className="flex items-center justify-between gap-4">

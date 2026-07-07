@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 
 const ROLE_HOME: Record<string, string> = {
@@ -43,6 +44,9 @@ export async function login(formData: FormData) {
     return redirect('/login?error=Account+is+inactive')
   }
 
+  // A dismissed dashboard banner should reappear on every fresh login.
+  ;(await cookies()).delete('ef_banner_dismissed')
+
   revalidatePath('/', 'layout')
   redirect(ROLE_HOME[profile.role] ?? '/login')
 }
@@ -74,6 +78,8 @@ export async function signIn(formData: FormData): Promise<{ error: string } | vo
     await supabase.auth.signOut()
     return { error: 'Your account is inactive. Please contact the registrar.' }
   }
+
+  ;(await cookies()).delete('ef_banner_dismissed')
 
   revalidatePath('/', 'layout')
   redirect(ROLE_HOME[profile.role] ?? '/login')

@@ -93,6 +93,9 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="m15 9-6 6M9 9l6 6" />
     </>
   ),
+  x: (
+    <path d="M18 6 6 18M6 6l12 12" />
+  ),
   check: (
     <>
       <circle cx="12" cy="12" r="10" />
