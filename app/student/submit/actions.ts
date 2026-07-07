@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActivePeriod, computeWindow } from '@/lib/examSettings'
+import { notifyNewSubmission } from '@/lib/email'
 import type { ExcusedReason } from '@/lib/supabase/types'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
@@ -156,10 +157,10 @@ export async function submitRequest(formData: FormData) {
     if (retry.error || !retry.data) {
       return redirect(`/student/submit?error=${encodeURIComponent(retry.error?.message ?? 'Submission failed')}`)
     }
-    return finishSubmission(supabase, retry.data, user.id, examType, files)
+    return finishSubmission(supabase, retry.data, user.id, examType, files, { studentName: snapshot.snap_name ?? 'A student', subjectId })
   }
 
-  return finishSubmission(supabase, req, user.id, examType, files)
+  return finishSubmission(supabase, req, user.id, examType, files, { studentName: snapshot.snap_name ?? 'A student', subjectId })
 }
 
 interface SubmissionFiles {
@@ -169,7 +170,7 @@ interface SubmissionFiles {
   supportDoc: File | null
 }
 
-async function finishSubmission(supabase: DB, req: { id: string }, userId: string, examType: string, f: SubmissionFiles) {
+async function finishSubmission(supabase: DB, req: { id: string }, userId: string, examType: string, f: SubmissionFiles, notify: { studentName: string; subjectId: string }) {
   const uploads: Promise<{ path: string; error: string | null }>[] = [
     uploadFile(supabase, f.parentId!, req.id, 'parent_id'),
     uploadFile(supabase, f.parentIdBack!, req.id, 'parent_id_back'),
@@ -206,6 +207,9 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
     actor_role: 'student',
     action: 'Submitted special exam request',
   })
+
+  // Notify the registrars a new request is waiting (best-effort — never blocks).
+  await notifyNewSubmission({ studentName: notify.studentName, subjectId: notify.subjectId, examType })
 
   redirect(`/student/requests/${req.id}?submitted=1`)
 }
@@ -298,6 +302,14 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     actor_id: userId,
     actor_role: 'student',
     action: 'Resubmitted after rejection',
+  })
+
+  // Back in the registrar queue — notify them (best-effort).
+  await notifyNewSubmission({
+    studentName: (fields.snapshot.snap_name as string | null) ?? 'A student',
+    subjectId: fields.subjectId,
+    examType: fields.examType,
+    resubmit: true,
   })
 
   redirect(`/student/requests/${oldId}?submitted=1`)

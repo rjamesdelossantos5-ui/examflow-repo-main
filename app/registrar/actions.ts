@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { notifyRequestVerified, notifyTeacherVerifiedMany } from '@/lib/email'
 
 async function requireRegistrar() {
   const supabase = await createClient()
@@ -39,6 +40,21 @@ export async function verifyRequest(requestId: string) {
     action: 'Verified by Registrar — forwarded to Subject Teacher',
   })
 
+  // Notify the routed subject teacher (best-effort — never blocks).
+  const { data: r } = await supabase
+    .from('special_exam_requests')
+    .select('teacher_id, subject_id, snap_name, profiles!student_id(full_name)')
+    .eq('id', requestId)
+    .maybeSingle()
+  if (r) {
+    const prof = r.profiles as unknown as { full_name: string } | null
+    await notifyRequestVerified({
+      teacherId: (r.teacher_id as string | null) ?? null,
+      studentName: (r.snap_name as string | null) ?? prof?.full_name ?? 'A student',
+      subjectId: r.subject_id as string,
+    })
+  }
+
   revalidatePath('/registrar')
   return { error: null }
 }
@@ -72,6 +88,27 @@ export async function verifyAll(requestIds: string[]) {
       actor_role: role,
       action: 'Verified by Registrar — forwarded to Subject Teacher',
     }))
+  )
+
+  // Notify each routed teacher once, with how many of their forms just arrived.
+  const { data: rows } = await supabase
+    .from('special_exam_requests')
+    .select('teacher_id, snap_name, profiles!student_id(full_name)')
+    .in('id', verified.map((v) => v.id))
+  const byTeacher = new Map<string, { studentName: string; count: number }>()
+  for (const row of rows ?? []) {
+    const teacherId = row.teacher_id as string | null
+    if (!teacherId) continue
+    const prof = row.profiles as unknown as { full_name: string } | null
+    const name = (row.snap_name as string | null) ?? prof?.full_name ?? 'A student'
+    const entry = byTeacher.get(teacherId)
+    if (entry) entry.count++
+    else byTeacher.set(teacherId, { studentName: name, count: 1 })
+  }
+  await Promise.all(
+    [...byTeacher.entries()].map(([teacherId, v]) =>
+      notifyTeacherVerifiedMany({ teacherId, studentName: v.studentName, count: v.count }),
+    ),
   )
 
   revalidatePath('/registrar')

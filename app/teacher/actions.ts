@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { notifyRequestApproved } from '@/lib/email'
 
 async function requireTeacher() {
   const supabase = await createClient()
@@ -43,6 +44,17 @@ export async function approveRequest(requestId: string) {
     action: 'Approved by Subject Teacher — forwarded to Program Head',
   })
 
+  // Notify the program heads a request is ready for final acceptance.
+  const { data: r } = await supabase
+    .from('special_exam_requests')
+    .select('snap_name, profiles!student_id(full_name)')
+    .eq('id', requestId)
+    .maybeSingle()
+  if (r) {
+    const prof = r.profiles as unknown as { full_name: string } | null
+    await notifyRequestApproved({ studentName: (r.snap_name as string | null) ?? prof?.full_name ?? 'A student' })
+  }
+
   revalidatePath('/teacher')
   return { error: null }
 }
@@ -81,6 +93,21 @@ export async function approveAll(requestIds: string[]) {
       action: 'Approved by Subject Teacher — forwarded to Program Head',
     }))
   )
+
+  // All rows belong to one student — notify the program heads once, with count.
+  const { data: one } = await supabase
+    .from('special_exam_requests')
+    .select('snap_name, profiles!student_id(full_name)')
+    .in('id', rows.map((r) => r.id))
+    .limit(1)
+    .maybeSingle()
+  if (one) {
+    const prof = one.profiles as unknown as { full_name: string } | null
+    await notifyRequestApproved({
+      studentName: (one.snap_name as string | null) ?? prof?.full_name ?? 'A student',
+      count: rows.length,
+    })
+  }
 
   revalidatePath('/teacher')
   return { error: null, count: rows.length }
