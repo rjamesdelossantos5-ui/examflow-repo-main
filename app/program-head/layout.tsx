@@ -26,7 +26,7 @@ export default async function ProgramHeadLayout({ children }: { children: React.
     { label: 'Second Approval', href: '/program-head/receipts', icon: 'receipt' as const, badge: secondCount },
     { label: 'Overview', href: '/program-head/overview', icon: 'chart' as const },
     { label: 'Accepted Students', href: '/program-head/students', icon: 'cap' as const },
-    { label: 'Settings', href: '/program-head/settings', icon: 'settings' as const },
+    { label: 'Exam Periods', href: '/program-head/settings', icon: 'calendar' as const },
   ]
 
   return (

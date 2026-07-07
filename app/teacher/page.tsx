@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { activePeriodId, keepActive } from '@/lib/examSettings'
+import { keepActive, getActivePeriod, computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import StaffWindowBanner from '@/components/StaffWindowBanner'
 import TeacherQueue from './TeacherQueue'
 
 export const metadata = { title: 'EXAMFLOW — Teacher Queue' }
@@ -24,7 +25,9 @@ export default async function TeacherPage() {
 
   // RLS already filters by teacher. Media isn't shown to teachers, but we pass
   // it through; signed URLs are fetched lazily where documents are viewable.
-  const activeId = await activePeriodId(supabase)
+  const activePeriod = await getActivePeriod(supabase)
+  const activeId = activePeriod?.id ?? null
+  const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const requests = keepActive(raw ?? [], activeId).map((r) => {
     const prof = r.profiles as unknown as { full_name: string } | null
     return {
@@ -36,5 +39,18 @@ export default async function TeacherPage() {
     }
   })
 
-  return <TeacherQueue requests={requests} />
+  return (
+    <>
+      <StaffWindowBanner
+        termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+        open={win.open}
+        notStarted={win.notStarted}
+        daysRemaining={win.daysRemaining}
+        end={win.end}
+        examDay={activePeriod?.examDay ?? null}
+        examEndDay={activePeriod?.examEndDay ?? null}
+      />
+      <TeacherQueue requests={requests} />
+    </>
+  )
 }

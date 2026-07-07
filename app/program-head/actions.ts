@@ -99,9 +99,20 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
 
   const finalSchedule = scheduleStr ? new Date(scheduleStr).toISOString() : null
 
+  // Excused requests have no receipt step, so accepting one finishes it —
+  // it goes straight to 'scheduled'. Paid requests go to 'accepted' and then
+  // wait for the student's cashier receipt.
+  const { data: existing } = await supabase
+    .from('special_exam_requests')
+    .select('exam_type')
+    .eq('id', requestId)
+    .maybeSingle()
+  const isExcused = existing?.exam_type === 'excused'
+  const nextStatus = isExcused ? 'scheduled' : 'accepted'
+
   const { data: updated, error } = await supabase
     .from('special_exam_requests')
-    .update({ status: 'accepted', final_schedule: finalSchedule })
+    .update({ status: nextStatus, final_schedule: finalSchedule })
     .eq('id', requestId)
     .eq('status', 'approved_by_teacher')
     .select('id')
@@ -113,12 +124,13 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
     request_id: requestId,
     actor_id: userId,
     actor_role: role,
-    action: scheduleStr
-      ? `Accepted by Program Head. Schedule: ${new Date(scheduleStr).toLocaleString()}`
-      : 'Accepted by Program Head',
+    action: isExcused
+      ? 'Accepted & scheduled by Program Head (excused — no receipt needed)'
+      : 'Accepted by Program Head — awaiting payment receipt',
   })
 
   revalidatePath('/program-head')
+  revalidatePath('/program-head/students')
   return { error: null }
 }
 

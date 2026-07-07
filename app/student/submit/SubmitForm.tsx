@@ -49,7 +49,8 @@ interface Prefill {
   section: string | null
 }
 
-export default function SubmitForm({ subjects, profile, error, submissionOpen = true, windowMessage, prefill }: { subjects: Subject[]; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null }) {
+export default function SubmitForm({ subjects, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [] }: { subjects: Subject[]; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[] }) {
+  const kept = new Set(existingDocs)
   // Effective values: a resubmit's saved snapshot overrides the profile defaults.
   const eff = {
     full_name: prefill?.fullName ?? profile.full_name,
@@ -99,7 +100,7 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
 
       {prefill && (
         <div className="mb-4 rounded-lg border px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', borderColor: 'rgba(253,185,19,0.4)', color: 'var(--card-foreground)' }}>
-          Resubmitting a rejected request — your details are filled in. Fix what was wrong and re-upload your documents.
+          Resubmitting a rejected request — your details and files are kept. Just fix what was wrong; you only need to re-upload a file if you want to replace it.
         </div>
       )}
 
@@ -235,18 +236,19 @@ export default function SubmitForm({ subjects, profile, error, submissionOpen = 
         {/* Parent documents */}
         <div className="space-y-4 pt-2 border-t ef-border">
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Parent / Guardian Documents</h2>
-          <FileField name="parent_id" label="Valid ID — Front *" hint="Clear photo of the ID front · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
-          <FileField name="parent_id_back" label="Valid ID — Back *" hint="Photo of the ID back · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
-          <FileField name="parent_signature" label="Parent/Guardian Signature *" hint="Signed consent · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} />
+          <FileField name="parent_id" label="Valid ID — Front" hint="Clear photo of the ID front · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} kept={kept.has('parent_id')} />
+          <FileField name="parent_id_back" label="Valid ID — Back" hint="Photo of the ID back · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} kept={kept.has('parent_id_back')} />
+          <FileField name="parent_signature" label="Parent/Guardian Signature" hint="Signed consent · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} kept={kept.has('parent_signature')} />
         </div>
 
         {/* Reason-specific supporting document */}
         {examType === 'excused' && reason && (
           <FileField
             name="supporting_document"
-            label={`${docLabel} *`}
+            label={docLabel}
             hint={`Upload the ${docLabel.toLowerCase()} · JPG, PNG, or PDF · max 5 MB`}
             inputClass={inputClass}
+            kept={kept.has('supporting_document')}
           />
         )}
 
@@ -305,7 +307,7 @@ function Chevron() {
   )
 }
 
-function FileField({ name, label, hint, inputClass }: { name: string; label: string; hint: string; inputClass: string }) {
+function FileField({ name, label, hint, inputClass, kept = false }: { name: string; label: string; hint: string; inputClass: string; kept?: boolean }) {
   const [fileName, setFileName] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
 
@@ -317,12 +319,15 @@ function FileField({ name, label, hint, inputClass }: { name: string; label: str
 
   return (
     <div>
-      <label className="block text-sm font-medium ef-muted mb-1">{label}</label>
+      <label className="block text-sm font-medium ef-muted mb-1">{label} {kept ? <span className="text-xs font-normal">(optional — replace)</span> : '*'}</label>
+      {kept && !fileName && (
+        <p className="mb-1 text-xs text-green-600 dark:text-green-400">✓ Your previous file is kept. Upload only to replace it.</p>
+      )}
       <input
         type="file"
         name={name}
         accept={ALLOWED}
-        required
+        required={!kept}
         onChange={(e) => {
           const f = e.target.files?.[0]
           if (f) {

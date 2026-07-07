@@ -16,16 +16,9 @@ export interface HistoryRow {
   rejected_by_role: string | null
 }
 
-const ROLE_LABEL: Record<string, string> = {
-  registrar: 'Registrar',
-  subject_teacher: 'Subject Teacher',
-  program_head: 'Program Head',
-  admin: 'Admin',
-}
-
 /**
  * Reviewed-history table shared by Registrar and Teacher. Rejected rows are
- * clickable and expand to show who rejected the request and why.
+ * clickable and expand to show the rejection reason.
  */
 export default function ReviewHistoryTable({ title, rows }: { title: string; rows: HistoryRow[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
@@ -91,8 +84,7 @@ export default function ReviewHistoryTable({ title, rows }: { title: string; row
           <tr>
             <td colSpan={5} className="px-4 pb-4 pt-0">
               <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
-                <span className="font-semibold">Rejected by {ROLE_LABEL[r.rejected_by_role ?? ''] ?? 'a reviewer'}</span>
-                {r.rejection_reason ? <> — {r.rejection_reason}</> : ' — no reason recorded.'}
+                {r.rejection_reason || 'No reason recorded.'}
               </div>
             </td>
           </tr>

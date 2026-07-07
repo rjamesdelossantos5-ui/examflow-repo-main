@@ -8,6 +8,8 @@ import { acceptRequest, rejectPHRequest, confirmReceipt, rejectReceipt } from '.
 import StatusBadge from '@/components/StatusBadge'
 import { Icon } from '@/components/Icon'
 import { getSignedUrl } from '@/app/media-actions'
+import RejectReasonPicker from '@/components/RejectReasonPicker'
+import { PH_REJECT_EXCUSED, PH_REJECT_PAID, PH_RECEIPT_REJECT } from '@/lib/rejectReasons'
 
 interface MediaItem {
   id: string
@@ -43,7 +45,14 @@ export default function PHQueue({
 }) {
   const reqParam = useSearchParams().get('req')
   const [selected, setSelected] = useState<string | null>(reqParam)
-  const active = requests.find((r) => r.id === selected) ?? null
+  const [items, setItems] = useState(requests)
+  useEffect(() => setItems(requests), [requests])
+  const active = items.find((r) => r.id === selected) ?? null
+
+  function dropActive() {
+    setItems((prev) => prev.filter((r) => r.id !== selected))
+    setSelected(null)
+  }
 
   // Opening from a notification (?req=…) auto-selects that request and scrolls it into view.
   useEffect(() => {
@@ -57,7 +66,7 @@ export default function PHQueue({
     <div>
       <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>{title}</h2>
 
-      {requests.length === 0 && (
+      {items.length === 0 && (
         <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">
           {emptyText}
         </div>
@@ -65,7 +74,7 @@ export default function PHQueue({
 
       <div className="grid md:grid-cols-2 gap-4 items-start">
         <div className="space-y-2.5">
-          {requests.map((r) => (
+          {items.map((r) => (
             <button
               key={r.id}
               id={`req-${r.id}`}
@@ -92,11 +101,11 @@ export default function PHQueue({
         </div>
 
         {/* Detail panel — sticky so it stays in view while scanning the list */}
-        {requests.length > 0 && (
+        {items.length > 0 && (
           <div className="md:sticky md:top-20">
             {active ? (
               <div className="ef-card rounded-xl shadow-sm p-6">
-                <PHDetail request={active} onClose={() => setSelected(null)} />
+                <PHDetail request={active} onDone={dropActive} />
               </div>
             ) : (
               <div className="hidden md:flex flex-col items-center justify-center rounded-xl border-2 border-dashed ef-border px-6 py-20 text-center ef-muted">
@@ -111,13 +120,15 @@ export default function PHQueue({
   )
 }
 
-function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () => void }) {
+function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => void }) {
   const [rejectMode, setRejectMode] = useState<'request' | 'receipt' | null>(null)
   const [reason, setReason] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const isExcused = r.exam_type === 'excused'
 
   function handleExpand(m: MediaItem) {
     const next = expanded === m.id ? null : m.id
@@ -131,7 +142,7 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
     startTransition(async () => {
       const res = await acceptRequest(r.id, '')
       if (res.error) setError(res.error)
-      else onClose()
+      else onDone()
     })
   }
 
@@ -140,7 +151,7 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
     startTransition(async () => {
       const res = await rejectPHRequest(r.id, reason)
       if (res.error) setError(res.error)
-      else onClose()
+      else onDone()
     })
   }
 
@@ -148,7 +159,7 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
     startTransition(async () => {
       const res = await confirmReceipt(r.id)
       if (res.error) setError(res.error)
-      else onClose()
+      else onDone()
     })
   }
 
@@ -157,7 +168,7 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
     startTransition(async () => {
       const res = await rejectReceipt(r.id, reason)
       if (res.error) setError(res.error)
-      else onClose()
+      else onDone()
     })
   }
 
@@ -229,8 +240,9 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
           <button onClick={handleAccept} disabled={isPending}
             className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-            {isPending ? 'Accepting…' : r.exam_type === 'excused' ? 'Accept' : 'Accept (await receipt)'}
+            {isPending ? 'Processing…' : isExcused ? 'Mark scheduled' : 'Accept'}
           </button>
+          {!isExcused && <p className="text-[11px] ef-muted text-center -mt-1">Student uploads the cashier receipt after this.</p>}
           <button onClick={() => setRejectMode('request')}
             className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50">
             Reject
@@ -255,13 +267,9 @@ function PHDetail({ request: r, onClose }: { request: RequestRow; onClose: () =>
 
       {rejectMode && (
         <div className="space-y-3 border-t pt-3">
-          <label className="block text-xs font-medium text-gray-600">Rejection reason *</label>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-            maxLength={1000}
-            className="w-full border rounded px-3 py-2 text-sm resize-none"
+          <RejectReasonPicker
+            presets={rejectMode === 'receipt' ? PH_RECEIPT_REJECT : isExcused ? PH_REJECT_EXCUSED : PH_REJECT_PAID}
+            onChange={setReason}
           />
           <div className="flex gap-2">
             <button

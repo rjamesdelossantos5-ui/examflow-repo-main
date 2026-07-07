@@ -18,8 +18,10 @@ export default async function SubmitPage({
   if (!user) redirect('/login')
 
   // Resubmitting a rejected request: pre-fill from its snapshot so the student
-  // only fixes what was wrong and re-uploads.
+  // only fixes what was wrong. Files already on record are kept (existingDocs),
+  // so those uploads become optional — upload only to replace.
   let prefill: Record<string, unknown> | null = null
+  let existingDocs: string[] = []
   if (from) {
     const { data: prev } = await supabase
       .from('special_exam_requests')
@@ -40,6 +42,11 @@ export default async function SubmitPage({
         yearLevel: prev.snap_year_level,
         section: prev.snap_section,
       }
+      const { data: prevMedia } = await supabase
+        .from('application_media')
+        .select('media_type')
+        .eq('request_id', prev.id)
+      existingDocs = (prevMedia ?? []).map((m) => m.media_type)
     }
   }
 
@@ -73,6 +80,7 @@ export default async function SubmitPage({
       submissionOpen={open}
       windowMessage={windowMessage}
       prefill={prefill as never}
+      existingDocs={existingDocs}
     />
   )
 }

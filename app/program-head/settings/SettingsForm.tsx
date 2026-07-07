@@ -156,23 +156,34 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
   const [location, setLocation] = useState(active?.examLocation ?? '')
   const [bring, setBring] = useState(active?.examBring ?? '')
   const [saved, setSaved] = useState(false)
+  const [info, setInfo] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const alreadySet = !!active?.examDay
 
+  // True when the form still matches the saved schedule exactly (compared at the
+  // minute precision the inputs use), so we can tell the PH nothing changed
+  // instead of "confirming" a no-op overwrite.
+  function unchanged() {
+    return (
+      examStart === toLocalInput(active?.examDay ?? null) &&
+      examEnd === toLocalInput(active?.examEndDay ?? null) &&
+      location.trim() === (active?.examLocation ?? '') &&
+      bring.trim() === (active?.examBring ?? '')
+    )
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    onError(null); setSaved(false)
+    onError(null); setSaved(false); setInfo(null)
     if (!active) { onError('Set and activate a submission window first.'); return }
     if (!examStart) { onError('Set the exam start date & time.'); return }
+    if (alreadySet && unchanged()) { setInfo('You haven’t changed anything, so there’s nothing to save.'); return }
+    setConfirmOpen(true) // in-app confirmation instead of a browser popup
+  }
 
-    // There is only ONE schedule per term — always confirm before writing,
-    // and make it explicit when this overwrites an existing schedule.
-    const newLabel = fmt(new Date(examStart).toISOString())
-    const msg = alreadySet
-      ? `A schedule is already set (${fmt(active.examDay)}). Change it to ${newLabel}? The old schedule will be replaced.`
-      : `Set the special exam schedule to ${newLabel}? Students will see it right away.`
-    if (!confirm(msg)) return
-
+  function doSave() {
+    setConfirmOpen(false)
     startTransition(async () => {
       const res = await saveExamSchedule({
         examStart: new Date(examStart).toISOString(),
@@ -185,6 +196,9 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
     })
   }
 
+  const newStartLabel = examStart ? fmt(new Date(examStart).toISOString()) : '—'
+  const newEndLabel = examEnd ? fmt(new Date(examEnd).toISOString()) : null
+
   return (
     <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5">
       <div>
@@ -194,6 +208,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
 
       {!active && <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-300">Save a submission window above first.</div>}
       {saved && <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">Schedule saved. Students can now see it.</div>}
+      {info && <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 text-sm text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-300">{info}</div>}
       {alreadySet && !saved && (
         <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
           Current: <strong>{fmt(active!.examDay)}</strong>{active!.examEndDay ? <> → <strong>{fmt(active!.examEndDay)}</strong></> : null}
@@ -223,6 +238,32 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
       <button type="submit" disabled={isPending || !active} className="px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
         {isPending ? 'Saving…' : alreadySet ? 'Change schedule' : 'Set schedule'}
       </button>
+
+      {/* In-app confirmation (replaces the browser confirm dialog) */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmOpen(false)}>
+          <div className="ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>
+              {alreadySet ? 'Change the exam schedule?' : 'Set the exam schedule?'}
+            </h3>
+            <div className="mt-3 space-y-2 text-sm">
+              {alreadySet && (
+                <p className="ef-muted">Current: <span style={{ color: 'var(--card-foreground)' }}>{fmt(active!.examDay)}{active!.examEndDay ? ` → ${fmt(active!.examEndDay)}` : ''}</span></p>
+              )}
+              <p className="ef-muted">
+                New: <strong style={{ color: 'var(--card-foreground)' }}>{newStartLabel}{newEndLabel ? ` → ${newEndLabel}` : ''}</strong>
+              </p>
+              <p className="ef-muted">{alreadySet ? 'The old schedule will be replaced and students will see the new one right away.' : 'Students will see this right away.'}</p>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
+              <button type="button" onClick={doSave} className="flex-1 py-2.5 rounded-lg font-semibold text-sm" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                {alreadySet ? 'Yes, change it' : 'Yes, set it'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }

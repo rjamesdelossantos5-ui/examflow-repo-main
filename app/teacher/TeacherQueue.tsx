@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
 import { Icon } from '@/components/Icon'
 import { approveRequest, rejectTeacherRequest } from './actions'
+import { TEACHER_REJECT } from '@/lib/rejectReasons'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface RequestRow {
@@ -23,7 +24,14 @@ interface RequestRow {
 export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const reqParam = useSearchParams().get('req')
   const [selected, setSelected] = useState<string | null>(reqParam)
-  const active = requests.find((r) => r.id === selected) ?? null
+  const [items, setItems] = useState(requests)
+  useEffect(() => setItems(requests), [requests])
+  const active = items.find((r) => r.id === selected) ?? null
+
+  function dropActive() {
+    setItems((prev) => prev.filter((r) => r.id !== selected))
+    setSelected(null)
+  }
 
   // Opening from a notification (?req=…) auto-selects that request and scrolls it into view.
   useEffect(() => {
@@ -37,7 +45,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
     <div>
       <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
 
-      {requests.length === 0 && (
+      {items.length === 0 && (
         <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">
           No pending requests.
         </div>
@@ -45,7 +53,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
 
       <div className="grid md:grid-cols-2 gap-4 items-start">
         <div className="space-y-2.5">
-          {requests.map((r) => (
+          {items.map((r) => (
             <button
               key={r.id}
               id={`req-${r.id}`}
@@ -72,7 +80,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
         </div>
 
         {/* Detail panel — sticky so it stays in view while scanning the list */}
-        {requests.length > 0 && (
+        {items.length > 0 && (
           <div className="md:sticky md:top-20">
             {active ? (
               <div className="ef-card rounded-xl shadow-sm p-6">
@@ -89,6 +97,8 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                   logs={active.logs}
                   onVerify={approveRequest}
                   onReject={rejectTeacherRequest}
+                  onDone={dropActive}
+                  rejectPresets={TEACHER_REJECT}
                   verifyLabel="Approve & Forward to Program Head"
                   actionableStatus="verified_by_registrar"
                   showDocuments={false}

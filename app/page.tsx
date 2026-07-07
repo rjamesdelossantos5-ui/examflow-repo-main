@@ -184,6 +184,19 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          {/* Required offline step — the online request doesn't replace the paper form */}
+          <div className="mt-8 rounded-2xl p-6 flex items-start gap-4" style={{ background: 'rgba(253,185,19,0.12)', border: '1px solid rgba(253,185,19,0.45)' }}>
+            <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: GOLD, color: NAVY }}>
+              <Icon name="building" className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold mb-1" style={{ color: NAVY }}>One more step at the Registrar</h3>
+              <p className="text-sm text-slate-600">
+                Submitting online doesn&apos;t replace the paper form. You still need to get the printed special-exam form from the <strong>Registrar&apos;s office</strong> and fill it out to complete your application — the same as the school&apos;s standard process.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

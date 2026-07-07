@@ -20,16 +20,20 @@ export default async function TeacherHistoryPage() {
     .in('status', ['approved_by_teacher', 'accepted', 'receipt_uploaded', 'scheduled', 'rejected'])
     .order('updated_at', { ascending: false })
 
-  const rows: HistoryRow[] = (data ?? []).map((r) => ({
-    id: r.id as string,
-    student: (r as { snap_name?: string | null }).snap_name ?? (r.profiles as unknown as { full_name: string })?.full_name ?? '—',
-    subject: (r.subjects as unknown as { subject_name: string })?.subject_name ?? '',
-    exam_type: r.exam_type as string,
-    status: r.status as RequestStatus,
-    date: r.submitted_at as string,
-    rejection_reason: (r.rejection_reason as string | null) ?? null,
-    rejected_by_role: (r.rejected_by_role as string | null) ?? null,
-  }))
+  const rows: HistoryRow[] = (data ?? [])
+    // A form the Registrar rejected never reached the teacher — it stays in the
+    // Registrar's history, not here. Only show rejections the teacher made.
+    .filter((r) => r.status !== 'rejected' || r.rejected_by_role === 'subject_teacher')
+    .map((r) => ({
+      id: r.id as string,
+      student: (r as { snap_name?: string | null }).snap_name ?? (r.profiles as unknown as { full_name: string })?.full_name ?? '—',
+      subject: (r.subjects as unknown as { subject_name: string })?.subject_name ?? '',
+      exam_type: r.exam_type as string,
+      status: r.status as RequestStatus,
+      date: r.submitted_at as string,
+      rejection_reason: (r.rejection_reason as string | null) ?? null,
+      rejected_by_role: (r.rejected_by_role as string | null) ?? null,
+    }))
 
   return <ReviewHistoryTable title="Reviewed History" rows={rows} />
 }

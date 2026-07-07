@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import { getSignedUrl } from '@/app/media-actions'
+import RejectReasonPicker from '@/components/RejectReasonPicker'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface MediaItem {
@@ -33,6 +34,10 @@ interface Props {
   showRejectedBy?: string
   /** Teachers don't verify the parent documents, so hide that section for them. */
   showDocuments?: boolean
+  /** Quick-pick rejection reasons; picking "Other" reveals a text box. */
+  rejectPresets?: string[]
+  /** Fired after a successful verify/reject so the queue can drop the card instantly. */
+  onDone?: () => void
 }
 
 export default function RequestReviewPanel({
@@ -51,6 +56,8 @@ export default function RequestReviewPanel({
   verifyLabel = 'Verify & Forward',
   actionableStatus = 'submitted',
   showDocuments = true,
+  rejectPresets,
+  onDone,
 }: Props) {
   const isActionable = status === actionableStatus
   const [rejectMode, setRejectMode] = useState(false)
@@ -74,16 +81,17 @@ export default function RequestReviewPanel({
     startTransition(async () => {
       const res = await onVerify(requestId)
       if (res.error) setError(res.error)
+      else onDone?.()
     })
   }
 
   function handleReject() {
     if (!onReject) return
-    if (!reason.trim()) { setError('Please enter a rejection reason'); return }
+    if (!reason.trim()) { setError('Please choose or enter a rejection reason'); return }
     startTransition(async () => {
       const res = await onReject(requestId, reason)
       if (res.error) setError(res.error)
-      else setRejectMode(false)
+      else { setRejectMode(false); onDone?.() }
     })
   }
 
@@ -187,15 +195,21 @@ export default function RequestReviewPanel({
 
         {rejectMode && (
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">Rejection reason *</label>
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-              maxLength={1000}
-              className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
-              placeholder="Explain why the request is rejected…"
-            />
+            {rejectPresets ? (
+              <RejectReasonPicker presets={rejectPresets} onChange={setReason} />
+            ) : (
+              <>
+                <label className="block text-sm font-medium text-gray-700">Rejection reason *</label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
+                  placeholder="Explain why the request is rejected…"
+                />
+              </>
+            )}
             <div className="flex gap-2">
               <button onClick={handleReject} disabled={isPending || !reason.trim()}
                 className="flex-1 py-2 rounded-lg font-semibold text-sm bg-red-600 text-white disabled:opacity-50">

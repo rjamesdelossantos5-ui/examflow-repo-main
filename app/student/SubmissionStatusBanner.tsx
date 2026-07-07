@@ -40,12 +40,15 @@ export default function SubmissionStatusBanner(props: Props) {
         ? `Closed ${fmtDate(props.end)}`
         : 'Check back later'
 
-  const hasExam = props.examDay || props.examLocation || props.examBring
+  // With an active term but no schedule yet, show "To be announced" instead of
+  // hiding the row — students still see the exam is coming.
+  const TBA = 'To be announced'
+  const hasTerm = !!props.termLabel
   const examRange = props.examDay
     ? props.examEndDay
       ? `${fmtDateTime(props.examDay)} → ${fmtDateTime(props.examEndDay)}`
       : fmtDateTime(props.examDay)
-    : null
+    : hasTerm ? TBA : null
 
   return (
     <div className="ef-card rounded-2xl shadow-sm overflow-hidden">
@@ -63,22 +66,26 @@ export default function SubmissionStatusBanner(props: Props) {
       </div>
 
       <div className="px-5 py-4 space-y-3">
-        {hasExam && (
-          <div className="rounded-xl border ef-border p-4 space-y-1.5 text-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide ef-muted mb-1">Special exam details</p>
-            {examRange && <p style={{ color: 'var(--card-foreground)' }}><span className="ef-muted">When: </span>{examRange}</p>}
-            {props.examLocation && <p style={{ color: 'var(--card-foreground)' }}><span className="ef-muted">Where: </span>{props.examLocation}</p>}
-            {props.examBring && <p style={{ color: 'var(--card-foreground)' }}><span className="ef-muted">Bring: </span>{props.examBring}</p>}
+        {/* School-standard reminder, made prominent — the online request is only
+            step one; the printed form from the Registrar is required. */}
+        <div className="rounded-xl px-4 py-3.5" style={{ background: 'color-mix(in srgb, #f59e0b 16%, transparent)', border: '1px solid rgba(245,158,11,0.45)' }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Icon name="clock" className="w-5 h-5 shrink-0" style={{ color: '#b45309' }} />
+            <p className="font-bold text-sm" style={{ color: '#92400e' }}>Don&apos;t forget the printed form</p>
           </div>
-        )}
-
-        {/* School-standard reminder: the online request is only step one. */}
-        <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', color: 'var(--card-foreground)' }}>
-          <Icon name="clock" className="w-5 h-5 shrink-0 mt-0.5" style={{ color: '#b45309' }} />
-          <p>
-            <strong>Important:</strong> submitting here does not finish your request. You still need to get the printed special-exam form from the <strong>Registrar&apos;s office</strong> and fill it out to complete the process.
+          <p className="text-sm" style={{ color: 'var(--card-foreground)' }}>
+            Submitting here does <strong>not</strong> finish your request. You still need to get the printed special-exam form from the <strong>Registrar&apos;s office</strong> and fill it out to complete the process.
           </p>
         </div>
+
+        {hasTerm && (
+          <div className="rounded-xl border ef-border p-4 space-y-1.5 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide ef-muted mb-1">Special exam details</p>
+            <p style={{ color: 'var(--card-foreground)' }}><span className="ef-muted">When: </span>{examRange}</p>
+            <p style={{ color: 'var(--card-foreground)' }}><span className="ef-muted">Where: </span>{props.examLocation || TBA}</p>
+            <p style={{ color: 'var(--card-foreground)' }}><span className="ef-muted">Bring: </span>{props.examBring || TBA}</p>
+          </div>
+        )}
       </div>
     </div>
   )

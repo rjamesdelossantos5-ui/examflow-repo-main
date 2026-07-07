@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { activePeriodId, keepActive } from '@/lib/examSettings'
+import { keepActive, getActivePeriod, computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import StaffWindowBanner from '@/components/StaffWindowBanner'
 import RegistrarQueue from './RegistrarQueue'
 
 export const metadata = { title: 'EXAMFLOW — Registrar Queue' }
@@ -24,17 +25,35 @@ export default async function RegistrarPage() {
 
   // Only the active term's forms show; the previous term drops off once a new
   // term is activated in Settings.
-  const activeId = await activePeriodId(supabase)
+  const activePeriod = await getActivePeriod(supabase)
+  const activeId = activePeriod?.id ?? null
+  const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const requests = keepActive(raw ?? [], activeId).map((r) => {
     const prof = r.profiles as unknown as { full_name: string } | null
     return {
       ...r,
       student: { full_name: (r as { snap_name?: string | null }).snap_name ?? prof?.full_name ?? '—' },
       subject: r.subjects as unknown as { subject_code: string; subject_name: string },
-      media: (r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[],
+      // Registrar verifies identity documents only. The medical/death certificate
+      // is private and shown to the Program Head, not the Registrar.
+      media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[])
+        .filter((m) => ['parent_id', 'parent_id_back', 'parent_signature'].includes(m.media_type)),
       logs: r.progress_logs ?? [],
     }
   })
 
-  return <RegistrarQueue requests={requests} />
+  return (
+    <>
+      <StaffWindowBanner
+        termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+        open={win.open}
+        notStarted={win.notStarted}
+        daysRemaining={win.daysRemaining}
+        end={win.end}
+        examDay={activePeriod?.examDay ?? null}
+        examEndDay={activePeriod?.examEndDay ?? null}
+      />
+      <RegistrarQueue requests={requests} />
+    </>
+  )
 }

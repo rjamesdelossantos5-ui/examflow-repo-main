@@ -50,7 +50,10 @@ export default async function ProgramHeadPage() {
         subject_name: subj?.subject_name ?? '',
         teacher: subj?.profiles ?? null,
       },
-      media: (r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[],
+      // The Program Head reviews the excuse certificate for excused requests.
+      // ID / signature are the Registrar's job and are not shown here.
+      media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[])
+        .filter((m) => m.media_type === 'supporting_document'),
       logs: r.progress_logs ?? [],
     }
   })

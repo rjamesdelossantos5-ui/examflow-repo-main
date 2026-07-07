@@ -51,7 +51,9 @@ export default async function ProgramHeadReceiptsPage() {
         subject_name: subj?.subject_name ?? '',
         teacher: subj?.profiles ?? null,
       },
-      media: (r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[],
+      // Second approval only concerns the cashier receipt.
+      media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[])
+        .filter((m) => m.media_type === 'payment_receipt'),
       logs: r.progress_logs ?? [],
     }
   })
