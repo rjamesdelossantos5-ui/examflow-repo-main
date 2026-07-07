@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { endedPeriodIds, hideEnded } from '@/lib/examSettings'
+import { activePeriodId, keepActive } from '@/lib/examSettings'
 import TeacherQueue from './TeacherQueue'
 
 export const metadata = { title: 'EXAMFLOW — Teacher Queue' }
@@ -24,8 +24,8 @@ export default async function TeacherPage() {
 
   // RLS already filters by teacher. Media isn't shown to teachers, but we pass
   // it through; signed URLs are fetched lazily where documents are viewable.
-  const ended = await endedPeriodIds(supabase)
-  const requests = hideEnded(raw ?? [], ended).map((r) => {
+  const activeId = await activePeriodId(supabase)
+  const requests = keepActive(raw ?? [], activeId).map((r) => {
     const prof = r.profiles as unknown as { full_name: string } | null
     return {
       ...r,

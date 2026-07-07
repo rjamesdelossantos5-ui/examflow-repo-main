@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { endedPeriodIds, hideEnded } from '@/lib/examSettings'
+import { activePeriodId, keepActive } from '@/lib/examSettings'
 import StudentsList from './StudentsList'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -28,8 +28,8 @@ export default async function StudentsPage() {
   // Live list rule: paid requests appear only once the receipt is verified
   // (status 'scheduled'); excused requests appear right after first approval
   // (status 'accepted'), since they have no receipt step.
-  const ended = await endedPeriodIds(supabase)
-  const rows = hideEnded(data ?? [], ended).map((r) => {
+  const activeId = await activePeriodId(supabase)
+  const rows = keepActive(data ?? [], activeId).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string
       subject_name: string

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { endedPeriodIds, hideEnded } from '@/lib/examSettings'
+import { activePeriodId, keepActive } from '@/lib/examSettings'
 import RegistrarQueue from './RegistrarQueue'
 
 export const metadata = { title: 'EXAMFLOW — Registrar Queue' }
@@ -22,10 +22,10 @@ export default async function RegistrarPage() {
     .eq('status', 'submitted')
     .order('submitted_at', { ascending: false })
 
-  // Requests from a term whose exam day has passed drop off, keeping the queue
-  // clean for the next term.
-  const ended = await endedPeriodIds(supabase)
-  const requests = hideEnded(raw ?? [], ended).map((r) => {
+  // Only the active term's forms show; the previous term drops off once a new
+  // term is activated in Settings.
+  const activeId = await activePeriodId(supabase)
+  const requests = keepActive(raw ?? [], activeId).map((r) => {
     const prof = r.profiles as unknown as { full_name: string } | null
     return {
       ...r,

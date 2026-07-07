@@ -1,20 +1,20 @@
 import type { NotificationItem } from '@/components/NotificationBell'
 import type { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/supabase/types'
-import { getActivePeriod, endedPeriodIds } from '@/lib/examSettings'
+import { getActivePeriod, activePeriodId } from '@/lib/examSettings'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
 // Cheap indexed count of requests at a given status — used for the nav-tab
-// badges. Excludes requests from ended terms so the badge matches the (filtered)
-// queue below it.
+// badges. Counts only the active term (plus legacy null-period rows) so the
+// badge matches the (filtered) queue below it.
 export async function countByStatus(supabase: SupabaseServer, status: string): Promise<number> {
-  const ended = await endedPeriodIds(supabase)
+  const activeId = await activePeriodId(supabase)
   let q = supabase
     .from('special_exam_requests')
     .select('id', { count: 'exact', head: true })
     .eq('status', status)
-  if (ended.size) q = q.not('period_id', 'in', `(${[...ended].join(',')})`)
+  if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
   const { count } = await q
   return count ?? 0
 }
@@ -49,9 +49,9 @@ export async function getNotifications(
   // One alert per pending request in a reviewer's queue (newest first). The
   // href carries ?req=<id> so the queue opens straight to that request's
   // accept/reject panel instead of just landing on the page.
-  // Ended-term requests drop off the reviewer queues, so their alerts should
+  // Previous-term requests drop off the reviewer queues, so their alerts should
   // drop off the bell too (keeps the bell in step with the queue + badge).
-  const ended = role === 'student' ? new Set<string>() : await endedPeriodIds(supabase)
+  const activeId = role === 'student' ? null : await activePeriodId(supabase)
 
   const queueItems = async (
     status: string,
@@ -66,7 +66,7 @@ export async function getNotifications(
       .eq('status', status)
       .order('submitted_at', { ascending: false })
       .limit(MAX_ITEMS)
-    if (ended.size) q = q.not('period_id', 'in', `(${[...ended].join(',')})`)
+    if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
     const { data } = await q
 
     return ((data ?? []) as unknown as QueueRow[]).map((r) => ({

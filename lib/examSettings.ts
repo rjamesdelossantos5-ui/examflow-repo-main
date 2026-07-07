@@ -73,33 +73,21 @@ export async function getPeriodById(supabase: DB, id: string): Promise<ExamPerio
   return data ? toPeriod(data as PeriodRow) : null
 }
 
-// The effective end of a period's exam (end day if set, else the single day).
-// A period is "over" once the whole of that day has passed.
-export function periodExamEnded(p: { examDay: string | null; examEndDay: string | null }): boolean {
-  const end = p.examEndDay ?? p.examDay
-  if (!end) return false
-  const d = new Date(end)
-  d.setHours(23, 59, 59, 999)
-  return d.getTime() < Date.now()
+// The id of the active term, or null if none is set. Staff queues use this to
+// show only the current term's forms — the previous term's forms drop off the
+// moment a new term is activated (the PH controls the cutover; nothing vanishes
+// on a timer).
+export async function activePeriodId(supabase: DB): Promise<string | null> {
+  const { data } = await supabase.from('exam_periods').select('id').eq('is_active', true).limit(1).maybeSingle()
+  return (data as { id: string } | null)?.id ?? null
 }
 
-// IDs of periods whose exam day has fully passed. Requests tagged with one of
-// these vanish from every queue so the next term starts clean. (Requests with a
-// null period_id — legacy — are never auto-hidden.)
-export async function endedPeriodIds(supabase: DB): Promise<Set<string>> {
-  const { data } = await supabase.from('exam_periods').select('id, exam_day, exam_end_day')
-  const ended = new Set<string>()
-  for (const r of (data ?? []) as { id: string; exam_day: string | null; exam_end_day: string | null }[]) {
-    if (periodExamEnded({ examDay: r.exam_day, examEndDay: r.exam_end_day })) ended.add(r.id)
-  }
-  return ended
-}
-
-// Drop rows belonging to a period whose exam has ended. `period_id` may be
-// absent on legacy rows; those always stay.
-export function hideEnded<T extends { period_id?: string | null }>(rows: T[], ended: Set<string>): T[] {
-  if (!ended.size) return rows
-  return rows.filter((r) => !r.period_id || !ended.has(r.period_id))
+// Keep only rows belonging to the active term. Legacy rows (null period_id) and
+// the case of no active term both fall through unfiltered so nothing is ever
+// hidden unexpectedly.
+export function keepActive<T extends { period_id?: string | null }>(rows: T[], activeId: string | null): T[] {
+  if (!activeId) return rows
+  return rows.filter((r) => !r.period_id || r.period_id === activeId)
 }
 
 export interface SubmissionWindow {
