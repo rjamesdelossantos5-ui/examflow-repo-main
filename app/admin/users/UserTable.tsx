@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
 import { toggleUserActive, deleteUser, createUser, toggleOverride } from './actions'
+import Select from '@/components/Select'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
@@ -101,20 +102,22 @@ export default function UserTable({
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Role *</label>
-                <select name="role" required className="w-full border rounded px-3 py-2 text-sm">
-                  {Object.entries(ROLE_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
+                <Select
+                  name="role"
+                  required
+                  placeholder="— Select role —"
+                  options={Object.entries(ROLE_LABELS).map(([v, l]) => ({ value: v, label: l }))}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Department</label>
-                <select name="department_id" className="w-full border rounded px-3 py-2 text-sm">
-                  <option value="">— none —</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
+                <Select
+                  name="department_id"
+                  placeholder="— none —"
+                  options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Student Number</label>

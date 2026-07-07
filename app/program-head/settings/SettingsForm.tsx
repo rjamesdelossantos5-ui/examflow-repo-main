@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { savePeriod, saveExamSchedule, setActivePeriod, deletePeriod } from '../actions'
 import { computeWindow, TERMS, TERM_LABEL, type ExamPeriod, type Term } from '@/lib/examSettings'
+import Select from '@/components/Select'
 
 const input = 'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]'
 const label = 'block text-sm font-medium ef-muted mb-1'
@@ -188,9 +189,13 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
 
       <div>
         <label className={label}>Term *</label>
-        <select value={term} onChange={(e) => setTerm(e.target.value as Term)} className={input} style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}>
-          {TERMS.map((t) => <option key={t} value={t}>{TERM_LABEL[t]}</option>)}
-        </select>
+        <Select
+          value={term}
+          onChange={(v) => setTerm(v as Term)}
+          options={TERMS.map((t) => ({ value: t, label: TERM_LABEL[t] }))}
+          className={input}
+          style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
+        />
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">

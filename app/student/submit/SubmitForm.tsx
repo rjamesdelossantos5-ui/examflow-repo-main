@@ -5,6 +5,7 @@ import { submitRequest } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import { Icon } from '@/components/Icon'
 import { compressImage } from '@/lib/compressImage'
+import Select from '@/components/Select'
 
 // One (subject + section → teacher) row. The student picks a subject, then a
 // section available for it, and the teacher for that section fills in.
@@ -108,7 +109,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const docLabel = REASONS.find((r) => r.value === reason)?.doc ?? 'Supporting Document'
   const inputClass =
     'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent'
-  const selectClass = `${inputClass} appearance-none pr-9 cursor-pointer`
+  const selectClass = `${inputClass} cursor-pointer`
   const selectStyle = { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' } as React.CSSProperties
 
   return (
@@ -216,32 +217,29 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Course / Program *</label>
-              <div className="relative">
-                <select name="course" required value={course} onChange={(e) => { setCourse(e.target.value); setSubjectId(''); setSection('') }} className={selectClass} style={selectStyle}>
-                  <option value="">— Select course —</option>
-                  {COURSES.map((c) => (
-                    <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
-                  ))}
-                </select>
-                <Chevron />
-              </div>
+              <Select
+                name="course"
+                required
+                value={course}
+                onChange={(v) => { setCourse(v); setSubjectId(''); setSection('') }}
+                placeholder="— Select course —"
+                options={COURSES.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))}
+                className={selectClass}
+                style={selectStyle}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Year level *</label>
-              <div className="relative">
-                <select
-                  name="year_level"
-                  required
-                  value={yearLevel}
-                  onChange={(e) => { setYearLevel(e.target.value); setSection('') }}
-                  className={selectClass}
-                  style={selectStyle}
-                >
-                  <option value="">— Select year —</option>
-                  {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
-                </select>
-                <Chevron />
-              </div>
+              <Select
+                name="year_level"
+                required
+                value={yearLevel}
+                onChange={(v) => { setYearLevel(v); setSection('') }}
+                placeholder="— Select year —"
+                options={YEARS.map((y) => ({ value: String(y), label: `Year ${y}` }))}
+                className={selectClass}
+                style={selectStyle}
+              />
             </div>
           </div>
         </div>
@@ -250,44 +248,32 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
-            <div className="relative">
-              <select
-                name="subject_id"
-                required
-                value={subjectId}
-                onChange={(e) => { setSubjectId(e.target.value); setSection('') }}
-                disabled={!course}
-                className={`${selectClass} disabled:opacity-50`}
-                style={selectStyle}
-              >
-                <option value="">{course ? '— Select a subject —' : 'Select a course first'}</option>
-                {subjectOptions.map((s) => (
-                  <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
-                ))}
-              </select>
-              <Chevron />
-            </div>
+            <Select
+              name="subject_id"
+              required
+              value={subjectId}
+              onChange={(v) => { setSubjectId(v); setSection('') }}
+              disabled={!course}
+              placeholder={course ? '— Select a subject —' : 'Select a course first'}
+              options={subjectOptions.map((s) => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
+              className={selectClass}
+              style={selectStyle}
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Section *</label>
-            <div className="relative">
-              <select
-                name="section"
-                required
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
-                disabled={!subjectId}
-                className={`${selectClass} disabled:opacity-50`}
-                style={selectStyle}
-              >
-                <option value="">
-                  {!subjectId ? 'Select a subject first' : sectionOptions.length ? '— Select section —' : 'No sections for that subject/year'}
-                </option>
-                {sectionOptions.map((o) => <option key={o.section} value={o.section}>{o.section}</option>)}
-              </select>
-              <Chevron />
-            </div>
+            <Select
+              name="section"
+              required
+              value={section}
+              onChange={setSection}
+              disabled={!subjectId}
+              placeholder={!subjectId ? 'Select a subject first' : sectionOptions.length ? '— Select section —' : 'No sections for that subject/year'}
+              options={sectionOptions.map((o) => ({ value: o.section, label: o.section }))}
+              className={selectClass}
+              style={selectStyle}
+            />
           </div>
 
           {section && (
@@ -362,14 +348,6 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
         )}
       </form>
     </div>
-  )
-}
-
-function Chevron() {
-  return (
-    <svg className="w-4 h-4 ef-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
   )
 }
 
