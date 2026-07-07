@@ -1,6 +1,7 @@
 import type { NotificationItem } from '@/components/NotificationBell'
 import type { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/supabase/types'
+import { getActivePeriod } from '@/lib/examSettings'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -121,27 +122,52 @@ export async function getNotifications(
     }))
   }
 
-  // Students: one alert per update on their own requests (someone acted on it).
+  // Students: one alert per update on their own requests (someone acted on it),
+  // newest change first.
   if (role === 'student') {
     const { data } = await supabase
       .from('special_exam_requests')
-      .select('id, status, exam_type, subjects(subject_code)')
+      .select('id, status, exam_type, updated_at, period_id, subjects(subject_code)')
       .eq('student_id', userId)
-      .in('status', ['accepted', 'scheduled', 'rejected'])
-      .order('submitted_at', { ascending: false })
+      .in('status', ['accepted', 'scheduled', 'rejected', 'submitted', 'verified_by_registrar', 'approved_by_teacher', 'receipt_uploaded'])
+      .order('updated_at', { ascending: false })
       .limit(MAX_ITEMS)
 
-    return (data ?? []).map((r): NotificationItem => {
+    const items: NotificationItem[] = []
+
+    // Top item: the special-exam schedule was set for the term this student is
+    // taking part in (only while they still have a live request in it).
+    const active = await getActivePeriod(supabase)
+    if (active?.examDay) {
+      const hasLiveRequest = (data ?? []).some(
+        (r) => r.status !== 'rejected' && (!r.period_id || r.period_id === active.id),
+      )
+      if (hasLiveRequest) {
+        const when = new Date(active.examDay).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+        items.push({
+          id: `sched-${active.id}`,
+          text: `The special exam is scheduled for ${when}. Remember to get and fill out the form from the Registrar.`,
+          href: '/student',
+          tone: 'info',
+          icon: 'calendar',
+        })
+      }
+    }
+
+    for (const r of (data ?? [])) {
       const code = (r.subjects as unknown as { subject_code: string } | null)?.subject_code ?? 'your subject'
       const href = `/student/requests/${r.id}`
       if (r.status === 'accepted' && r.exam_type === 'paid')
-        return { id: r.id, text: `Action needed: upload your payment receipt for ${code}.`, href, tone: 'warning', icon: 'receipt' }
-      if (r.status === 'accepted')
-        return { id: r.id, text: `Your request for ${code} was approved.`, href, tone: 'success', icon: 'check' }
-      if (r.status === 'scheduled')
-        return { id: r.id, text: `Your special exam for ${code} is scheduled.`, href, tone: 'success', icon: 'calendar' }
-      return { id: r.id, text: `Your request for ${code} was rejected.`, href, tone: 'danger', icon: 'x-circle' }
-    })
+        items.push({ id: r.id, text: `Action needed: upload your payment receipt for ${code}.`, href, tone: 'warning', icon: 'receipt' })
+      else if (r.status === 'accepted')
+        items.push({ id: r.id, text: `Your request for ${code} was approved.`, href, tone: 'success', icon: 'check' })
+      else if (r.status === 'scheduled')
+        items.push({ id: r.id, text: `Your special exam for ${code} is scheduled.`, href, tone: 'success', icon: 'calendar' })
+      else if (r.status === 'rejected')
+        items.push({ id: r.id, text: `Your request for ${code} was rejected.`, href, tone: 'danger', icon: 'x-circle' })
+    }
+
+    return items
   }
 
   return []

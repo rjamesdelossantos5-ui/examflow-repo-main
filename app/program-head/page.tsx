@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { endedPeriodIds, hideEnded } from '@/lib/examSettings'
 import PHQueue from './PHQueue'
 
 export const metadata = { title: 'EXAMFLOW — Program Head Queue' }
@@ -26,7 +27,8 @@ export default async function ProgramHeadPage() {
     .eq('status', 'approved_by_teacher')
     .order('submitted_at', { ascending: false })
 
-  const requests = (raw ?? []).map((r) => {
+  const ended = await endedPeriodIds(supabase)
+  const requests = hideEnded(raw ?? [], ended).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string
       subject_name: string

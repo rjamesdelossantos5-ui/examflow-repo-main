@@ -154,10 +154,14 @@ export default async function RequestDetailPage({
             {TERM_LABEL[period.term]} Special Exam{period.schoolYear ? ` · ${period.schoolYear}` : ''}
           </h2>
           <dl className="space-y-1.5 text-sm">
-            {period.examDay && <p><span className="ef-muted">When: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{new Date(period.examDay).toLocaleString()}</span></p>}
+            {period.examDay && <p><span className="ef-muted">When: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{new Date(period.examDay).toLocaleString()}{period.examEndDay ? ` → ${new Date(period.examEndDay).toLocaleString()}` : ''}</span></p>}
             {period.examLocation && <p><span className="ef-muted">Where: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{period.examLocation}</span></p>}
             {period.examBring && <p><span className="ef-muted">Bring: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{period.examBring}</span></p>}
           </dl>
+          <div className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs" style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', color: 'var(--card-foreground)' }}>
+            <span className="font-semibold shrink-0">Reminder:</span>
+            <span>Get the printed special-exam form from the Registrar&apos;s office and fill it out — the online request alone does not complete your application.</span>
+          </div>
         </div>
       )}
 

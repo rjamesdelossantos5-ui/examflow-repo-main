@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getActivePeriod } from '@/lib/examSettings'
 
 async function requirePH() {
   const supabase = await createClient()
@@ -256,16 +257,15 @@ export async function updateSubmissionWindow(days: number) {
 
 interface PeriodInput {
   term: string
-  schoolYear: string
   submissionStart: string
   windowDays: number
-  examDay: string
-  examLocation: string
-  examBring: string
 }
 
-// Create/update an exam period (Prelim/Midterms/Pre-finals/Finals) and make it
-// the single active one students submit to.
+// Create/update a term's SUBMISSION WINDOW (Prelim/Midterms/Pre-finals/Finals)
+// and make it the single active one students submit to. The exam schedule
+// (date/location/what-to-bring) is saved separately via saveExamSchedule, so
+// this upsert deliberately does NOT touch those columns — one term = one row
+// (school_year is fixed to '', giving one period per term).
 export async function savePeriod(input: PeriodInput) {
   const ctx = await requirePH()
   if (!ctx) return { error: 'Unauthorized' }
@@ -279,12 +279,9 @@ export async function savePeriod(input: PeriodInput) {
 
   const row = {
     term: input.term,
-    school_year: String(input.schoolYear ?? '').trim().slice(0, 20),
+    school_year: '',
     submission_start: input.submissionStart,
     window_days: input.windowDays,
-    exam_day: input.examDay || null,
-    exam_location: String(input.examLocation ?? '').trim().slice(0, 300) || null,
-    exam_bring: String(input.examBring ?? '').trim().slice(0, 1000) || null,
     is_active: true,
   }
 
@@ -301,6 +298,47 @@ export async function savePeriod(input: PeriodInput) {
   revalidatePath('/program-head/settings')
   revalidatePath('/student')
   revalidatePath('/student/submit')
+  return { error: null }
+}
+
+interface ScheduleInput {
+  examStart: string // ISO or datetime-local
+  examEnd: string // ISO or datetime-local ('' = single day)
+  examLocation: string
+  examBring: string
+}
+
+// Save the ONE special-exam schedule for the active period. There is only ever
+// one schedule per term; calling this again overwrites the previous one (the UI
+// confirms before doing so). Students see the new schedule immediately.
+export async function saveExamSchedule(input: ScheduleInput) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase } = ctx
+
+  const active = await getActivePeriod(supabase)
+  if (!active) return { error: 'Set and activate a submission window first, then schedule the exam.' }
+
+  if (!input.examStart) return { error: 'Set the exam start date & time.' }
+  const start = new Date(input.examStart)
+  if (isNaN(start.getTime())) return { error: 'Invalid exam start date.' }
+  const end = input.examEnd ? new Date(input.examEnd) : null
+  if (end && isNaN(end.getTime())) return { error: 'Invalid exam end date.' }
+  if (end && end.getTime() < start.getTime()) return { error: 'Exam end must be on or after the start.' }
+
+  const { error } = await supabase
+    .from('exam_periods')
+    .update({
+      exam_day: start.toISOString(),
+      exam_end_day: end ? end.toISOString() : null,
+      exam_location: String(input.examLocation ?? '').trim().slice(0, 300) || null,
+      exam_bring: String(input.examBring ?? '').trim().slice(0, 1000) || null,
+    })
+    .eq('id', active.id)
+  if (error) return { error: error.message }
+
+  revalidatePath('/program-head/settings')
+  revalidatePath('/student')
   return { error: null }
 }
 

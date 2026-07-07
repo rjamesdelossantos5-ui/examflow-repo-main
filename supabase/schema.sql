@@ -306,7 +306,8 @@ create table if not exists exam_periods (
   school_year      text not null default '',
   submission_start date not null,
   window_days      int  not null default 7 check (window_days between 1 and 365),
-  exam_day         timestamptz,
+  exam_day         timestamptz,        -- START of the special-exam window
+  exam_end_day     timestamptz,        -- END of the window (null = single day)
   exam_location    text,
   exam_bring       text,
   is_active        boolean not null default false,

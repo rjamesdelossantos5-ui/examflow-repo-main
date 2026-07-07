@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon, type IconName } from '@/components/Icon'
 import { getActivePeriod, computeWindow, TERM_LABEL } from '@/lib/examSettings'
-import SubmissionNotice from './SubmissionNotice'
+import SubmissionStatusBanner from './SubmissionStatusBanner'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — My Requests' }
@@ -57,8 +57,7 @@ export default async function StudentPage() {
 
   return (
     <div className="space-y-6">
-      <SubmissionNotice
-        configured={!!activePeriod}
+      <SubmissionStatusBanner
         termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
         open={win.open}
         notStarted={win.notStarted}
@@ -66,6 +65,7 @@ export default async function StudentPage() {
         start={win.start}
         end={win.end}
         examDay={activePeriod?.examDay ?? null}
+        examEndDay={activePeriod?.examEndDay ?? null}
         examLocation={activePeriod?.examLocation ?? null}
         examBring={activePeriod?.examBring ?? null}
       />

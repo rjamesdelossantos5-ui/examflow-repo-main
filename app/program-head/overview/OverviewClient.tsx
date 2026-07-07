@@ -134,8 +134,17 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
             </tr>
           </thead>
           <tbody className="divide-y">
-            {visible.map((r) => (
-              <tr key={r.id} className="hover:bg-black/5 dark:hover:bg-white/5">
+            {visible.map((r) => {
+              // The whole row is a shortcut for accepting when this PH is allowed
+              // to (globally authorized, or the admin approved this exact request).
+              const canAcceptHere = OVERRIDABLE.includes(r.status) && (canOverride || r.overrideStatus === 'approved')
+              return (
+              <tr
+                key={r.id}
+                onClick={canAcceptHere ? () => handleAccept(r.id) : undefined}
+                title={canAcceptHere ? 'Click to accept this request now' : undefined}
+                className={`hover:bg-black/5 dark:hover:bg-white/5 ${canAcceptHere ? 'cursor-pointer' : ''}`}
+              >
                 <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.name}</td>
                 <td className="px-4 py-3 ef-muted">{r.section ?? '—'}</td>
                 <td className="px-4 py-3">
@@ -159,7 +168,7 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
                   {OVERRIDABLE.includes(r.status) && (
                     canOverride || r.overrideStatus === 'approved' ? (
                       <button
-                        onClick={() => handleAccept(r.id)}
+                        onClick={(e) => { e.stopPropagation(); handleAccept(r.id) }}
                         disabled={isPending}
                         className="text-xs px-2.5 py-1 rounded-lg font-semibold disabled:opacity-50"
                         style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
@@ -170,7 +179,7 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
                       <span className="text-xs ef-muted">Awaiting admin…</span>
                     ) : (
                       <button
-                        onClick={() => setRequestFor(r)}
+                        onClick={(e) => { e.stopPropagation(); setRequestFor(r) }}
                         className="text-xs px-2.5 py-1 rounded-lg font-semibold border ef-border hover:bg-black/5 dark:hover:bg-white/10"
                         style={{ color: 'var(--card-foreground)' }}
                       >
@@ -180,7 +189,7 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
                   )}
                 </td>
               </tr>
-            ))}
+            )})}
             {visible.length === 0 && (
               <tr><td colSpan={7} className="px-4 py-8 text-center ef-muted">No requests in this stage.</td></tr>
             )}
