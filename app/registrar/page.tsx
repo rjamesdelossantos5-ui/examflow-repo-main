@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { keepActive, getActivePeriod, computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import { keepActive, computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import { getActivePeriodCached } from '@/lib/activePeriod'
+import { getCurrentUser } from '@/lib/currentUser'
 import StaffWindowBanner from '@/components/StaffWindowBanner'
 import RegistrarQueue from './RegistrarQueue'
 
@@ -8,7 +10,7 @@ export const metadata = { title: 'EXAMFLOW — Registrar Queue' }
 
 export default async function RegistrarPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const { data: raw } = await supabase
@@ -25,7 +27,7 @@ export default async function RegistrarPage() {
 
   // Only the active term's forms show; the previous term drops off once a new
   // term is activated in Settings.
-  const activePeriod = await getActivePeriod(supabase)
+  const activePeriod = await getActivePeriodCached()
   const activeId = activePeriod?.id ?? null
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const requests = keepActive(raw ?? [], activeId).map((r) => {

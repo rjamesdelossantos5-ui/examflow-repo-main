@@ -1,7 +1,7 @@
 import type { NotificationItem } from '@/components/NotificationBell'
 import type { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/supabase/types'
-import { getActivePeriod, activePeriodId } from '@/lib/examSettings'
+import { getActivePeriodCached, activePeriodIdCached } from '@/lib/activePeriod'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -9,7 +9,7 @@ type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 // badges. Counts only the active term (plus legacy null-period rows) so the
 // badge matches the (filtered) queue below it.
 export async function countByStatus(supabase: SupabaseServer, status: string): Promise<number> {
-  const activeId = await activePeriodId(supabase)
+  const activeId = await activePeriodIdCached()
   let q = supabase
     .from('special_exam_requests')
     .select('id', { count: 'exact', head: true })
@@ -51,7 +51,7 @@ export async function getNotifications(
   // accept/reject panel instead of just landing on the page.
   // Previous-term requests drop off the reviewer queues, so their alerts should
   // drop off the bell too (keeps the bell in step with the queue + badge).
-  const activeId = role === 'student' ? null : await activePeriodId(supabase)
+  const activeId = role === 'student' ? null : await activePeriodIdCached()
 
   const queueItems = async (
     status: string,
@@ -148,7 +148,7 @@ export async function getNotifications(
 
     // Top item: the special-exam schedule was set for the term this student is
     // taking part in (only while they still have a live request in it).
-    const active = await getActivePeriod(supabase)
+    const active = await getActivePeriodCached()
     if (active?.examDay) {
       const hasLiveRequest = (data ?? []).some(
         (r) => r.status !== 'rejected' && (!r.period_id || r.period_id === active.id),

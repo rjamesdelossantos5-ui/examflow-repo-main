@@ -3,9 +3,30 @@
 import { useEffect, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import StatusBadge from '@/components/StatusBadge'
+import { Icon } from '@/components/Icon'
 import { exportSchoolFormat } from './exportExcel'
 import { deleteFinishedRequest } from '../actions'
 import type { RequestStatus } from '@/lib/supabase/types'
+
+interface StudentGroup {
+  key: string
+  student: StudentRow
+  forms: StudentRow[]
+}
+
+// Group a student's per-subject forms under one row. A student takes up to ~8
+// subjects a term, so this collapses 8 rows into 1 expandable entry keyed by
+// student number (falling back to name when no number is on record).
+function groupByStudent(rows: StudentRow[]): StudentGroup[] {
+  const map = new Map<string, StudentGroup>()
+  for (const r of rows) {
+    const key = r.student_number || r.student_name
+    const g = map.get(key)
+    if (g) g.forms.push(r)
+    else map.set(key, { key, student: r, forms: [r] })
+  }
+  return [...map.values()]
+}
 
 interface StudentRow {
   id: string
@@ -32,8 +53,18 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
   const [query, setQuery] = useState('')
   const [, startTransition] = useTransition()
 
+  const [openKeys, setOpenKeys] = useState<Set<string>>(new Set())
+  function toggle(key: string) {
+    setOpenKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
   const q = query.trim().toLowerCase()
   const visible = q ? rows.filter((r) => r.student_name.toLowerCase().includes(q)) : rows
+  const groups = groupByStudent(visible)
 
   function handleDelete(id: string) {
     if (!confirm('Delete this record permanently? This removes the form and its uploaded files.')) return
@@ -110,52 +141,63 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
         </div>
       </div>
 
-      <div className="ef-card rounded-xl shadow-sm overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-3 py-3">Student</th>
-              <th className="px-3 py-3">No.</th>
-              <th className="px-3 py-3">Course</th>
-              <th className="px-3 py-3">Yr / Sec</th>
-              <th className="px-3 py-3">Subject</th>
-              <th className="px-3 py-3">Teacher</th>
-              <th className="px-3 py-3">Type</th>
-              <th className="px-3 py-3">Status</th>
-              <th className="px-3 py-3 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {visible.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50">
-                <td className="px-3 py-2 font-medium">{r.student_name}</td>
-                <td className="px-3 py-2 text-gray-500 text-xs">{r.student_number ?? '—'}</td>
-                <td className="px-3 py-2 text-gray-500">{r.course ?? '—'}</td>
-                <td className="px-3 py-2 text-gray-500">{r.year_level ?? '—'} / {r.section ?? '—'}</td>
-                <td className="px-3 py-2">
-                  <div>{r.subject_name}</div>
-                  <div className="text-xs text-gray-400">{r.subject_code}</div>
-                </td>
-                <td className="px-3 py-2 text-gray-500">{r.teacher_name ?? '—'}</td>
-                <td className="px-3 py-2 capitalize text-xs">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</td>
-                <td className="px-3 py-2"><StatusBadge status={r.status} /></td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    onClick={() => handleDelete(r.id)}
-                    disabled={pendingDelete === r.id}
-                    className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50"
-                  >
-                    {pendingDelete === r.id ? 'Deleting…' : 'Delete'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {visible.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">{rows.length === 0 ? 'No accepted students yet.' : 'No student matches your search.'}</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {groups.length === 0 ? (
+        <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">
+          {rows.length === 0 ? 'No accepted students yet.' : 'No student matches your search.'}
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          {groups.map((g) => {
+            const open = openKeys.has(g.key)
+            return (
+              <div key={g.key} className="ef-card rounded-xl shadow-sm overflow-hidden">
+                {/* Student header — click to expand all their forms */}
+                <button
+                  onClick={() => toggle(g.key)}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
+                >
+                  <span className="w-9 h-9 rounded-lg grid place-items-center font-bold text-sm shrink-0" style={{ background: 'var(--sti-navy)', color: 'var(--sti-gold)' }}>
+                    {g.student.student_name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold truncate" style={{ color: 'var(--card-foreground)' }}>{g.student.student_name}</p>
+                    <p className="text-xs ef-muted truncate">
+                      {g.student.student_number ?? '—'} · {g.student.course ?? '—'} · {g.student.year_level ?? '—'}/{g.student.section ?? '—'}
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
+                    {g.forms.length} form{g.forms.length === 1 ? '' : 's'}
+                  </span>
+                  <Icon name="chevron-right" className={`w-4 h-4 ef-muted shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+                </button>
+
+                {/* Per-subject forms */}
+                {open && (
+                  <div className="border-t ef-border divide-y">
+                    {g.forms.map((r) => (
+                      <div key={r.id} className="flex items-center gap-3 px-4 py-2.5 pl-16">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate" style={{ color: 'var(--card-foreground)' }}>{r.subject_name}</p>
+                          <p className="text-xs ef-muted truncate">{r.subject_code}{r.teacher_name ? ` · ${r.teacher_name}` : ''}</p>
+                        </div>
+                        <span className="text-[11px] capitalize ef-muted shrink-0">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</span>
+                        <StatusBadge status={r.status} />
+                        <button
+                          onClick={() => handleDelete(r.id)}
+                          disabled={pendingDelete === r.id}
+                          className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50 shrink-0"
+                        >
+                          {pendingDelete === r.id ? '…' : 'Delete'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

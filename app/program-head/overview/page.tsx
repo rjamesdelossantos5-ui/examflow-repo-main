@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { activePeriodId, keepActive } from '@/lib/examSettings'
+import { keepActive } from '@/lib/examSettings'
+import { activePeriodIdCached } from '@/lib/activePeriod'
 import OverviewClient, { type OverviewRow } from './OverviewClient'
 
 export const metadata = { title: 'EXAMFLOW — Overview' }
@@ -35,7 +36,7 @@ export default async function OverviewPage() {
     if (!ovByReq.has(o.request_id)) ovByReq.set(o.request_id, o.status)
   }
 
-  const activeId = await activePeriodId(supabase)
+  const activeId = await activePeriodIdCached()
   const rows: OverviewRow[] = keepActive(data ?? [], activeId).map((r) => {
     const prof = r.profiles as unknown as { full_name: string; section: string | null } | null
     const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null

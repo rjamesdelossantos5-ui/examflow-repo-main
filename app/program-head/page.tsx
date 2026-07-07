@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { activePeriodId, keepActive } from '@/lib/examSettings'
+import { keepActive } from '@/lib/examSettings'
+import { activePeriodIdCached } from '@/lib/activePeriod'
+import { getCurrentUser } from '@/lib/currentUser'
 import PHQueue from './PHQueue'
 
 export const metadata = { title: 'EXAMFLOW — Program Head Queue' }
 
 export default async function ProgramHeadPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const { data: raw } = await supabase
@@ -27,7 +29,7 @@ export default async function ProgramHeadPage() {
     .eq('status', 'approved_by_teacher')
     .order('submitted_at', { ascending: false })
 
-  const activeId = await activePeriodId(supabase)
+  const activeId = await activePeriodIdCached()
   const requests = keepActive(raw ?? [], activeId).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string

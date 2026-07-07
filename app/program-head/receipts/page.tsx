@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { activePeriodId, keepActive } from '@/lib/examSettings'
+import { keepActive } from '@/lib/examSettings'
+import { activePeriodIdCached } from '@/lib/activePeriod'
 import PHQueue from '../PHQueue'
 
 export const metadata = { title: 'EXAMFLOW — Second Approval (Receipts)' }
@@ -28,7 +29,7 @@ export default async function ProgramHeadReceiptsPage() {
     .eq('status', 'receipt_uploaded')
     .order('submitted_at', { ascending: false })
 
-  const activeId = await activePeriodId(supabase)
+  const activeId = await activePeriodIdCached()
   const requests = keepActive(raw ?? [], activeId).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string

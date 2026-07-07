@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import SubmitForm from './SubmitForm'
-import { getActivePeriod, computeWindow } from '@/lib/examSettings'
+import { computeWindow } from '@/lib/examSettings'
+import { getActivePeriodCached } from '@/lib/activePeriod'
 import type { Subject } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Submit Request' }
@@ -53,7 +54,7 @@ export default async function SubmitPage({
   const [{ data: subjects }, { data: profile }, activePeriod] = await Promise.all([
     supabase.from('subjects').select('id, subject_code, subject_name').order('subject_code'),
     supabase.from('profiles').select('full_name, student_number, course, year_level, section').eq('id', user.id).single(),
-    getActivePeriod(supabase),
+    getActivePeriodCached(),
   ])
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)

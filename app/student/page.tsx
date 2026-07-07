@@ -3,7 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon, type IconName } from '@/components/Icon'
-import { getActivePeriod, computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
+import { getActivePeriodCached } from '@/lib/activePeriod'
+import { getCurrentUser } from '@/lib/currentUser'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -29,7 +31,7 @@ function StatCard({ label, value, accent, icon }: { label: string; value: number
 
 export default async function StudentPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase
@@ -44,7 +46,7 @@ export default async function StudentPage() {
       .select('*, subjects(subject_code, subject_name)')
       .eq('student_id', user.id)
       .order('submitted_at', { ascending: false }),
-    getActivePeriod(supabase),
+    getActivePeriodCached(),
   ])
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
