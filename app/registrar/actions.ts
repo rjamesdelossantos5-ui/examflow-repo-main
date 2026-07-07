@@ -43,6 +43,41 @@ export async function verifyRequest(requestId: string) {
   return { error: null }
 }
 
+// Verify every still-pending form for a student in one go. Only rows still at
+// 'submitted' are touched (the .eq guard), so forms that already moved on are
+// left alone. Returns how many were actually verified.
+export async function verifyAll(requestIds: string[]) {
+  const ctx = await requireRegistrar()
+  if (!ctx) return { error: 'Unauthorized', count: 0 }
+  const { supabase, userId, role } = ctx
+
+  const ids = [...new Set(requestIds)].filter(Boolean)
+  if (!ids.length) return { error: 'Nothing to verify.', count: 0 }
+
+  const { data: updated, error } = await supabase
+    .from('special_exam_requests')
+    .update({ status: 'verified_by_registrar' })
+    .in('id', ids)
+    .eq('status', 'submitted')
+    .select('id')
+
+  if (error) return { error: error.message, count: 0 }
+  const verified = updated ?? []
+  if (!verified.length) return { error: 'These requests were already handled.', count: 0 }
+
+  await supabase.from('progress_logs').insert(
+    verified.map((u) => ({
+      request_id: u.id,
+      actor_id: userId,
+      actor_role: role,
+      action: 'Verified by Registrar — forwarded to Subject Teacher',
+    }))
+  )
+
+  revalidatePath('/registrar')
+  return { error: null, count: verified.length }
+}
+
 export async function rejectRequest(requestId: string, reason: string) {
   const ctx = await requireRegistrar()
   if (!ctx) return { error: 'Unauthorized' }
