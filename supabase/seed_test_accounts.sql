@@ -18,11 +18,11 @@
 --   santos@examflow.com         Maria Santos (registrar)
 --   galamiton@examflow.com      Joshua Galamiton (ICT)
 --   valles@examflow.com         Kid Valles       (ICT)
---   shs.teacher1@examflow.com   Maria Clara      (SHS)
---   shs.teacher2@examflow.com   Alice Go         (SHS)
+--   clara@examflow.com          Maria Clara      (SHS)
+--   go@examflow.com             Alice Go         (SHS)
 --   vergara@examflow.com        Ms. Lara Camille Vergara (ICT Head)
 --   pangalinan@examflow.com     Ms. Grace Pangilinan     (SHS Head)
---   student1@examflow.com       Jose Rizal, student (course BSIT)
+--   rizal@examflow.com          Jose Rizal, student (course BSIT)
 --   penduko@examflow.com        Pedro Penduko, student (course STEM)
 --
 -- The student-facing Course dropdown is trimmed to exactly 2 for testing:
@@ -111,11 +111,11 @@ admin_id := _seed_user('admin@examflow.com',       pw, 'System Admin',        'a
 reg_id   := _seed_user('santos@examflow.com',      pw, 'Maria Santos',        'registrar');
 t_g      := _seed_user('galamiton@examflow.com',   pw, 'Instructor Joshua Galamiton', 'subject_teacher');
 t_gm     := _seed_user('valles@examflow.com',       pw, 'Instructor Kid Valles',       'subject_teacher');
-t_p      := _seed_user('shs.teacher1@examflow.com', pw, 'Instructor Maria Clara',      'subject_teacher');
-t_l      := _seed_user('shs.teacher2@examflow.com', pw, 'Instructor Alice Go',         'subject_teacher');
+t_p      := _seed_user('clara@examflow.com',       pw, 'Instructor Maria Clara',      'subject_teacher');
+t_l      := _seed_user('go@examflow.com',          pw, 'Instructor Alice Go',         'subject_teacher');
 ph_ict   := _seed_user('vergara@examflow.com',     pw, 'Ms. Lara Camille Vergara',    'program_head');
 ph_shs   := _seed_user('pangalinan@examflow.com',  pw, 'Ms. Grace Pangilinan',        'program_head');
-stu1     := _seed_user('student1@examflow.com',    pw, 'Jose Rizal',          'student');
+stu1     := _seed_user('rizal@examflow.com',       pw, 'Jose Rizal',          'student');
 stu2     := _seed_user('penduko@examflow.com',     pw, 'Pedro Penduko',       'student');
 
 -- ── Roles + departments (trigger defaults everyone to 'student') ──

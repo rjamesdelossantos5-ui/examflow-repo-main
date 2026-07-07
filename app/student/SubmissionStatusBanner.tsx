@@ -53,7 +53,7 @@ export default function SubmissionStatusBanner(props: Props) {
         ? `Closed ${fmtDate(props.end)}`
         : 'Check back later'
 
-  const TBA = 'TBA'
+  const TBA = 'To be announced'
   const hasTerm = !!props.termLabel
   const examRange = props.examDay
     ? props.examEndDay
