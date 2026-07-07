@@ -95,8 +95,12 @@ export default function SubmissionStatusBanner(props: Props) {
         <p className="px-4 mt-2 text-sm">
           <span className="ef-muted">Exam: </span>
           <strong style={{ color: 'var(--card-foreground)' }}>{examRange}</strong>
-          <span className="ef-muted"> · </span>
-          <span style={{ color: 'var(--card-foreground)' }}>{props.examLocation || TBA}</span>
+          {props.examLocation && (
+            <>
+              <span className="ef-muted"> · </span>
+              <span style={{ color: 'var(--card-foreground)' }}>{props.examLocation}</span>
+            </>
+          )}
           {props.examBring && (
             <>
               <span className="ef-muted"> · Bring: </span>
