@@ -99,7 +99,8 @@ export async function uploadReceipt(requestId: string, formData: FormData) {
     size_bytes: file.size,
   })
 
-  await supabase.from('special_exam_requests').update({ status: 'receipt_uploaded' }).eq('id', requestId)
+  // Clear any prior receipt-rejection note now that a fresh receipt is in.
+  await supabase.from('special_exam_requests').update({ status: 'receipt_uploaded', rejection_reason: null }).eq('id', requestId)
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,

@@ -6,7 +6,7 @@ import { uploadReceipt } from './actions'
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_MB = 5
 
-export default function ReceiptUpload({ requestId }: { requestId: string }) {
+export default function ReceiptUpload({ requestId, rejectedReason }: { requestId: string; rejectedReason?: string | null }) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -65,6 +65,14 @@ export default function ReceiptUpload({ requestId }: { requestId: string }) {
           </p>
         </div>
       </div>
+
+      {/* Previous receipt was rejected — tell the student why so they don't
+          re-upload the same one. */}
+      {rejectedReason && (
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
+          <strong>Your previous receipt was rejected:</strong> {rejectedReason}. Please upload a clear, correct receipt.
+        </div>
+      )}
 
       {/* Server error */}
       {serverError && (

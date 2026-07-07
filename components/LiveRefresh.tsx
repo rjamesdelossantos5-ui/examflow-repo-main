@@ -22,21 +22,30 @@ export default function LiveRefresh() {
     const supabase = createClient()
     let realtimeOk = false
 
+    // Coalesce bursts of DB changes into a single refresh. Without this, a run
+    // of updates (e.g. several submissions at once) would fire one full
+    // router.refresh() per event on every open dashboard.
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const scheduleRefresh = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => router.refresh(), 500)
+    }
+
     const channel = supabase
       .channel('examflow-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_exam_requests' }, () => {
-        router.refresh()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_exam_requests' }, scheduleRefresh)
       .subscribe((status) => { realtimeOk = status === 'SUBSCRIBED' })
 
     // Fallback only — skips the refetch entirely while Realtime is connected.
     const interval = setInterval(() => { if (!realtimeOk) router.refresh() }, POLL_MS)
 
+    // Tab refocus refreshes immediately (no debounce needed — it's a single event).
     const onVisible = () => { if (document.visibilityState === 'visible') router.refresh() }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)
 
     return () => {
+      if (timer) clearTimeout(timer)
       supabase.removeChannel(channel)
       clearInterval(interval)
       document.removeEventListener('visibilitychange', onVisible)

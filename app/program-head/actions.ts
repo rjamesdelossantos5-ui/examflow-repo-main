@@ -249,24 +249,6 @@ export async function deleteFinishedRequest(requestId: string) {
   return { error: null }
 }
 
-export async function updateSubmissionWindow(days: number) {
-  const ctx = await requirePH()
-  if (!ctx) return { error: 'Unauthorized' }
-  const { supabase } = ctx
-
-  if (!Number.isInteger(days) || days < 1 || days > 365) {
-    return { error: 'Days must be between 1 and 365' }
-  }
-
-  const { error } = await supabase
-    .from('settings')
-    .upsert({ key: 'submission_window_days', value: String(days), updated_at: new Date().toISOString() })
-
-  if (error) return { error: error.message }
-  revalidatePath('/program-head/settings')
-  return { error: null }
-}
-
 interface PeriodInput {
   term: string
   submissionStart: string

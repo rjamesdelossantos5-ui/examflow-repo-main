@@ -45,24 +45,22 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
   useEffect(() => {
     const supabase = createClient()
 
+    // Realtime postgres_changes only supports simple filters (eq), not `in`, so
+    // we subscribe to all changes on the table and re-fetch (fetchRows already
+    // narrows to accepted/receipt_uploaded/scheduled). Refetches are coalesced
+    // so a burst of changes triggers one query.
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const refetch = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => { fetchRows(supabase).then(setRows) }, 400)
+    }
+
     const channel = supabase
       .channel('accepted-students')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'special_exam_requests',
-          filter: "status=in.(accepted,receipt_uploaded,scheduled)",
-        },
-        () => {
-          // Re-fetch on any relevant change
-          fetchRows(supabase).then(setRows)
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_exam_requests' }, refetch)
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { if (timer) clearTimeout(timer); supabase.removeChannel(channel) }
   }, [])
 
   async function exportExcel() {

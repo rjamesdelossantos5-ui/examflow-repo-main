@@ -224,9 +224,10 @@ export default async function RequestDetailPage({
         </div>
       )}
 
-      {/* Receipt upload (Paid + accepted) */}
+      {/* Receipt upload (Paid + accepted). If a prior receipt was rejected, the
+          reason is still on the request — show it so the student can fix it. */}
       {req.exam_type === 'paid' && req.status === 'accepted' && (
-        <ReceiptUpload requestId={req.id} />
+        <ReceiptUpload requestId={req.id} rejectedReason={req.rejection_reason as string | null} />
       )}
 
       {/* Documents */}
