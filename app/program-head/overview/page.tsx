@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
+import { keepMyDepartment } from '@/lib/deptFilter'
 import OverviewClient, { type OverviewRow } from './OverviewClient'
 
 export const metadata = { title: 'EXAMFLOW — Overview' }
@@ -11,7 +12,7 @@ export default async function OverviewPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: me } = await supabase.from('profiles').select('role, can_override').eq('id', user.id).single()
+  const { data: me } = await supabase.from('profiles').select('role, can_override, department_id').eq('id', user.id).single()
   const canOverride = me?.role === 'admin' || !!me?.can_override
 
   const { data } = await supabase
@@ -19,7 +20,7 @@ export default async function OverviewPage() {
     .select(`
       *,
       profiles!student_id(full_name, section),
-      subjects(subject_code, subject_name)
+      subjects(subject_code, subject_name, department_id)
     `)
     // Once scheduled, a request is done — it drops off the overview.
     .neq('status', 'scheduled')
@@ -37,7 +38,7 @@ export default async function OverviewPage() {
   }
 
   const activeId = await activePeriodIdCached()
-  const rows: OverviewRow[] = keepActive(data ?? [], activeId).map((r) => {
+  const rows: OverviewRow[] = keepMyDepartment(keepActive(data ?? [], activeId), me?.department_id ?? null).map((r) => {
     const prof = r.profiles as unknown as { full_name: string; section: string | null } | null
     const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null
     const s = r as { snap_name?: string | null; snap_section?: string | null }

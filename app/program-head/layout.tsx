@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/currentUser'
+import { getMyDeptSubjectIds } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getNotifications, countByStatus } from '@/lib/notifications'
 
@@ -17,10 +18,11 @@ export default async function ProgramHeadLayout({ children }: { children: React.
 
   if (!profile || !['program_head', 'admin'].includes(profile.role)) redirect('/login')
 
+  const deptIds = await getMyDeptSubjectIds()
   const [notifications, firstCount, secondCount] = await Promise.all([
     getNotifications(supabase, user.id, 'program_head'),
-    countByStatus(supabase, 'approved_by_teacher'),
-    countByStatus(supabase, 'receipt_uploaded'),
+    countByStatus(supabase, 'approved_by_teacher', deptIds),
+    countByStatus(supabase, 'receipt_uploaded', deptIds),
   ])
   const nav = [
     { label: 'First Approval', href: '/program-head', icon: 'inbox' as const, badge: firstCount },

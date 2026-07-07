@@ -2,19 +2,29 @@ import type { NotificationItem } from '@/components/NotificationBell'
 import type { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/supabase/types'
 import { getActivePeriodCached, activePeriodIdCached } from '@/lib/activePeriod'
+import { getMyDeptSubjectIds } from '@/lib/myProfile'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
 // Cheap indexed count of requests at a given status — used for the nav-tab
 // badges. Counts only the active term (plus legacy null-period rows) so the
 // badge matches the (filtered) queue below it.
-export async function countByStatus(supabase: SupabaseServer, status: string): Promise<number> {
+export async function countByStatus(
+  supabase: SupabaseServer,
+  status: string,
+  subjectIds?: string[] | null,
+): Promise<number> {
+  // A dept-scoped caller (Program Head) passes their department's subject ids.
+  // Empty array = department has no subjects yet = nothing to count.
+  if (Array.isArray(subjectIds) && subjectIds.length === 0) return 0
+
   const activeId = await activePeriodIdCached()
   let q = supabase
     .from('special_exam_requests')
     .select('id', { count: 'exact', head: true })
     .eq('status', status)
   if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
+  if (subjectIds && subjectIds.length) q = q.in('subject_id', subjectIds)
   const { count } = await q
   return count ?? 0
 }
@@ -59,7 +69,9 @@ export async function getNotifications(
     text: (name: string, code: string) => string,
     tone: NotificationItem['tone'],
     icon: NotificationItem['icon'],
+    subjectIds?: string[] | null,
   ): Promise<NotificationItem[]> => {
+    if (Array.isArray(subjectIds) && subjectIds.length === 0) return []
     let q = supabase
       .from('special_exam_requests')
       .select('id, snap_name, profiles!student_id(full_name), subjects(subject_code)')
@@ -67,6 +79,7 @@ export async function getNotifications(
       .order('submitted_at', { ascending: false })
       .limit(MAX_ITEMS)
     if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
+    if (subjectIds && subjectIds.length) q = q.in('subject_id', subjectIds)
     const { data } = await q
 
     return ((data ?? []) as unknown as QueueRow[]).map((r) => ({
@@ -87,9 +100,11 @@ export async function getNotifications(
   }
 
   if (role === 'program_head') {
+    // Scope the PH bell to their own department's subjects.
+    const deptIds = await getMyDeptSubjectIds()
     const [first, second] = await Promise.all([
-      queueItems('approved_by_teacher', '/program-head', (name, code) => `${name} — ${code} is awaiting first approval.`, 'info', 'inbox'),
-      queueItems('receipt_uploaded', '/program-head/receipts', (name, code) => `${name} uploaded a payment receipt for ${code}.`, 'warning', 'receipt'),
+      queueItems('approved_by_teacher', '/program-head', (name, code) => `${name} — ${code} is awaiting first approval.`, 'info', 'inbox', deptIds),
+      queueItems('receipt_uploaded', '/program-head/receipts', (name, code) => `${name} uploaded a payment receipt for ${code}.`, 'warning', 'receipt', deptIds),
     ])
 
     // "Your override request was approved" — only while the request is still

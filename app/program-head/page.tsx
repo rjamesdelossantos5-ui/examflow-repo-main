@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
+import { getMyProfileMeta } from '@/lib/myProfile'
+import { keepMyDepartment } from '@/lib/deptFilter'
 import PHQueue from './PHQueue'
 
 export const metadata = { title: 'EXAMFLOW — Program Head Queue' }
@@ -18,7 +20,7 @@ export default async function ProgramHeadPage() {
       *,
       profiles!student_id(full_name, student_number, course, year_level, section),
       subjects(
-        subject_code, subject_name,
+        subject_code, subject_name, department_id,
         profiles!teacher_id(full_name)
       ),
       application_media(id, media_type, storage_path, file_name, mime_type),
@@ -29,8 +31,9 @@ export default async function ProgramHeadPage() {
     .eq('status', 'approved_by_teacher')
     .order('submitted_at', { ascending: false })
 
-  const activeId = await activePeriodIdCached()
-  const requests = keepActive(raw ?? [], activeId).map((r) => {
+  // A Program Head only approves their own department's subjects.
+  const [activeId, meta] = await Promise.all([activePeriodIdCached(), getMyProfileMeta()])
+  const requests = keepMyDepartment(keepActive(raw ?? [], activeId), meta?.department_id ?? null).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string
       subject_name: string

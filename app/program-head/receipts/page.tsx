@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
+import { getMyProfileMeta } from '@/lib/myProfile'
+import { keepMyDepartment } from '@/lib/deptFilter'
 import PHQueue from '../PHQueue'
 
 export const metadata = { title: 'EXAMFLOW — Second Approval (Receipts)' }
@@ -20,7 +22,7 @@ export default async function ProgramHeadReceiptsPage() {
       *,
       profiles!student_id(full_name, student_number, course, year_level, section),
       subjects(
-        subject_code, subject_name,
+        subject_code, subject_name, department_id,
         profiles!teacher_id(full_name)
       ),
       application_media(id, media_type, storage_path, file_name, mime_type),
@@ -29,8 +31,8 @@ export default async function ProgramHeadReceiptsPage() {
     .eq('status', 'receipt_uploaded')
     .order('submitted_at', { ascending: false })
 
-  const activeId = await activePeriodIdCached()
-  const requests = keepActive(raw ?? [], activeId).map((r) => {
+  const [activeId, meta] = await Promise.all([activePeriodIdCached(), getMyProfileMeta()])
+  const requests = keepMyDepartment(keepActive(raw ?? [], activeId), meta?.department_id ?? null).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string
       subject_name: string
