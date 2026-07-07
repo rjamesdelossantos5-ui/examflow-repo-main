@@ -33,7 +33,9 @@ export default function SubmissionStatusBanner(props: Props) {
   const base = open ? 'Submission window is open' : notStarted ? 'Submissions open soon' : 'Submissions are closed'
   const title = termLabel ? `${termLabel} — ${base}` : base
   const headline = open
-    ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left to submit`
+    ? daysRemaining != null
+      ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left to submit`
+      : 'Open — no active term set yet'
     : notStarted
       ? `Opens ${fmtDate(props.start)}`
       : props.end
