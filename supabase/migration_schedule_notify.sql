@@ -4,3 +4,4 @@
 -- that proxy almost never counted as "new".
 alter table exam_periods add column if not exists schedule_updated_at timestamptz;
 alter table profiles add column if not exists schedule_ack text;
+alter table profiles add column if not exists window_ack text;

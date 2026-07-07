@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Icon } from '@/components/Icon'
-import { dismissModal } from './bannerActions'
+import { dismissModal, ackWindow } from './bannerActions'
 
 interface Props {
   termLabel: string | null
@@ -12,6 +12,11 @@ interface Props {
   start: string | null
   end: string | null
   show: boolean
+  /** When set, acknowledging persists in the DB (won't reappear on next
+   * login) instead of the usual per-login cookie — used once the window is
+   * open AND the exam schedule is fully settled (has an end time), so this
+   * "settled" state doesn't keep nagging on every login. */
+  persistSignature?: string | null
 }
 
 function fmtDate(iso: string | null) {
@@ -19,9 +24,12 @@ function fmtDate(iso: string | null) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-// One-time popup shown right after login. Clicking OK only closes the popup —
-// the dashboard banner below stays put and is dismissed separately (via its
-// own X). Reappears on the next fresh login (see app/login/actions.ts).
+// Popup shown right after login. Clicking OK only closes the popup — the
+// dashboard banner below stays put and is dismissed separately (via its own
+// X). Normally reappears on the next fresh login (see app/login/actions.ts);
+// but once the window is open and the schedule is settled (persistSignature
+// set), acknowledging it persists instead, so it only shows once ever for
+// that state.
 export default function SubmissionStatusModal(props: Props) {
   const [visible, setVisible] = useState(props.show)
   if (!visible) return null
@@ -42,7 +50,8 @@ export default function SubmissionStatusModal(props: Props) {
 
   function handleOk() {
     setVisible(false)
-    dismissModal()
+    if (props.persistSignature) ackWindow(props.persistSignature)
+    else dismissModal()
   }
 
   return (

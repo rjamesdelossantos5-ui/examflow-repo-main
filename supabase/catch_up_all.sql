@@ -198,6 +198,7 @@ alter table profiles add column if not exists notifications_seen_at timestamptz;
 -- ── migration_schedule_notify.sql ───────────────
 alter table exam_periods add column if not exists schedule_updated_at timestamptz;
 alter table profiles add column if not exists schedule_ack text;
+alter table profiles add column if not exists window_ack text;
 
 -- ── migration_indexes.sql ──────────────────────
 create index if not exists idx_requests_status_submitted on special_exam_requests (status, submitted_at desc);

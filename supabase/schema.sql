@@ -55,6 +55,12 @@ create table profiles (
   -- logins (unlike the submission-window popup, which resets every login),
   -- and only re-prompts when the schedule actually changes.
   schedule_ack text,
+  -- Signature ("<periodId>:<examEndDay>") of the "window open + full exam
+  -- schedule already settled" state the student has acknowledged. Once the
+  -- window is open AND the exam's end time is set, that popup should only
+  -- show once (not every login) — while still-pending states (not yet open,
+  -- or open but no end time yet) keep re-showing every login via a cookie.
+  window_ack text,
   created_at     timestamptz not null default now()
 );
 

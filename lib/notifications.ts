@@ -2,6 +2,7 @@ import type { NotificationItem } from '@/components/NotificationBell'
 import type { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/supabase/types'
 import { getActivePeriodCached, activePeriodIdCached } from '@/lib/activePeriod'
+import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getMyDeptSubjectIds } from '@/lib/myProfile'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
@@ -172,10 +173,27 @@ export async function getNotifications(
 
     const items: NotificationItem[] = []
 
-    // Top item: the special-exam schedule was set for the term this student is
-    // taking part in (only while they still have a live request in it, and only
-    // while it's newer than the student's last-seen mark).
     const active = await getActivePeriodCached()
+
+    // Submission window just opened for this term — "new" if it opened after
+    // the student last checked the bell (submissionStart is the moment it
+    // became open).
+    if (active) {
+      const win = computeWindow(active.submissionStart, active.windowDays)
+      if (win.open && new Date(active.submissionStart + 'T00:00:00').getTime() > seenMs) {
+        items.push({
+          id: `open-${active.id}`,
+          text: `${TERM_LABEL[active.term]} submissions are now open. You have ${win.daysRemaining} day${win.daysRemaining === 1 ? '' : 's'} to submit.`,
+          href: '/student/submit',
+          tone: 'success',
+          icon: 'calendar',
+        })
+      }
+    }
+
+    // The special-exam schedule was set for the term this student is taking
+    // part in (only while they still have a live request in it, and only
+    // while it's newer than the student's last-seen mark).
     if (active?.examDay && active.scheduleUpdatedAt && new Date(active.scheduleUpdatedAt).getTime() > seenMs) {
       const hasLiveRequest = (allData ?? []).some(
         (r) => r.status !== 'rejected' && (!r.period_id || r.period_id === active.id),

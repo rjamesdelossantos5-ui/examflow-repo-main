@@ -39,7 +39,7 @@ export default async function StudentPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name, schedule_ack')
+    .select('full_name, schedule_ack, window_ack')
     .eq('id', user.id)
     .single()
 
@@ -75,6 +75,16 @@ export default async function StudentPage() {
     activePeriod?.examDay && scheduleSignature && hasLiveRequest && profile?.schedule_ack !== scheduleSignature
   )
 
+  // Once the window is open AND the exam's end time is set, that's a
+  // "settled" state — the popup should only ever nag once, not every login.
+  // Anything short of that (not yet open, or open with no end time yet) is
+  // still unresolved, so it keeps reappearing every login (cookie-based).
+  const isSettled = win.open && !!activePeriod?.examEndDay
+  const windowSignature = isSettled ? `${activePeriod!.id}:${activePeriod!.examEndDay}` : null
+  const showWindowModal = isSettled
+    ? profile?.window_ack !== windowSignature
+    : !modalSeen
+
   return (
     <div className="space-y-6">
       {/* Only one popup at a time — the schedule announcement is the rarer,
@@ -97,7 +107,8 @@ export default async function StudentPage() {
           daysRemaining={win.daysRemaining}
           start={win.start}
           end={win.end}
-          show={!modalSeen}
+          show={showWindowModal}
+          persistSignature={windowSignature}
         />
       )}
       <SubmissionStatusBanner

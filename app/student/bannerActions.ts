@@ -34,3 +34,14 @@ export async function ackSchedule(signature: string) {
   if (!user) return
   await supabase.from('profiles').update({ schedule_ack: signature }).eq('id', user.id)
 }
+
+// Acknowledges the "submission window is open + exam schedule fully set"
+// popup (identified by a "<periodId>:<examEndDay>" signature). Same DB-backed,
+// not-reset-on-login persistence as ackSchedule — once everything is settled,
+// re-showing this every login would just be noise.
+export async function ackWindow(signature: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.from('profiles').update({ window_ack: signature }).eq('id', user.id)
+}
