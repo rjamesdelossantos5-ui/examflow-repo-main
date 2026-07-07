@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/currentUser'
+import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getNotifications } from '@/lib/notifications'
 
@@ -10,18 +12,17 @@ const NAV = [
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, full_name, email')
-    .eq('id', user.id)
-    .single()
+  // One parallel wave — nothing below depends on the profile row, so it must
+  // not wait behind it (the header can't paint until this layout resolves).
+  const [profile, notifications] = await Promise.all([
+    getMyProfileMeta(),
+    getNotifications(supabase, user.id, 'student'),
+  ])
 
   if (!profile || profile.role !== 'student') redirect('/login')
-
-  const notifications = await getNotifications(supabase, user.id, 'student')
 
   return (
     <DashboardLayout
