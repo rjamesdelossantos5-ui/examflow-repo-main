@@ -11,14 +11,21 @@ begin
   delete from auth.users where email = p_email;
   insert into auth.users
     (instance_id, id, aud, role, email, encrypted_password,
-     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+     email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+     confirmation_token, recovery_token, email_change_token_new, email_change,
+     phone_change, phone_change_token, reauthentication_token)
   values
     ('00000000-0000-0000-0000-000000000000', uuid_generate_v4(),
      'authenticated', 'authenticated', p_email,
      crypt(p_password, gen_salt('bf')), now(),
      '{"provider":"email","providers":["email"]}',
      jsonb_build_object('full_name', p_name, 'role', p_role),
-     now(), now())
+     now(), now(),
+     -- GoTrue's Go structs scan these as plain strings, never NULL. Leaving
+     -- them at their column default (NULL) makes every login attempt fail
+     -- with a 500 "Database error querying schema" / "converting NULL to
+     -- string is unsupported" — the account exists but can never sign in.
+     '', '', '', '', '', '', '')
   returning id into uid;
 
   -- Supabase Auth verifies email/password logins against auth.identities, not
