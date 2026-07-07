@@ -138,6 +138,16 @@ create table progress_logs (
 );
 
 -- ─────────────────────────────────────────────
+-- INDEXES (foreign keys are NOT auto-indexed in Postgres)
+-- ─────────────────────────────────────────────
+create index if not exists idx_requests_status_submitted on special_exam_requests (status, submitted_at desc);
+create index if not exists idx_requests_student on special_exam_requests (student_id);
+create index if not exists idx_requests_subject on special_exam_requests (subject_id);
+create index if not exists idx_subjects_teacher on subjects (teacher_id);
+create index if not exists idx_media_request on application_media (request_id);
+create index if not exists idx_logs_request on progress_logs (request_id);
+
+-- ─────────────────────────────────────────────
 -- TRIGGERS: updated_at on special_exam_requests
 -- ─────────────────────────────────────────────
 create or replace function set_updated_at()
