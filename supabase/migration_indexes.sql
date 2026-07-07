@@ -26,10 +26,17 @@ create index if not exists idx_media_request
 create index if not exists idx_logs_request
   on progress_logs (request_id);
 
--- Admin override queue.
-create index if not exists idx_override_status
-  on override_requests (status);
-create index if not exists idx_override_request
-  on override_requests (request_id);
-create index if not exists idx_override_requester
-  on override_requests (requested_by);
+-- Admin override queue. Guarded so this migration still runs cleanly if the
+-- override_requests table hasn't been created yet (run migration_override.sql
+-- to create it — it powers the admin-override flow).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'override_requests'
+  ) then
+    create index if not exists idx_override_status on override_requests (status);
+    create index if not exists idx_override_request on override_requests (request_id);
+    create index if not exists idx_override_requester on override_requests (requested_by);
+  end if;
+end $$;
