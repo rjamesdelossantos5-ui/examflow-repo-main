@@ -27,6 +27,20 @@ function validateFile(file: File | null, fieldName: string, keptOnRecord = false
   return null
 }
 
+// The teacher a request routes to = the instructor of the chosen (subject,
+// section) offering. Null when there's no matching offering (falls back to the
+// subject's own teacher via RLS).
+async function resolveOfferingTeacher(supabase: DB, subjectId: string, section: string | null): Promise<string | null> {
+  if (!section) return null
+  const { data } = await supabase
+    .from('class_offerings')
+    .select('teacher_id')
+    .eq('subject_id', subjectId)
+    .eq('section', section)
+    .maybeSingle()
+  return (data as { teacher_id: string | null } | null)?.teacher_id ?? null
+}
+
 async function uploadFile(supabase: DB, file: File, requestId: string, mediaType: string): Promise<{ path: string; error: string | null }> {
   // Sanitize the extension so a crafted filename can't influence the storage key
   const ext = (file.name.split('.').pop() ?? 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin'
@@ -104,6 +118,9 @@ export async function submitRequest(formData: FormData) {
 
   if (errors.length) return redirect(`/student/submit?error=${encodeURIComponent(errors.join('; '))}`)
 
+  // Route to the chosen section's teacher.
+  const routedTeacherId = await resolveOfferingTeacher(supabase, subjectId, snapshot.snap_section)
+
   // Insert request (with the per-form snapshot of student details)
   const { data: req, error: reqErr } = await supabase
     .from('special_exam_requests')
@@ -115,6 +132,7 @@ export async function submitRequest(formData: FormData) {
       other_reason: examType === 'excused' && excusedReason === 'other' ? otherReason : null,
       status: 'submitted',
       period_id: activePeriod.id,
+      teacher_id: routedTeacherId,
       ...snapshot,
     })
     .select()
@@ -233,6 +251,7 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
   if (errors.length) return redirect(`/student/submit?from=${oldId}&error=${encodeURIComponent(errors.join('; '))}`)
 
   // Reset the request back into the queue with the (possibly edited) details.
+  const routedTeacherId = await resolveOfferingTeacher(supabase, fields.subjectId, (fields.snapshot.snap_section as string | null) ?? null)
   const baseUpdate = {
     subject_id: fields.subjectId,
     exam_type: fields.examType as 'paid' | 'excused',
@@ -242,6 +261,7 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     rejection_reason: null,
     rejected_by_role: null,
     period_id: fields.periodId,
+    teacher_id: routedTeacherId,
     submitted_at: new Date().toISOString(),
   }
   let { error: updErr } = await supabase.from('special_exam_requests').update({ ...baseUpdate, ...fields.snapshot }).eq('id', oldId).eq('student_id', userId)

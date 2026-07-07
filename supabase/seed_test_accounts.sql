@@ -1,26 +1,39 @@
 -- ─────────────────────────────────────────────────────────────
--- TEST DATA: 2 departments, 4 subjects, 2 teachers (2 subjects each),
--- 2 program heads, and an extra student — for testing department-scoped routing.
+-- TEST DATA (curated, real-ish): 2 departments, 4 subjects, 4 teachers,
+-- 2 program heads, admin, registrar, 2 students, and class offerings that
+-- route each (subject + section) to a specific teacher.
 --
--- Temporary manual accounts (Microsoft login comes later). Safe to re-run.
--- Run AFTER reset_forms.sql if you want a clean slate.
+-- Run order:  1) migration_offerings.sql   2) reset_forms.sql   3) this file
+-- Safe to re-run. Every account below uses the SAME password: Exam@123
 --
---   ICT Department      → IT101, IT102   → Teacher 1  → ICT program head
---   Senior High School  → GEN01, GEN02   → Teacher 2  → SHS program head
---   A subject only reaches its own teacher; a PH only sees their department.
---   The Accepted-Students live list still shows ALL departments.
+-- ICT Department      Computer Programming (CP101), Game Development (GD101)
+-- Senior High School  Earth & Life Science (ELS01), General Physics (PHY01)
 --
--- Accounts (email / password):
---   teacher@examflow.com      Teacher@123   (ICT) IT101 + IT102
---   teacher.shs@examflow.com  Teacher@123   (SHS) GEN01 + GEN02
---   programhead@examflow.com  PHead@123     ICT Department Head
---   ph.shs@examflow.com       PHead@123     Senior High School Head
---   student2@examflow.com     Student@123   student
+-- A subject can be taught in several sections by different teachers, so the
+-- student picks subject → section, and the form routes to that section's
+-- teacher. The Accepted-Students live list still shows ALL departments.
+--
+-- Accounts (all password Exam@123):
+--   admin@examflow.com          admin
+--   registrar@examflow.com      registrar
+--   ict.teacher1@examflow.com   Galamiton (ICT)
+--   ict.teacher2@examflow.com   Gamino    (ICT)
+--   shs.teacher1@examflow.com   Pangilinan (SHS)
+--   shs.teacher2@examflow.com   Libaton    (SHS)
+--   ict.head@examflow.com       ICT Department Head
+--   shs.head@examflow.com       Senior High School Head
+--   student1@examflow.com       student
+--   student2@examflow.com       student
+--
+-- Offerings:
+--   CP101  BSIT 2-201 → Galamiton   BSIT 2-202 → Gamino
+--   GD101  BSIT 3-201 → Galamiton   BSIT 3-202 → Gamino
+--   ELS01  STEM 11-A  → Pangilinan  ABM 11-A   → Libaton
+--   PHY01  STEM 12-A  → Pangilinan  STEM 12-B  → Libaton
 -- ─────────────────────────────────────────────────────────────
 
 create extension if not exists pgcrypto;
 
--- Helper: create (or reset) an email/password auth user with role metadata.
 create or replace function _seed_user(p_email text, p_password text, p_name text, p_role text)
 returns uuid language plpgsql as $$
 declare uid uuid;
@@ -42,13 +55,11 @@ end $$;
 
 DO $$
 DECLARE
-  ict_id   uuid;
-  shs_id   uuid;
-  t_ict    uuid;
-  t_shs    uuid;
-  ph_ict   uuid;
-  ph_shs   uuid;
-  stu2     uuid;
+  ict_id uuid; shs_id uuid;
+  t_g uuid; t_gm uuid; t_p uuid; t_l uuid;   -- Galamiton, Gamino, Pangilinan, Libaton
+  admin_id uuid; reg_id uuid; ph_ict uuid; ph_shs uuid; stu1 uuid; stu2 uuid;
+  cp uuid; gd uuid; els uuid; phy uuid;      -- subject ids
+  pw text := 'Exam@123';
 BEGIN
 
 -- ── Departments ───────────────────────────────
@@ -57,32 +68,50 @@ INSERT INTO departments (name) VALUES ('Senior High School') ON CONFLICT (name) 
 SELECT id INTO ict_id FROM departments WHERE name = 'ICT Department';
 SELECT id INTO shs_id FROM departments WHERE name = 'Senior High School';
 
--- ── Teachers: one per department, 2 subjects each ──
-t_ict := _seed_user('teacher@examflow.com',     'Teacher@123', 'Juan Dela Cruz', 'subject_teacher');
-t_shs := _seed_user('teacher.shs@examflow.com', 'Teacher@123', 'Ana Lim',        'subject_teacher');
+-- ── Accounts ──────────────────────────────────
+admin_id := _seed_user('admin@examflow.com',        pw, 'System Admin',        'admin');
+reg_id   := _seed_user('registrar@examflow.com',    pw, 'Maria Santos',        'registrar');
+t_g      := _seed_user('ict.teacher1@examflow.com', pw, 'Prof. Galamiton',     'subject_teacher');
+t_gm     := _seed_user('ict.teacher2@examflow.com', pw, 'Prof. Gamino',        'subject_teacher');
+t_p      := _seed_user('shs.teacher1@examflow.com', pw, 'Prof. Pangilinan',    'subject_teacher');
+t_l      := _seed_user('shs.teacher2@examflow.com', pw, 'Prof. Libaton',       'subject_teacher');
+ph_ict   := _seed_user('ict.head@examflow.com',     pw, 'Dr. Reyes (ICT Head)','program_head');
+ph_shs   := _seed_user('shs.head@examflow.com',     pw, 'Ms. Flores (SHS Head)','program_head');
+stu1     := _seed_user('student1@examflow.com',     pw, 'Jose Rizal',          'student');
+stu2     := _seed_user('student2@examflow.com',     pw, 'Pedro Penduko',       'student');
 
--- ── Program heads ─────────────────────────────
-ph_ict := _seed_user('programhead@examflow.com', 'PHead@123', 'Dr. Reyes (ICT Head)',  'program_head');
-ph_shs := _seed_user('ph.shs@examflow.com',      'PHead@123', 'Ms. Flores (SHS Head)', 'program_head');
+-- ── Roles + departments (trigger defaults everyone to 'student') ──
+UPDATE profiles SET role='admin'                              WHERE id=admin_id;
+UPDATE profiles SET role='registrar'                          WHERE id=reg_id;
+UPDATE profiles SET role='subject_teacher', department_id=ict_id WHERE id IN (t_g, t_gm);
+UPDATE profiles SET role='subject_teacher', department_id=shs_id WHERE id IN (t_p, t_l);
+UPDATE profiles SET role='program_head',    department_id=ict_id WHERE id=ph_ict;
+UPDATE profiles SET role='program_head',    department_id=shs_id WHERE id=ph_shs;
+UPDATE profiles SET role='student', student_number='2024-00001', course='BSIT', year_level=2, section='BSIT 2-201', department_id=ict_id WHERE id=stu1;
+UPDATE profiles SET role='student', student_number='2024-00002', course='BSIT', year_level=3, section='BSIT 3-201', department_id=ict_id WHERE id=stu2;
 
--- ── Extra student ─────────────────────────────
-stu2 := _seed_user('student2@examflow.com', 'Student@123', 'Pedro Penduko', 'student');
-
--- ── Assign roles + departments (trigger defaults everyone to 'student') ──
-UPDATE profiles SET role = 'subject_teacher', department_id = ict_id WHERE id = t_ict;
-UPDATE profiles SET role = 'subject_teacher', department_id = shs_id WHERE id = t_shs;
-UPDATE profiles SET role = 'program_head',    department_id = ict_id WHERE id = ph_ict;
-UPDATE profiles SET role = 'program_head',    department_id = shs_id WHERE id = ph_shs;
-UPDATE profiles SET role = 'student', student_number = '2024-00002', course = 'BSIT', year_level = 2, section = 'A', department_id = ict_id WHERE id = stu2;
-
--- ── Exactly 4 subjects: 2 ICT (Teacher 1), 2 SHS (Teacher 2) ──
--- (Requires no existing requests referencing subjects — run reset_forms.sql first.)
+-- ── Subjects (teacher_id null: routing is via class_offerings) ──
 DELETE FROM subjects;
-INSERT INTO subjects (subject_code, subject_name, department_id, teacher_id) VALUES
-  ('IT101', 'Introduction to Programming', ict_id, t_ict),
-  ('IT102', 'Data Structures',             ict_id, t_ict),
-  ('GEN01', 'General Mathematics',         shs_id, t_shs),
-  ('GEN02', 'Earth Science',               shs_id, t_shs);
+INSERT INTO subjects (subject_code, subject_name, department_id) VALUES
+  ('CP101', 'Computer Programming',   ict_id) RETURNING id INTO cp;
+INSERT INTO subjects (subject_code, subject_name, department_id) VALUES
+  ('GD101', 'Game Development',        ict_id) RETURNING id INTO gd;
+INSERT INTO subjects (subject_code, subject_name, department_id) VALUES
+  ('ELS01', 'Earth and Life Science', shs_id) RETURNING id INTO els;
+INSERT INTO subjects (subject_code, subject_name, department_id) VALUES
+  ('PHY01', 'General Physics',        shs_id) RETURNING id INTO phy;
+
+-- ── Offerings (subject + section → teacher) ──
+DELETE FROM class_offerings;
+INSERT INTO class_offerings (subject_id, section, teacher_id, year_level) VALUES
+  (cp,  'BSIT 2-201', t_g,  2),
+  (cp,  'BSIT 2-202', t_gm, 2),
+  (gd,  'BSIT 3-201', t_g,  3),
+  (gd,  'BSIT 3-202', t_gm, 3),
+  (els, 'STEM 11-A',  t_p,  null),
+  (els, 'ABM 11-A',   t_l,  null),
+  (phy, 'STEM 12-A',  t_p,  null),
+  (phy, 'STEM 12-B',  t_l,  null);
 
 END $$;
 

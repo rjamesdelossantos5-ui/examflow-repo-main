@@ -1,10 +1,20 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type { Subject } from '@/lib/supabase/types'
 import { submitRequest } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import { Icon } from '@/components/Icon'
+
+// One (subject + section → teacher) row. The student picks a subject, then a
+// section available for it, and the teacher for that section fills in.
+export interface Offering {
+  subjectId: string
+  subjectCode: string
+  subjectName: string
+  section: string
+  yearLevel: number | null
+  teacherName: string | null
+}
 
 const MAX_MB = 5
 const ALLOWED = '.jpg,.jpeg,.png,.pdf'
@@ -50,7 +60,7 @@ interface Prefill {
   contactNumber: string | null
 }
 
-export default function SubmitForm({ subjects, teacherBySubject = {}, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [] }: { subjects: Subject[]; teacherBySubject?: Record<string, string>; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[] }) {
+export default function SubmitForm({ offerings, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [] }: { offerings: Offering[]; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[] }) {
   const kept = new Set(existingDocs)
   // Effective values: a resubmit's saved snapshot overrides the profile defaults.
   const eff = {
@@ -64,15 +74,24 @@ export default function SubmitForm({ subjects, teacherBySubject = {}, termLabel,
   const [examType, setExamType] = useState<'paid' | 'excused'>(prefill?.examType ?? 'paid')
   const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>(prefill?.excusedReason ?? '')
   const [course, setCourse] = useState(COURSES.some((c) => c.code === eff.course) ? eff.course : '')
-  const [section, setSection] = useState(eff.section ?? '')
+  const [yearLevel, setYearLevel] = useState(eff.year_level ? String(eff.year_level) : '')
   const [subjectId, setSubjectId] = useState(prefill?.subjectId ?? '')
+  const [section, setSection] = useState(eff.section ?? '')
   const [confirming, setConfirming] = useState(false)
 
-  const teacherName = subjectId ? teacherBySubject[subjectId] : null
+  // Distinct subjects across all offerings.
+  const subjectOptions = Array.from(
+    new Map(offerings.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
+  )
+  // Sections available for the chosen subject (and year, when the offering
+  // specifies one).
+  const yearNum = yearLevel ? Number(yearLevel) : null
+  const sectionOptions = offerings.filter(
+    (o) => o.subjectId === subjectId && (yearNum == null || o.yearLevel == null || o.yearLevel === yearNum),
+  )
+  const teacherName = offerings.find((o) => o.subjectId === subjectId && o.section === section)?.teacherName ?? null
 
   const formRef = useRef<HTMLFormElement>(null)
-
-  const sectionsForCourse = COURSES.find((c) => c.code === course)?.sections ?? []
 
   function openConfirm() {
     if (!submissionOpen) return
@@ -132,16 +151,9 @@ export default function SubmitForm({ subjects, teacherBySubject = {}, termLabel,
               <input name="student_number" defaultValue={eff.student_number} className={inputClass} placeholder="2024-00001" />
             </div>
             <div>
-              <label className="block text-sm font-medium ef-muted mb-1">Course *</label>
+              <label className="block text-sm font-medium ef-muted mb-1">Course / Program *</label>
               <div className="relative">
-                <select
-                  name="course"
-                  required
-                  value={course}
-                  onChange={(e) => { setCourse(e.target.value); setSection('') }}
-                  className={selectClass}
-                  style={selectStyle}
-                >
+                <select name="course" required value={course} onChange={(e) => setCourse(e.target.value)} className={selectClass} style={selectStyle}>
                   <option value="">— Select course —</option>
                   {COURSES.map((c) => (
                     <option key={c.code} value={c.code}>{c.code} — {c.name}</option>
@@ -153,27 +165,16 @@ export default function SubmitForm({ subjects, teacherBySubject = {}, termLabel,
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Year level *</label>
               <div className="relative">
-                <select name="year_level" required defaultValue={eff.year_level ?? ''} className={selectClass} style={selectStyle}>
-                  <option value="">— Select year —</option>
-                  {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
-                </select>
-                <Chevron />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium ef-muted mb-1">Section *</label>
-              <div className="relative">
                 <select
-                  name="section"
+                  name="year_level"
                   required
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                  disabled={!course}
-                  className={`${selectClass} disabled:opacity-50`}
+                  value={yearLevel}
+                  onChange={(e) => { setYearLevel(e.target.value); setSection('') }}
+                  className={selectClass}
                   style={selectStyle}
                 >
-                  <option value="">{course ? '— Select section —' : 'Select a course first'}</option>
-                  {sectionsForCourse.map((s) => <option key={s} value={s}>Section {s}</option>)}
+                  <option value="">— Select year —</option>
+                  {YEARS.map((y) => <option key={y} value={y}>Year {y}</option>)}
                 </select>
                 <Chevron />
               </div>
@@ -203,23 +204,47 @@ export default function SubmitForm({ subjects, teacherBySubject = {}, termLabel,
           </div>
         </div>
 
-        {/* Subject + its teacher */}
-        <div>
-          <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
-          <div className="relative">
-            <select name="subject_id" required value={subjectId} onChange={(e) => setSubjectId(e.target.value)} className={selectClass} style={selectStyle}>
-              <option value="">— Select a subject —</option>
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>{s.subject_code} — {s.subject_name}</option>
-              ))}
-            </select>
-            <Chevron />
+        {/* Subject → Section → Teacher (dynamic from the class offerings) */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
+            <div className="relative">
+              <select name="subject_id" required value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setSection('') }} className={selectClass} style={selectStyle}>
+                <option value="">— Select a subject —</option>
+                {subjectOptions.map((s) => (
+                  <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
+                ))}
+              </select>
+              <Chevron />
+            </div>
           </div>
-          {subjectId && (
-            <div className="mt-2 rounded-lg px-3 py-2 text-sm border ef-border">
+
+          <div>
+            <label className="block text-sm font-medium ef-muted mb-1">Section *</label>
+            <div className="relative">
+              <select
+                name="section"
+                required
+                value={section}
+                onChange={(e) => setSection(e.target.value)}
+                disabled={!subjectId}
+                className={`${selectClass} disabled:opacity-50`}
+                style={selectStyle}
+              >
+                <option value="">
+                  {!subjectId ? 'Select a subject first' : sectionOptions.length ? '— Select section —' : 'No sections for that subject/year'}
+                </option>
+                {sectionOptions.map((o) => <option key={o.section} value={o.section}>{o.section}</option>)}
+              </select>
+              <Chevron />
+            </div>
+          </div>
+
+          {section && (
+            <div className="rounded-lg px-3 py-2 text-sm border ef-border">
               <span className="ef-muted">Teacher: </span>
               <strong style={{ color: 'var(--card-foreground)' }}>{teacherName ?? 'Not assigned yet'}</strong>
-              <p className="text-xs ef-muted mt-0.5">Your request goes to this subject&apos;s teacher.</p>
+              <p className="text-xs ef-muted mt-0.5">Your request will be sent to this section&apos;s teacher for approval.</p>
             </div>
           )}
         </div>

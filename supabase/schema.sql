@@ -341,6 +341,42 @@ create policy "exam_periods_write" on exam_periods for all
   with check (current_user_role() in ('program_head', 'admin'));
 alter table special_exam_requests add column if not exists period_id uuid references exam_periods(id);
 
+-- ── class_offerings (subject + section → teacher) ────
+-- Routing truth: a subject can be taught in several sections by different
+-- teachers. The student picks subject → section, and the request routes to that
+-- section's teacher (stored on the request as teacher_id).
+create table if not exists class_offerings (
+  id          uuid primary key default gen_random_uuid(),
+  subject_id  uuid not null references subjects(id) on delete cascade,
+  section     text not null,
+  teacher_id  uuid references profiles(id) on delete set null,
+  year_level  int,
+  created_at  timestamptz not null default now(),
+  unique (subject_id, section)
+);
+alter table class_offerings enable row level security;
+create policy "offerings_read" on class_offerings for select using (auth.uid() is not null);
+create policy "offerings_write" on class_offerings for all
+  using (current_user_role() in ('admin', 'program_head'))
+  with check (current_user_role() in ('admin', 'program_head'));
+create index if not exists idx_offerings_subject on class_offerings (subject_id);
+
+alter table special_exam_requests add column if not exists teacher_id uuid references profiles(id);
+create index if not exists idx_requests_teacher on special_exam_requests (teacher_id);
+
+-- Teacher visibility now includes requests routed to them via teacher_id
+-- (plus the legacy "I own the subject" path).
+drop policy if exists "requests_student_select" on special_exam_requests;
+create policy "requests_student_select" on special_exam_requests
+  for select using (
+    student_id = auth.uid() or
+    current_user_role() in ('registrar', 'program_head', 'admin') or
+    (current_user_role() = 'subject_teacher' and (
+      teacher_id = auth.uid() or
+      subject_id in (select id from subjects where teacher_id = auth.uid())
+    ))
+  );
+
 -- ── application_media ─────────────────────────
 create policy "media_select" on application_media
   for select using (
@@ -376,7 +412,8 @@ create policy "logs_select" on progress_logs
     (current_user_role() = 'subject_teacher' and
      request_id in (
        select id from special_exam_requests
-       where subject_id in (select id from subjects where teacher_id = auth.uid())
+       where teacher_id = auth.uid()
+          or subject_id in (select id from subjects where teacher_id = auth.uid())
      ))
   );
 

@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import SubmitForm from './SubmitForm'
 import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
-import type { Subject } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Submit Request' }
 
@@ -52,18 +51,38 @@ export default async function SubmitPage({
     }
   }
 
-  const [{ data: subjects }, { data: profile }, activePeriod] = await Promise.all([
+  const [{ data: offeringRows }, { data: subjectRows }, { data: profile }, activePeriod] = await Promise.all([
+    supabase.from('class_offerings').select('subject_id, section, year_level, subjects(subject_code, subject_name), profiles!teacher_id(full_name)').order('section'),
     supabase.from('subjects').select('id, subject_code, subject_name, profiles!teacher_id(full_name)').order('subject_code'),
     supabase.from('profiles').select('full_name, student_number, course, year_level, section').eq('id', user.id).single(),
     getActivePeriodCached(),
   ])
 
-  // Teacher's Name shown on the form is the subject's assigned teacher — the
-  // request routes to exactly that teacher.
-  const subjRows = (subjects ?? []) as unknown as { id: string; subject_code: string; subject_name: string; profiles: { full_name: string } | null }[]
-  const teacherBySubject: Record<string, string> = {}
-  for (const s of subjRows) if (s.profiles?.full_name) teacherBySubject[s.id] = s.profiles.full_name
-  const subjectList = subjRows.map((s) => ({ id: s.id, subject_code: s.subject_code, subject_name: s.subject_name }))
+  // Offerings drive Subject → Section → Teacher on the form.
+  type OffRow = { subject_id: string; section: string; year_level: number | null; subjects: { subject_code: string; subject_name: string } | null; profiles: { full_name: string } | null }
+  let offerings = ((offeringRows ?? []) as unknown as OffRow[]).map((o) => ({
+    subjectId: o.subject_id,
+    subjectCode: o.subjects?.subject_code ?? '',
+    subjectName: o.subjects?.subject_name ?? '',
+    section: o.section,
+    yearLevel: o.year_level ?? null,
+    teacherName: o.profiles?.full_name ?? null,
+  }))
+
+  // Fallback for data with no offerings yet: one section per subject (the
+  // student's own section), teacher from the subject.
+  if (offerings.length === 0) {
+    type SubRow = { id: string; subject_code: string; subject_name: string; profiles: { full_name: string } | null }
+    offerings = ((subjectRows ?? []) as unknown as SubRow[]).map((s) => ({
+      subjectId: s.id,
+      subjectCode: s.subject_code,
+      subjectName: s.subject_name,
+      section: profile?.section || 'N/A',
+      yearLevel: null,
+      teacherName: s.profiles?.full_name ?? null,
+    }))
+  }
+
   const termLabel = activePeriod ? `${TERM_LABEL[activePeriod.term]}${activePeriod.schoolYear ? ` · ${activePeriod.schoolYear}` : ''}` : null
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
@@ -78,8 +97,7 @@ export default async function SubmitPage({
 
   return (
     <SubmitForm
-      subjects={subjectList as unknown as Subject[]}
-      teacherBySubject={teacherBySubject}
+      offerings={offerings}
       termLabel={termLabel}
       profile={{
         full_name: profile?.full_name ?? '',
