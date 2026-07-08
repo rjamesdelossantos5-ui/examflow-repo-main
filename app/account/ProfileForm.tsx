@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { updateProfile } from './actions'
+import { initials } from '@/lib/initials'
 import type { Profile } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -57,7 +58,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
           className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-black shrink-0"
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
-          {profile.full_name.split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+          {initials(profile.full_name)}
         </div>
         <div className="min-w-0">
           <p className="font-bold text-lg truncate" style={{ color: 'var(--card-foreground)' }}>{profile.full_name}</p>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { logout } from '@/app/login/actions'
 import ThemeToggle from './ThemeToggle'
 import { Icon } from './Icon'
+import { initials } from '@/lib/initials'
 import type { UserRole } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -13,12 +14,6 @@ const ROLE_LABELS: Record<UserRole, string> = {
   subject_teacher: 'Subject Teacher',
   program_head: 'Program Head',
   student: 'Student',
-}
-
-// "Maria Santos" → "MS" for the round avatar chip.
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/)
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U'
 }
 
 /**
