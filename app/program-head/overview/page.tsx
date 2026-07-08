@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
 import { keepMyDepartment } from '@/lib/deptFilter'
+import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
 import OverviewClient, { type OverviewRow } from './OverviewClient'
 
 export const metadata = { title: 'EXAMFLOW — Overview' }
@@ -11,6 +12,9 @@ export default async function OverviewPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Drop forms whose exam date has already passed before listing (see helper).
+  await purgeExpiredExams(supabase)
 
   const { data: me } = await supabase.from('profiles').select('role, can_override, department_id').eq('id', user.id).single()
   const canOverride = me?.role === 'admin' || !!me?.can_override

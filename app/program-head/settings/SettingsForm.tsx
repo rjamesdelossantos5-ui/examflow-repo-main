@@ -296,6 +296,17 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
   const newStartLabel = examStart ? fmt(new Date(examStart + 'T00:00:00').toISOString()) : '—'
   const newEndLabel = examEnd ? fmt(new Date(examEnd + 'T00:00:00').toISOString()) : null
 
+  // Non-blocking sanity check: the exam should fall AFTER submissions close.
+  // If it's on or before the window's close day, students can keep filing
+  // requests for an exam that's already happened (and those late forms can't be
+  // reviewed in time). We warn the PH but never block — they may have a reason.
+  const windowEnd = active ? computeWindow(active.submissionStart, active.windowDays).end : null
+  const examStartDate = examStart ? new Date(examStart + 'T00:00:00') : null
+  const scheduleWarning =
+    windowEnd && examStartDate && examStartDate <= new Date(windowEnd)
+      ? `The exam date (${newStartLabel}) is on or before submissions close (${fmt(windowEnd)}). Students could still file requests for it that can’t be reviewed in time.`
+      : null
+
   return (
     <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5">
       <div>
@@ -322,6 +333,12 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
           <input type="date" value={examEnd} onChange={(e) => setExamEnd(e.target.value)} disabled={!active} className={input} />
         </div>
       </div>
+
+      {scheduleWarning && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-300">
+          ⚠️ {scheduleWarning} You can still save it.
+        </div>
+      )}
 
       <div>
         <label className={label}>Exam location</label>
@@ -351,6 +368,11 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
                 New: <strong style={{ color: 'var(--card-foreground)' }}>{newStartLabel}{newEndLabel ? ` → ${newEndLabel}` : ''}</strong>
               </p>
               <p className="ef-muted">{alreadySet ? 'The old schedule will be replaced and students will see the new one right away.' : 'Students will see this right away.'}</p>
+              {scheduleWarning && (
+                <p className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-300">
+                  ⚠️ {scheduleWarning}
+                </p>
+              )}
             </div>
             <div className="flex gap-3 mt-5">
               <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border" style={{ color: 'var(--card-foreground)' }}>Cancel</button>

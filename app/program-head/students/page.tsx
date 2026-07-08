@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
+import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
 import StudentsList from './StudentsList'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -11,6 +12,9 @@ export default async function StudentsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Drop forms whose exam date has already passed before listing (see helper).
+  await purgeExpiredExams(supabase)
 
   const { data } = await supabase
     .from('special_exam_requests')
