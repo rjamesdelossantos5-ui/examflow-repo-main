@@ -9,6 +9,7 @@ interface Props {
   open: boolean
   notStarted: boolean
   daysRemaining: number | null
+  windowDays: number
   start: string | null
   end: string | null
   examDay: string | null
@@ -24,33 +25,28 @@ function fmtDate(iso: string | null) {
 }
 
 /**
- * Compact banner at the top of the student dashboard — status header, a
- * clearly-amber printed-form warning, and exam details, each its own short
- * line instead of the old multi-paragraph boxes. Dismissible — the dismissal
- * only lasts for the current login; it always reappears on the next sign-in
- * (the cookie backing it is cleared at login time).
+ * Top-of-dashboard status card. Three cleanly separated zones instead of the
+ * old wall of text: (1) a status header — colored "window" pill + term, with a
+ * right-aligned countdown (days left, a depleting progress bar, close date);
+ * (2) an amber reminder with a left accent bar; (3) a 3-column exam-schedule
+ * strip (Exam period / Venue / Bring). Dismissible for the current login only
+ * — it reappears next sign-in (the backing cookie is cleared at login).
  */
 export default function SubmissionStatusBanner(props: Props) {
   const [dismissed, setDismissed] = useState(!!props.initiallyDismissed)
-  const { open, notStarted, daysRemaining, termLabel } = props
+  const { open, notStarted, daysRemaining, windowDays, termLabel } = props
 
   if (dismissed) return null
 
   const tone = open ? '#16a34a' : notStarted ? '#f59e0b' : '#dc2626'
-  const base = open ? 'Submission window is open' : notStarted ? 'Submissions open soon' : 'Submissions are closed'
-  const title = termLabel ? `${termLabel} — ${base}` : base
-  const headline = open
-    ? daysRemaining != null
-      ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left${props.end ? ` · closes ${fmtDate(props.end)}` : ''}`
-      : 'Open'
-    : notStarted
-      ? `Opens ${fmtDate(props.start)}`
-      : props.end
-        ? `Closed ${fmtDate(props.end)}`
-        : 'Check back later'
+  const statusText = open ? 'Submission window open' : notStarted ? 'Opens soon' : 'Submissions closed'
+  // Depleting bar: share of the window still remaining.
+  const remainingPct = open && daysRemaining != null && windowDays > 0
+    ? Math.max(4, Math.min(100, (daysRemaining / windowDays) * 100))
+    : 0
 
+  const hasTerm = !!termLabel
   const TBA = 'To be announced'
-  const hasTerm = !!props.termLabel
   const examRange = props.examDay
     ? props.examEndDay
       ? `${fmtDate(props.examDay)} → ${fmtDate(props.examEndDay)}`
@@ -63,47 +59,78 @@ export default function SubmissionStatusBanner(props: Props) {
   }
 
   return (
-    <div className="ef-card rounded-xl shadow-sm py-3 relative">
+    <div className="ef-card rounded-2xl shadow-sm p-5 relative">
       <button
         onClick={handleDismiss}
         aria-label="Dismiss"
-        className="absolute top-2 right-2 w-6 h-6 rounded-full grid place-items-center ef-muted hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+        className="absolute top-3 right-3 w-6 h-6 rounded-full grid place-items-center ef-muted hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
       >
         <Icon name="x" className="w-3.5 h-3.5" />
       </button>
 
-      <div className="px-4 flex items-center gap-2 pr-9">
-        <span className="w-7 h-7 rounded-full grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${tone} 16%, transparent)`, color: tone }}>
-          <Icon name="calendar" className="w-4 h-4" />
-        </span>
-        <span className="font-bold text-sm" style={{ color: 'var(--card-foreground)' }}>{title}</span>
-        <span className="text-sm font-semibold" style={{ color: tone }}>{headline}</span>
+      {/* 1 — Status header */}
+      <div className="flex items-start justify-between gap-4 flex-wrap pr-6">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style={{ background: `color-mix(in srgb, ${tone} 15%, transparent)`, color: tone }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: tone }} />
+            {statusText}
+          </span>
+          {hasTerm && (
+            <span className="font-bold text-base" style={{ color: 'var(--card-foreground)' }}>{termLabel}</span>
+          )}
+        </div>
+
+        <div className="text-right min-w-[150px]">
+          {open && daysRemaining != null ? (
+            <>
+              <p className="text-sm font-bold" style={{ color: tone }}>
+                {daysRemaining} day{daysRemaining === 1 ? '' : 's'} left
+              </p>
+              <div className="mt-1 h-1.5 w-40 ml-auto rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+                <div className="h-full rounded-full transition-all" style={{ width: `${remainingPct}%`, background: tone }} />
+              </div>
+              <p className="text-[11px] ef-muted mt-1">closes {fmtDate(props.end)}</p>
+            </>
+          ) : notStarted ? (
+            <p className="text-sm font-semibold" style={{ color: tone }}>Opens {fmtDate(props.start)}</p>
+          ) : (
+            <p className="text-sm font-semibold" style={{ color: tone }}>
+              {props.end ? `Closed ${fmtDate(props.end)}` : 'Check back later'}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="mx-4 mt-2.5 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'color-mix(in srgb, #f59e0b 18%, transparent)', border: '1px solid rgba(245,158,11,0.5)' }}>
-        <Icon name="clock" className="w-4 h-4 shrink-0" style={{ color: '#b45309' }} />
-        <p className="text-xs font-semibold" style={{ color: '#92400e' }}>
-          Don&apos;t forget: get the printed form from the Registrar&apos;s office — submitting here alone does not finish your request.
+      {/* 2 — Reminder with left accent bar */}
+      <div
+        className="mt-4 flex items-start gap-2.5 rounded-r-lg py-2.5 pl-3 pr-3"
+        style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', borderLeft: '3px solid #f59e0b' }}
+      >
+        <Icon name="clock" className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#b45309' }} />
+        <p className="text-xs font-medium" style={{ color: 'var(--card-foreground)' }}>
+          Get the printed form from the Registrar&apos;s office — submitting here alone does not finish your request.
         </p>
       </div>
 
+      {/* 3 — Exam schedule strip */}
       {hasTerm && (
-        <p className="px-4 mt-2 text-sm">
-          <span className="ef-muted">Exam Date: </span>
-          <strong style={{ color: 'var(--card-foreground)' }}>{examRange}</strong>
-          {props.examLocation && (
-            <>
-              <span className="ef-muted"> · </span>
-              <span style={{ color: 'var(--card-foreground)' }}>{props.examLocation}</span>
-            </>
-          )}
-          {props.examBring && (
-            <>
-              <span className="ef-muted"> · Bring: </span>
-              <span style={{ color: 'var(--card-foreground)' }}>{props.examBring}</span>
-            </>
-          )}
-        </p>
+        <div className="mt-4 grid grid-cols-3 gap-4 border-t ef-border pt-3">
+          {[
+            { label: 'Exam Period', value: examRange },
+            { label: 'Venue', value: props.examLocation || TBA },
+            { label: 'Bring', value: props.examBring || TBA },
+          ].map((c) => (
+            <div key={c.label} className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wider ef-muted">{c.label}</p>
+              <p className="text-sm font-semibold mt-0.5 truncate" style={{ color: 'var(--card-foreground)' }} title={c.value ?? undefined}>
+                {c.value}
+              </p>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
