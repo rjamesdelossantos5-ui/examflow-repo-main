@@ -75,7 +75,7 @@ export default function DocumentViewer({ media }: { media: ViewerMedia[] }) {
           onClick={() => setLightbox(null)}
         >
           <button
-            className="absolute top-4 right-4 text-white text-2xl"
+            className="absolute top-4 right-4 z-10 w-10 h-10 grid place-items-center rounded-full bg-white/15 hover:bg-white/30 text-white text-xl leading-none backdrop-blur-sm transition-colors"
             onClick={() => setLightbox(null)}
             aria-label="Close"
           >
