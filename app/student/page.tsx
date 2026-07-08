@@ -65,9 +65,15 @@ export default async function StudentPage() {
   const hasLiveRequest = activePeriod
     ? list.some((r) => r.status !== 'rejected' && (!r.period_id || r.period_id === activePeriod.id))
     : false
-  const scheduleSignature = activePeriod?.scheduleUpdatedAt ? `${activePeriod.id}:${activePeriod.scheduleUpdatedAt}` : null
+  // Signature built from the schedule CONTENT (date / venue / what-to-bring), so
+  // the one-time popup fires when the Program Head first sets it AND re-fires
+  // whenever any of it changes — without depending on the schedule_updated_at
+  // timestamp being present.
+  const scheduleSignature = activePeriod?.examDay
+    ? [activePeriod.id, activePeriod.examDay, activePeriod.examEndDay ?? '', activePeriod.examLocation ?? '', activePeriod.examBring ?? ''].join('|')
+    : null
   const showSchedulePopup = !!(
-    activePeriod?.examDay && scheduleSignature && hasLiveRequest && profile?.schedule_ack !== scheduleSignature
+    scheduleSignature && hasLiveRequest && profile?.schedule_ack !== scheduleSignature
   )
 
   // Once the window is open AND the exam's end time is set, that's a
@@ -75,7 +81,11 @@ export default async function StudentPage() {
   // Anything short of that (not yet open, or open with no end time yet) is
   // still unresolved, so it keeps reappearing every login (cookie-based).
   const isSettled = win.open && !!activePeriod?.examEndDay
-  const windowSignature = isSettled ? `${activePeriod!.id}:${activePeriod!.examEndDay}` : null
+  // Re-fires the settled popup if the Program Head changes the window (start /
+  // days) or the exam end — same "notify again on change" rule as the schedule.
+  const windowSignature = isSettled
+    ? [activePeriod!.id, activePeriod!.submissionStart, activePeriod!.windowDays, activePeriod!.examEndDay].join('|')
+    : null
   const showWindowModal = isSettled
     ? profile?.window_ack !== windowSignature
     : !modalSeen

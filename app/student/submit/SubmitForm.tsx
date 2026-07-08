@@ -204,7 +204,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               value={eff.full_name}
               className={`${inputClass} cursor-not-allowed opacity-70`}
             />
-            <p className="mt-1 text-xs ef-muted">Matches your account — contact the Registrar if this is wrong.</p>
+            <p className="mt-1 text-xs ef-muted">Matches your account — contact the Program Head if this is wrong.</p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>

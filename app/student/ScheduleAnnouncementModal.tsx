@@ -51,7 +51,7 @@ export default function ScheduleAnnouncementModal(props: Props) {
           </div>
         )}
         <p className="text-xs ef-muted mt-3">
-          Please visit the Registrar&apos;s office or your Program Head for further details.
+          Please ask the Registrar or your Program Head for further assistance.
         </p>
         <button
           onClick={handleOk}
