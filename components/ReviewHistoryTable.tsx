@@ -31,14 +31,15 @@ export default function ReviewHistoryTable({ title, rows }: { title: string; row
     <div>
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>{title}</h2>
-        <div className="relative w-full sm:w-64">
-          <Icon name="user" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ef-muted" />
+        <div className="relative w-full sm:w-72">
+          <Icon name="user" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ef-muted pointer-events-none" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search student name…"
-            className="w-full rounded-lg pl-9 pr-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
+            className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm border shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent"
+            style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--card-foreground)' }}
           />
         </div>
       </div>

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ReviewHistoryTable, { type HistoryRow } from '@/components/ReviewHistoryTable'
+import { keepActive } from '@/lib/examSettings'
+import { activePeriodIdCached } from '@/lib/activePeriod'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Teacher History' }
@@ -10,17 +12,21 @@ export default async function TeacherHistoryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data } = await supabase
-    .from('special_exam_requests')
-    .select(`
-      *,
-      profiles!student_id(full_name),
-      subjects!inner(subject_code, subject_name, teacher_id)
-    `)
-    .in('status', ['approved_by_teacher', 'accepted', 'receipt_uploaded', 'scheduled', 'rejected'])
-    .order('updated_at', { ascending: false })
+  const [{ data }, activeId] = await Promise.all([
+    supabase
+      .from('special_exam_requests')
+      .select(`
+        *,
+        profiles!student_id(full_name),
+        subjects!inner(subject_code, subject_name, teacher_id)
+      `)
+      .in('status', ['approved_by_teacher', 'accepted', 'receipt_uploaded', 'scheduled', 'rejected'])
+      .order('updated_at', { ascending: false }),
+    activePeriodIdCached(),
+  ])
 
-  const rows: HistoryRow[] = (data ?? [])
+  // Only the current term (dropped off when the PH activates the next term).
+  const rows: HistoryRow[] = keepActive(data ?? [], activeId)
     // A form the Registrar rejected never reached the teacher — it stays in the
     // Registrar's history, not here. Only show rejections the teacher made.
     .filter((r) => r.status !== 'rejected' || r.rejected_by_role === 'subject_teacher')

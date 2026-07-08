@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ReviewHistoryTable, { type HistoryRow } from '@/components/ReviewHistoryTable'
+import { keepActive } from '@/lib/examSettings'
+import { activePeriodIdCached } from '@/lib/activePeriod'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Registrar History' }
@@ -10,17 +12,23 @@ export default async function RegistrarHistoryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data } = await supabase
-    .from('special_exam_requests')
-    .select(`
-      *,
-      profiles!student_id(full_name),
-      subjects(subject_code, subject_name)
-    `)
-    .in('status', ['verified_by_registrar', 'approved_by_teacher', 'accepted', 'receipt_uploaded', 'scheduled', 'rejected'])
-    .order('updated_at', { ascending: false })
+  const [{ data }, activeId] = await Promise.all([
+    supabase
+      .from('special_exam_requests')
+      .select(`
+        *,
+        profiles!student_id(full_name),
+        subjects(subject_code, subject_name)
+      `)
+      .in('status', ['verified_by_registrar', 'approved_by_teacher', 'accepted', 'receipt_uploaded', 'scheduled', 'rejected'])
+      .order('updated_at', { ascending: false }),
+    activePeriodIdCached(),
+  ])
 
-  const rows: HistoryRow[] = (data ?? []).map((r) => ({
+  // Only the current term's processed forms — once the PH activates the next
+  // term, the previous term's forms drop off this list (they aren't deleted;
+  // the rows remain for the student/PH records). Same rule as the queues.
+  const rows: HistoryRow[] = keepActive(data ?? [], activeId).map((r) => ({
     id: r.id as string,
     student: (r as { snap_name?: string | null }).snap_name ?? (r.profiles as unknown as { full_name: string })?.full_name ?? '—',
     subject: (r.subjects as unknown as { subject_name: string })?.subject_name ?? '',
