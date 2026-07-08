@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { computeWindow, keepActive, TERM_LABEL } from '@/lib/examSettings'
+import { computeWindow, keepActive, TERM_LABEL, SEMESTER_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
@@ -41,6 +41,9 @@ export default async function StudentPage() {
   // History instead of sitting here forever — same "current term only" rule
   // already used for every staff queue.
   const list = keepActive(requests ?? [], activePeriod?.id ?? null)
+  // Shown wherever the current term is named (banner, modals, list) — e.g.
+  // "1st Semester · Finals".
+  const termLabel = activePeriod ? `${SEMESTER_LABEL[activePeriod.semester]} · ${TERM_LABEL[activePeriod.term]}` : null
   // Serializable rows for the interactive (client) panel below.
   const panelRequests: StudentRequest[] = list.map((r) => {
     const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null
@@ -85,7 +88,7 @@ export default async function StudentPage() {
         <ScheduleAnnouncementModal
           show
           signature={scheduleSignature!}
-          termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+          termLabel={termLabel}
           examDay={activePeriod!.examDay!}
           examEndDay={activePeriod?.examEndDay ?? null}
           examLocation={activePeriod?.examLocation ?? null}
@@ -93,7 +96,7 @@ export default async function StudentPage() {
         />
       ) : (
         <SubmissionStatusModal
-          termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+          termLabel={termLabel}
           open={win.open}
           notStarted={win.notStarted}
           daysRemaining={win.daysRemaining}
@@ -104,7 +107,7 @@ export default async function StudentPage() {
         />
       )}
       <SubmissionStatusBanner
-        termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+        termLabel={termLabel}
         open={win.open}
         notStarted={win.notStarted}
         start={win.start}
@@ -135,7 +138,7 @@ export default async function StudentPage() {
       {/* Stat cards + request list — the cards double as status filters */}
       <RequestsPanel
         requests={panelRequests}
-        termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
+        termLabel={termLabel}
         hasHistory={(requests ?? []).length > 0}
       />
     </div>

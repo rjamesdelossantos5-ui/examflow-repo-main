@@ -11,6 +11,15 @@ export const TERM_LABEL: Record<Term, string> = {
   finals: 'Finals',
 }
 
+// A single school-wide semester for now (1st / 2nd). Per-program semesters
+// (e.g. a course running a 3rd/summer term) are a later change.
+export const SEMESTERS = ['1st', '2nd'] as const
+export type Semester = (typeof SEMESTERS)[number]
+export const SEMESTER_LABEL: Record<Semester, string> = {
+  '1st': '1st Semester',
+  '2nd': '2nd Semester',
+}
+
 // The term after this one (used to suggest the next window once a term ends).
 export function nextTerm(t: Term): Term {
   const i = TERMS.indexOf(t)
@@ -20,6 +29,7 @@ export function nextTerm(t: Term): Term {
 export interface ExamPeriod {
   id: string
   term: Term
+  semester: Semester
   schoolYear: string
   submissionStart: string // 'yyyy-mm-dd'
   windowDays: number
@@ -35,6 +45,7 @@ export interface ExamPeriod {
 interface PeriodRow {
   id: string
   term: string
+  semester: string | null
   school_year: string | null
   submission_start: string
   window_days: number
@@ -51,6 +62,7 @@ function toPeriod(r: PeriodRow): ExamPeriod {
   return {
     id: r.id,
     term: r.term as Term,
+    semester: (r.semester as Semester) ?? '1st',
     schoolYear: r.school_year ?? '',
     submissionStart: r.submission_start,
     windowDays: r.window_days || 7,

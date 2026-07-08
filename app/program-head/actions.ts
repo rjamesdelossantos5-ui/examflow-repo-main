@@ -296,21 +296,23 @@ export async function deleteFinishedRequest(requestId: string) {
 
 interface PeriodInput {
   term: string
+  semester: string
   submissionStart: string
   windowDays: number
 }
 
 // Create/update a term's SUBMISSION WINDOW (Prelim/Midterms/Pre-finals/Finals)
-// and make it the single active one students submit to. The exam schedule
-// (date/location/what-to-bring) is saved separately via saveExamSchedule, so
-// this upsert deliberately does NOT touch those columns — one term = one row
-// (school_year is fixed to '', giving one period per term).
+// for a semester (1st/2nd) and make it the single active one students submit
+// to. The exam schedule (date/location/what-to-bring) is saved separately via
+// saveExamSchedule, so this upsert deliberately does NOT touch those columns —
+// one (term, semester) = one row (school_year is fixed to '' for now).
 export async function savePeriod(input: PeriodInput) {
   const ctx = await requirePH()
   if (!ctx) return { error: 'Unauthorized' }
   const { supabase } = ctx
 
   if (!['prelim', 'midterms', 'prefinals', 'finals'].includes(input.term)) return { error: 'Choose a term.' }
+  if (!['1st', '2nd'].includes(input.semester)) return { error: 'Choose a semester.' }
   if (!input.submissionStart) return { error: 'Set a submission start date.' }
   if (!Number.isInteger(input.windowDays) || input.windowDays < 1 || input.windowDays > 365) {
     return { error: 'Submission window must be 1–365 days.' }
@@ -318,17 +320,29 @@ export async function savePeriod(input: PeriodInput) {
 
   const row = {
     term: input.term,
+    semester: input.semester,
     school_year: '',
     submission_start: input.submissionStart,
     window_days: input.windowDays,
     is_active: true,
   }
 
-  const { data: saved, error } = await supabase
+  let { data: saved, error } = await supabase
     .from('exam_periods')
-    .upsert(row, { onConflict: 'term,school_year' })
+    .upsert(row, { onConflict: 'term,school_year,semester' })
     .select('id')
     .single()
+
+  // migration_semester.sql not applied yet (no `semester` column / index) —
+  // fall back to the pre-semester shape so the PH can still save the window.
+  if (error) {
+    const { semester: _omit, ...legacy } = row
+    ;({ data: saved, error } = await supabase
+      .from('exam_periods')
+      .upsert(legacy, { onConflict: 'term,school_year' })
+      .select('id')
+      .single())
+  }
   if (error) return { error: error.message }
 
   // Exactly one active period.

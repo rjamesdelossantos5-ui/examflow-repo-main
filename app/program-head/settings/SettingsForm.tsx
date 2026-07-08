@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { savePeriod, saveExamSchedule, setActivePeriod, deletePeriod } from '../actions'
-import { computeWindow, TERMS, TERM_LABEL, type ExamPeriod, type Term } from '@/lib/examSettings'
+import { computeWindow, TERMS, TERM_LABEL, SEMESTERS, SEMESTER_LABEL, type ExamPeriod, type Term, type Semester } from '@/lib/examSettings'
 import Select from '@/components/Select'
 
 const input = 'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]'
@@ -50,7 +50,7 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
         <div className="ef-card rounded-xl shadow-sm p-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs ef-muted">Active term</p>
-            <p className="font-bold" style={{ color: 'var(--card-foreground)' }}>{TERM_LABEL[active.term]}</p>
+            <p className="font-bold" style={{ color: 'var(--card-foreground)' }}>{SEMESTER_LABEL[active.semester]} · {TERM_LABEL[active.term]}</p>
           </div>
           <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-green-100 text-green-700">Active</span>
         </div>
@@ -68,7 +68,7 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
             {periods.map((p) => (
               <div key={p.id} className="ef-card rounded-xl shadow-sm p-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold" style={{ color: 'var(--card-foreground)' }}>{TERM_LABEL[p.term]}</p>
+                  <p className="font-semibold" style={{ color: 'var(--card-foreground)' }}>{SEMESTER_LABEL[p.semester]} · {TERM_LABEL[p.term]}</p>
                   <p className="text-xs ef-muted">
                     Opens {new Date(p.submissionStart + 'T00:00:00').toLocaleDateString()} · {p.windowDays} days
                     {p.examDay ? ` · Exam ${new Date(p.examDay).toLocaleDateString()}` : ''}
@@ -133,15 +133,16 @@ type FormProps = {
 // ── Form 1: submission window ──────────────────────────────────────────────
 function WindowForm({ active, periods, onError, isPending, startTransition }: FormProps & { periods: ExamPeriod[] }) {
   const [term, setTerm] = useState<Term>(active?.term ?? 'prelim')
+  const [semester, setSemester] = useState<Semester>(active?.semester ?? '1st')
   const [start, setStart] = useState(active?.submissionStart ?? '')
   const [days, setDays] = useState(active?.windowDays ?? 7)
   const [saved, setSaved] = useState(false)
   const [info, setInfo] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  // The saved period for whichever term is currently selected (not
+  // The saved period for whichever semester + term is currently selected (not
   // necessarily the active one — the PH can set up a future term here).
-  const existing = periods.find((p) => p.term === term) ?? null
+  const existing = periods.find((p) => p.term === term && p.semester === semester) ?? null
   const alreadySet = !!existing
 
   function unchanged() {
@@ -167,7 +168,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
   function doSave() {
     setConfirmOpen(false)
     startTransition(async () => {
-      const res = await savePeriod({ term, submissionStart: start, windowDays: days })
+      const res = await savePeriod({ term, semester, submissionStart: start, windowDays: days })
       if (res.error) onError(res.error)
       else setSaved(true)
     })
@@ -187,15 +188,27 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
         </div>
       )}
 
-      <div>
-        <label className={label}>Term *</label>
-        <Select
-          value={term}
-          onChange={(v) => setTerm(v as Term)}
-          options={TERMS.map((t) => ({ value: t, label: TERM_LABEL[t] }))}
-          className={input}
-          style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
-        />
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className={label}>Semester *</label>
+          <Select
+            value={semester}
+            onChange={(v) => setSemester(v as Semester)}
+            options={SEMESTERS.map((s) => ({ value: s, label: SEMESTER_LABEL[s] }))}
+            className={input}
+            style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
+          />
+        </div>
+        <div>
+          <label className={label}>Term *</label>
+          <Select
+            value={term}
+            onChange={(v) => setTerm(v as Term)}
+            options={TERMS.map((t) => ({ value: t, label: TERM_LABEL[t] }))}
+            className={input}
+            style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
+          />
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -231,7 +244,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
               <p className="ef-muted">
                 New: <strong style={{ color: 'var(--card-foreground)' }}>Opens {new Date(start + 'T00:00:00').toLocaleDateString()} · {days} days (closes {endLabel})</strong>
               </p>
-              <p className="ef-muted">This makes {TERM_LABEL[term]} the active term — students will see it right away.</p>
+              <p className="ef-muted">This makes {SEMESTER_LABEL[semester]} · {TERM_LABEL[term]} the active term — students will see it right away.</p>
             </div>
             <div className="flex gap-3 mt-5">
               <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
