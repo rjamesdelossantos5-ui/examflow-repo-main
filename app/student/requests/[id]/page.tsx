@@ -6,24 +6,9 @@ import StatusBadge from '@/components/StatusBadge'
 import DocumentViewer from '@/components/DocumentViewer'
 import ReceiptUpload from './ReceiptUpload'
 import DeleteRequestButton from './DeleteRequestButton'
-import { getPeriodById, TERM_LABEL } from '@/lib/examSettings'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
-
-// Paid exams have an extra receipt step (Program Head → Receipt → Scheduled);
-// excused exams finish once the Program Head approves.
-const STEPS_PAID = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Receipt', 'Scheduled']
-const STEPS_EXCUSED = ['Submitted', 'Registrar', 'Teacher', 'Approved']
-
-const ORDER_PAID: Record<RequestStatus, number> = {
-  submitted: 0, verified_by_registrar: 1, approved_by_teacher: 2,
-  accepted: 3, receipt_uploaded: 4, scheduled: 5, rejected: -1,
-}
-const ORDER_EXCUSED: Record<RequestStatus, number> = {
-  submitted: 0, verified_by_registrar: 1, approved_by_teacher: 2,
-  accepted: 3, receipt_uploaded: 3, scheduled: 3, rejected: -1,
-}
 
 const ROLE_DOT: Record<UserRole, string> = {
   student: '#3b82f6',
@@ -74,13 +59,7 @@ export default async function RequestDetailPage({
   if (!req) notFound()
 
   const subj = req.subjects as unknown as { subject_code: string; subject_name: string } | null
-  const period = req.period_id ? await getPeriodById(supabase, req.period_id as string) : null
-  const isPaid = req.exam_type === 'paid'
-  const STEPS = isPaid ? STEPS_PAID : STEPS_EXCUSED
-  const STATUS_ORDER = isPaid ? ORDER_PAID : ORDER_EXCUSED
-  const currentStep = STATUS_ORDER[req.status as RequestStatus]
   const isRejected = req.status === 'rejected'
-  const fillPct = isRejected ? 0 : (currentStep / (STEPS.length - 1)) * 100
 
   const logs = (req.progress_logs as { id: string; action: string; created_at: string; actor_role: UserRole }[]) ?? []
   const rawMedia = (req.application_media as { id: string; file_name: string; media_type: string; mime_type: string; storage_path: string }[]) ?? []
@@ -147,24 +126,6 @@ export default async function RequestDetailPage({
         )}
       </div>
 
-      {/* Exam details for this request's period (frozen to that term) */}
-      {period && (period.examDay || period.examLocation || period.examBring) && (
-        <div className="ef-card rounded-xl shadow-sm p-6">
-          <h2 className="font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>
-            {TERM_LABEL[period.term]} Special Exam{period.schoolYear ? ` · ${period.schoolYear}` : ''}
-          </h2>
-          <dl className="space-y-1.5 text-sm">
-            {period.examDay && <p><span className="ef-muted">When: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{new Date(period.examDay).toLocaleDateString()}{period.examEndDay ? ` → ${new Date(period.examEndDay).toLocaleDateString()}` : ''}</span></p>}
-            {period.examLocation && <p><span className="ef-muted">Where: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{period.examLocation}</span></p>}
-            {period.examBring && <p><span className="ef-muted">Bring: </span><span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{period.examBring}</span></p>}
-          </dl>
-          <div className="mt-3 flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs" style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', color: 'var(--card-foreground)' }}>
-            <span className="font-semibold shrink-0">Reminder:</span>
-            <span>Get the printed special-exam form from the Registrar&apos;s office and fill it out — the online request alone does not complete your application.</span>
-          </div>
-        </div>
-      )}
-
       {/* Submitted details (what the student entered on this form) */}
       <div className="ef-card rounded-xl shadow-sm p-6">
         <h2 className="font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>Submitted Details</h2>
@@ -184,46 +145,6 @@ export default async function RequestDetailPage({
           ))}
         </dl>
       </div>
-
-      {/* 3D Progress stepper */}
-      {!isRejected && (
-        <div className="ef-card rounded-xl shadow-sm p-6 pb-5">
-          <h2 className="font-semibold mb-6" style={{ color: 'var(--card-foreground)' }}>Progress</h2>
-          <div className="relative">
-            {/* track */}
-            <div className="absolute left-5 right-5 top-5 h-1.5 rounded-full -translate-y-1/2" style={{ background: 'var(--border)' }} />
-            {/* filled */}
-            <div
-              className="absolute left-5 top-5 h-1.5 rounded-full -translate-y-1/2 transition-all duration-700"
-              style={{ width: `calc((100% - 2.5rem) * ${fillPct / 100})`, background: 'linear-gradient(90deg, #e0a200, var(--sti-gold))' }}
-            />
-            <div className="relative flex justify-between">
-              {STEPS.map((step, i) => {
-                const done = currentStep >= i
-                const active = currentStep === i
-                return (
-                  <div key={step} className="flex flex-col items-center gap-2 w-16">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ef-step-node ${
-                        done ? 'ef-step-done' : ''
-                      } ${active ? 'ef-step-active' : ''}`}
-                      style={!done ? { background: 'var(--card)', border: '2px solid var(--border)', color: 'var(--muted)' } : undefined}
-                    >
-                      {done ? '✓' : i + 1}
-                    </div>
-                    <span
-                      className={`text-[11px] text-center leading-tight ${active ? 'font-semibold' : ''}`}
-                      style={{ color: active ? 'var(--card-foreground)' : 'var(--muted)' }}
-                    >
-                      {step}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Receipt upload (Paid + accepted). If a prior receipt was rejected, the
           reason is still on the request — show it so the student can fix it. */}
