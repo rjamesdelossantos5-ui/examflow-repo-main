@@ -304,7 +304,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
   const examStartDate = examStart ? new Date(examStart + 'T00:00:00') : null
   const scheduleWarning =
     windowEnd && examStartDate && examStartDate <= new Date(windowEnd)
-      ? `The exam date (${newStartLabel}) is on or before submissions close (${fmt(windowEnd)}). Students could still file requests for it that can’t be reviewed in time.`
+      ? `The exam date (${newStartLabel}) is on or before submissions close (${fmt(windowEnd)}). It’s recommended to set the exam date after the submission window ends, so every request can be reviewed in time — otherwise students may keep filing requests that can’t be processed before the exam.`
       : null
 
   return (

@@ -207,6 +207,35 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     }
   }
 
+  // A form with a single document (the common receipt / excuse case) shows it
+  // right away — fetch its signed URL on mount so no click is needed. Multi-doc
+  // forms keep fetching lazily on View to avoid loading several images at once.
+  const soloDoc = r.media.length === 1 ? r.media[0] : null
+  useEffect(() => {
+    if (soloDoc && !soloDoc.signed_url && !urls[soloDoc.id]) {
+      getSignedUrl(soloDoc.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [soloDoc.id]: u })) })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soloDoc?.id])
+
+  // The image / PDF / loading preview body, shared by the solo and expanded views.
+  function docPreview(m: MediaItem, url: string | undefined) {
+    return (
+      <div className="rounded-lg border ef-border overflow-hidden">
+        {!url ? (
+          <div className="p-2 text-xs ef-muted">Loading…</div>
+        ) : m.mime_type.startsWith('image/') ? (
+          <div className="relative w-full h-48" style={{ background: 'var(--background)' }}>
+            <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
+          </div>
+        ) : (
+          <a href={url} target="_blank" rel="noreferrer"
+            className="block p-2 text-xs text-blue-600 dark:text-blue-400 hover:underline">Open PDF: {m.file_name}</a>
+        )}
+      </div>
+    )
+  }
+
   function handleAccept() {
     startTransition(async () => {
       const res = await acceptRequest(r.id, '')
@@ -277,6 +306,13 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
         <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
           <Icon name="file" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> Documents
         </h4>
+        {soloDoc ? (
+          // Single document → shown immediately, no View button.
+          <div className="space-y-1.5">
+            <p className="capitalize font-medium text-xs" style={{ color: 'var(--card-foreground)' }}>{soloDoc.media_type.replace(/_/g, ' ')}</p>
+            {docPreview(soloDoc, soloDoc.signed_url ?? urls[soloDoc.id])}
+          </div>
+        ) : (
         <div className="space-y-2">
           {r.media.map((m) => {
             const url = m.signed_url ?? urls[m.id]
@@ -293,24 +329,12 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
                 <span className="capitalize font-medium" style={{ color: 'var(--card-foreground)' }}>{m.media_type.replace(/_/g, ' ')}</span>
                 <span className="ml-auto font-semibold" style={{ color: 'var(--sti-navy)' }}>{open ? 'Hide' : 'View'}</span>
               </button>
-              {open && (
-                <div className="mt-1 rounded-lg border ef-border overflow-hidden">
-                  {!url ? (
-                    <div className="p-2 text-xs ef-muted">Loading…</div>
-                  ) : m.mime_type.startsWith('image/') ? (
-                    <div className="relative w-full h-48" style={{ background: 'var(--background)' }}>
-                      <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
-                    </div>
-                  ) : (
-                    <a href={url} target="_blank" rel="noreferrer"
-                      className="block p-2 text-xs text-blue-600 dark:text-blue-400 hover:underline">Open PDF: {m.file_name}</a>
-                  )}
-                </div>
-              )}
+              {open && <div className="mt-1">{docPreview(m, url)}</div>}
             </div>
             )
           })}
         </div>
+        )}
       </div>
 
       {/* History — mini timeline with role-colored dots */}
