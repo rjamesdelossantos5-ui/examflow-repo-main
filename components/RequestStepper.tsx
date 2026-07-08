@@ -1,25 +1,39 @@
 import type { RequestStatus } from '@/lib/supabase/types'
 
-// Compact 5-step progress rail shown inline on each student request card.
-// One unified track for both exam types (the paid receipt step lives inside the
-// Program Head stage, so it isn't a separate node here). `current` = the stage
-// the request is WAITING on (rendered navy); every earlier stage is done (gold
-// check). 'scheduled' = 5 means all five are complete; 'rejected' never renders
-// this — the card shows a reject/resubmit strip instead.
-const STEP_LABELS = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Scheduled'] as const
+// Inline progress rail on each student request card. `current` = the stage the
+// request is WAITING on (rendered navy); every earlier stage is done (gold
+// check); later stages are gray. The final node is only ever "done", never
+// current. 'rejected' never renders this — the card shows a resubmit strip.
+//
+// Paid and excused differ by one node: a paid exam has an extra "Receipt" stage
+// (Program Head accepts → student uploads cashier receipt → Program Head
+// verifies → Scheduled). An excused exam has no payment, so Program Head
+// acceptance schedules it directly.
+const STEPS_EXCUSED = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Scheduled'] as const
+const STEPS_PAID = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Receipt', 'Scheduled'] as const
 
-const CURRENT_INDEX: Record<RequestStatus, number> = {
+const CURRENT_EXCUSED: Record<RequestStatus, number> = {
   submitted: 1,
   verified_by_registrar: 2,
   approved_by_teacher: 3,
   accepted: 3,
   receipt_uploaded: 3,
-  scheduled: 5,
+  scheduled: 5, // all five done
+  rejected: -1,
+}
+const CURRENT_PAID: Record<RequestStatus, number> = {
+  submitted: 1,
+  verified_by_registrar: 2,
+  approved_by_teacher: 3,
+  accepted: 4, // PH accepted → now waiting on the receipt upload
+  receipt_uploaded: 4, // receipt is in, Program Head verifying it
+  scheduled: 6, // all six done
   rejected: -1,
 }
 
-export default function RequestStepper({ status }: { status: RequestStatus }) {
-  const current = CURRENT_INDEX[status] ?? 0
+export default function RequestStepper({ status, paid }: { status: RequestStatus; paid: boolean }) {
+  const STEP_LABELS = paid ? STEPS_PAID : STEPS_EXCUSED
+  const current = (paid ? CURRENT_PAID : CURRENT_EXCUSED)[status] ?? 0
   const last = STEP_LABELS.length - 1
   // Gold line reaches up to whichever node is current (or the end when done).
   const fillTo = Math.min(current, last)

@@ -251,7 +251,7 @@ export default async function StudentPage() {
                   {/* Inline progress rail (rejected shows the strip below instead) */}
                   {!isRejected && (
                     <div className="mt-5">
-                      <RequestStepper status={status} />
+                      <RequestStepper status={status} paid={isPaid} />
                     </div>
                   )}
 
