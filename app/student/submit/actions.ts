@@ -102,6 +102,27 @@ export async function submitRequest(formData: FormData) {
     }, files)
   }
 
+  // One request per subject per term. A student can't file a brand-new request
+  // for a subject they already submitted this term — a rejected one must be
+  // fixed via Edit & Resubmit (which reuses that row), not duplicated. This
+  // only guards the NEW-submission path; the resubmit branch above is exempt.
+  const { data: dupes, error: dupeErr } = await supabase
+    .from('special_exam_requests')
+    .select('id, status')
+    .eq('student_id', user.id)
+    .eq('subject_id', subjectId)
+    .eq('period_id', activePeriod.id)
+    .limit(1)
+  const dupe = dupes?.[0]
+  // If the period_id column isn't migrated, dupeErr is set — fail open rather
+  // than block every submission.
+  if (!dupeErr && dupe) {
+    const msg = dupe.status === 'rejected'
+      ? 'You already have a request for this subject this term. Open it and use “Edit & Resubmit” instead of filing a new one.'
+      : 'You already have a request for this subject this term.'
+    return redirect(`/student/submit?error=${encodeURIComponent(msg)}`)
+  }
+
   const errors: string[] = []
   const idErr = validateFile(parentId, 'Valid ID (front)')
   const backErr = validateFile(parentIdBack, 'Valid ID (back)')
