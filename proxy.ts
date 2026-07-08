@@ -110,6 +110,6 @@ export const config = {
   // Run on every route EXCEPT Next.js internals and static image assets — those
   // don't need auth and skipping them avoids a DB round-trip per static file.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
