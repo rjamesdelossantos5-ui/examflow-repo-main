@@ -77,7 +77,6 @@ export default function RequestReviewPanel({
   studentName,
   studentInfo,
   teacherName,
-  subjectName,
   subjectCode,
   examType,
   excusedReason,
@@ -144,17 +143,11 @@ export default function RequestReviewPanel({
             {subjectCode.slice(0, 3).toUpperCase()}
           </span>
           <div className="min-w-0">
+            {/* Identity only — the subject title is shown by the queue card
+                above, and the student's details live in Form Details below, so
+                neither is repeated here. */}
             <h3 className="font-bold text-lg leading-tight" style={{ color: 'var(--card-foreground)' }}>{studentName}</h3>
-            {studentInfo?.student_number && <p className="text-xs ef-muted">#{studentInfo.student_number}</p>}
-            {(studentInfo?.course || studentInfo?.year_level) && (
-              <p className="text-sm ef-muted">
-                {studentInfo?.course}{studentInfo?.course && studentInfo?.year_level ? ' · ' : ''}
-                {studentInfo?.year_level ? ordinalYear(studentInfo.year_level) : ''}
-                {studentInfo?.section ? ` · ${studentInfo.section}` : ''}
-              </p>
-            )}
-            <p className="mt-1 text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>{subjectCode} — {subjectName}</p>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
               <span className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${isPaid ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300'}`}>
                 {isPaid ? 'Paid' : 'Excused'}
               </span>

@@ -258,11 +258,11 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
           {r.subject.subject_code.slice(0, 3).toUpperCase()}
         </span>
         <div className="min-w-0">
+          {/* Subject title is shown by the queue card above — not repeated here. */}
           <h3 className="font-bold text-base leading-tight" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
           {r.student.student_number && <p className="ef-muted text-xs">#{r.student.student_number}</p>}
           <p className="ef-muted text-xs">{r.student.course} · {ordinalYear(r.student.year_level)} · {r.student.section}</p>
-          <p className="mt-1 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.subject.subject_code} — {r.subject.subject_name}</p>
-          {r.subject.teacher && <p className="ef-muted text-xs">Teacher: {r.subject.teacher.full_name}</p>}
+          {r.subject.teacher && <p className="ef-muted text-xs mt-0.5">Teacher: {r.subject.teacher.full_name}</p>}
         </div>
       </div>
 
