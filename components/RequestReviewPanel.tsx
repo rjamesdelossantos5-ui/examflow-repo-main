@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import Image from 'next/image'
+import DocumentViewer from '@/components/DocumentViewer'
 import { getSignedUrl } from '@/app/media-actions'
 import RejectReasonPicker from '@/components/RejectReasonPicker'
 import { Icon, type IconName } from '@/components/Icon'
@@ -96,51 +96,30 @@ export default function RequestReviewPanel({
   const [rejectMode, setRejectMode] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
 
   const isPaid = examType === 'paid'
 
-  // Fetch the document's signed URL only when it's actually opened.
-  function handleExpand(m: MediaItem) {
-    const next = expanded === m.id ? null : m.id
-    setExpanded(next)
-    if (next && !m.signed_url && !urls[m.id]) {
-      getSignedUrl(m.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [m.id]: u })) })
-    }
-  }
-
-  // A form with a single document is shown immediately (no View click) — fetch
-  // its signed URL on mount. Multi-doc forms stay lazy to avoid loading several
-  // full images at once.
-  const soloDoc = media.length === 1 ? media[0] : null
+  // Every document shows inline right away (no "View" click) as a clickable
+  // thumbnail that zooms. The bucket is private, so we sign each file's URL on
+  // mount — short-lived signed URLs, fetched only for the docs actually shown.
   useEffect(() => {
-    if (soloDoc && !soloDoc.signed_url && !urls[soloDoc.id]) {
-      getSignedUrl(soloDoc.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [soloDoc.id]: u })) })
+    for (const m of media) {
+      if (!m.signed_url && !urls[m.id]) {
+        getSignedUrl(m.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [m.id]: u })) })
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [soloDoc?.id])
+  }, [])
 
-  // The image / PDF / loading preview body, shared by the solo and expanded views.
-  function docPreview(m: MediaItem, url: string | undefined) {
-    return (
-      <div className="rounded-lg overflow-hidden border ef-border">
-        {!url ? (
-          <div className="p-3 text-xs ef-muted">Loading…</div>
-        ) : m.mime_type.startsWith('image/') ? (
-          <div className="relative w-full h-64 cursor-zoom-in" style={{ background: 'var(--background)' }}>
-            <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
-          </div>
-        ) : (
-          <a href={url} target="_blank" rel="noreferrer"
-            className="block p-3 text-sm text-blue-600 dark:text-blue-400 hover:underline">
-            Open PDF: {m.file_name}
-          </a>
-        )}
-      </div>
-    )
-  }
+  const viewerMedia = media.map((m) => ({
+    id: m.id,
+    media_type: m.media_type,
+    file_name: m.file_name,
+    mime_type: m.mime_type,
+    signed_url: m.signed_url ?? urls[m.id],
+  }))
 
   function handleVerify() {
     if (!onVerify) return
@@ -196,7 +175,7 @@ export default function RequestReviewPanel({
             style={{ background: 'color-mix(in srgb, var(--sti-gold) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--sti-gold) 30%, transparent)' }}
           >
             <SectionLabel icon="list">Form Details</SectionLabel>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+            <dl className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
               {[
                 ['Contact No.', studentInfo.contact_number],
                 ['Student No.', studentInfo.student_number],
@@ -205,51 +184,20 @@ export default function RequestReviewPanel({
                 ['Section', studentInfo.section],
                 ['Teacher', teacherName],
               ].map(([label, value]) => (
-                <div key={label as string}>
+                <div key={label as string} className="min-w-0">
                   <dt className="text-[11px] uppercase tracking-wide ef-muted">{label}</dt>
-                  <dd className="font-medium" style={{ color: 'var(--card-foreground)' }}>{value ?? '—'}</dd>
+                  <dd className="font-medium break-words" style={{ color: 'var(--card-foreground)' }}>{value ?? '—'}</dd>
                 </div>
               ))}
             </dl>
           </div>
         )}
 
-        {/* Documents list */}
+        {/* Documents — all shown inline as clickable thumbnails (click to zoom) */}
         {showDocuments && (
         <div>
           <SectionLabel icon="file">Documents</SectionLabel>
-          {soloDoc ? (
-            // Single document → shown immediately, no View button.
-            <div className="space-y-1.5">
-              <p className="capitalize font-medium text-sm" style={{ color: 'var(--card-foreground)' }}>{soloDoc.media_type.replace(/_/g, ' ')}</p>
-              {docPreview(soloDoc, soloDoc.signed_url ?? urls[soloDoc.id])}
-            </div>
-          ) : (
-          <div className="space-y-2">
-            {media.map((m) => {
-              const url = m.signed_url ?? urls[m.id]
-              const open = expanded === m.id
-              return (
-              <div key={m.id}>
-                <button
-                  onClick={() => handleExpand(m)}
-                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-sm text-left transition-colors"
-                >
-                  <span
-                    className="w-7 h-7 rounded-md grid place-items-center shrink-0"
-                    style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: '#b45309' }}
-                  >
-                    <Icon name="file" className="w-4 h-4" />
-                  </span>
-                  <span className="capitalize font-medium" style={{ color: 'var(--card-foreground)' }}>{m.media_type.replace(/_/g, ' ')}</span>
-                  <span className="text-xs font-semibold ml-auto" style={{ color: 'var(--sti-navy)' }}>{open ? 'Hide' : 'View'}</span>
-                </button>
-                {open && <div className="mt-1">{docPreview(m, url)}</div>}
-              </div>
-              )
-            })}
-          </div>
-          )}
+          <DocumentViewer media={viewerMedia} />
         </div>
         )}
 

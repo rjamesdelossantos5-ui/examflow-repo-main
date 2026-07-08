@@ -71,6 +71,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
+  /* Long unbroken strings (student/contact numbers, emails, URLs) wrap instead
+     of overflowing their container on small screens — a site-wide safety net. */
+  overflow-wrap: break-word;
 }
 
 /* Hide scrollbar (used by the horizontal pill nav) while staying scrollable */

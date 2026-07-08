@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
-import Image from 'next/image'
+import DocumentViewer from '@/components/DocumentViewer'
 import type { RequestStatus } from '@/lib/supabase/types'
 import { acceptRequest, rejectPHRequest, confirmReceipt, rejectReceipt, acceptAll } from './actions'
 import { Icon } from '@/components/Icon'
@@ -192,49 +192,31 @@ export default function PHQueue({
 function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => void }) {
   const [rejectMode, setRejectMode] = useState<'request' | 'receipt' | null>(null)
   const [reason, setReason] = useState('')
-  const [expanded, setExpanded] = useState<string | null>(null)
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const isExcused = r.exam_type === 'excused'
 
-  function handleExpand(m: MediaItem) {
-    const next = expanded === m.id ? null : m.id
-    setExpanded(next)
-    if (next && !m.signed_url && !urls[m.id]) {
-      getSignedUrl(m.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [m.id]: u })) })
-    }
-  }
-
-  // A form with a single document (the common receipt / excuse case) shows it
-  // right away — fetch its signed URL on mount so no click is needed. Multi-doc
-  // forms keep fetching lazily on View to avoid loading several images at once.
-  const soloDoc = r.media.length === 1 ? r.media[0] : null
+  // Every document (receipt / parent IDs / signature) shows inline right away as
+  // a clickable thumbnail that zooms — no "View" click. The bucket is private,
+  // so sign each file's URL on mount (short-lived signed URLs).
   useEffect(() => {
-    if (soloDoc && !soloDoc.signed_url && !urls[soloDoc.id]) {
-      getSignedUrl(soloDoc.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [soloDoc.id]: u })) })
+    for (const m of r.media) {
+      if (!m.signed_url && !urls[m.id]) {
+        getSignedUrl(m.storage_path).then((u) => { if (u) setUrls((s) => ({ ...s, [m.id]: u })) })
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [soloDoc?.id])
+  }, [])
 
-  // The image / PDF / loading preview body, shared by the solo and expanded views.
-  function docPreview(m: MediaItem, url: string | undefined) {
-    return (
-      <div className="rounded-lg border ef-border overflow-hidden">
-        {!url ? (
-          <div className="p-2 text-xs ef-muted">Loading…</div>
-        ) : m.mime_type.startsWith('image/') ? (
-          <div className="relative w-full h-48" style={{ background: 'var(--background)' }}>
-            <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
-          </div>
-        ) : (
-          <a href={url} target="_blank" rel="noreferrer"
-            className="block p-2 text-xs text-blue-600 dark:text-blue-400 hover:underline">Open PDF: {m.file_name}</a>
-        )}
-      </div>
-    )
-  }
+  const viewerMedia = r.media.map((m) => ({
+    id: m.id,
+    media_type: m.media_type,
+    file_name: m.file_name,
+    mime_type: m.mime_type,
+    signed_url: m.signed_url ?? urls[m.id],
+  }))
 
   function handleAccept() {
     startTransition(async () => {
@@ -288,10 +270,10 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
         </span>
         <div className="min-w-0">
           {/* Subject title is shown by the queue card above — not repeated here. */}
-          <h3 className="font-bold text-base leading-tight" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
-          {r.student.student_number && <p className="ef-muted text-xs">#{r.student.student_number}</p>}
-          <p className="ef-muted text-xs">{r.student.course} · {ordinalYear(r.student.year_level)} · {r.student.section}</p>
-          {r.subject.teacher && <p className="ef-muted text-xs mt-0.5">Teacher: {r.subject.teacher.full_name}</p>}
+          <h3 className="font-bold text-base leading-tight break-words" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
+          {r.student.student_number && <p className="ef-muted text-xs break-words">#{r.student.student_number}</p>}
+          <p className="ef-muted text-xs break-words">{r.student.course} · {ordinalYear(r.student.year_level)} · {r.student.section}</p>
+          {r.subject.teacher && <p className="ef-muted text-xs mt-0.5 break-words">Teacher: {r.subject.teacher.full_name}</p>}
         </div>
       </div>
 
@@ -306,35 +288,8 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
         <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
           <Icon name="file" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> Documents
         </h4>
-        {soloDoc ? (
-          // Single document → shown immediately, no View button.
-          <div className="space-y-1.5">
-            <p className="capitalize font-medium text-xs" style={{ color: 'var(--card-foreground)' }}>{soloDoc.media_type.replace(/_/g, ' ')}</p>
-            {docPreview(soloDoc, soloDoc.signed_url ?? urls[soloDoc.id])}
-          </div>
-        ) : (
-        <div className="space-y-2">
-          {r.media.map((m) => {
-            const url = m.signed_url ?? urls[m.id]
-            const open = expanded === m.id
-            return (
-            <div key={m.id}>
-              <button
-                onClick={() => handleExpand(m)}
-                className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-xs text-left transition-colors"
-              >
-                <span className="w-6 h-6 rounded-md grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: '#b45309' }}>
-                  <Icon name="file" className="w-3.5 h-3.5" />
-                </span>
-                <span className="capitalize font-medium" style={{ color: 'var(--card-foreground)' }}>{m.media_type.replace(/_/g, ' ')}</span>
-                <span className="ml-auto font-semibold" style={{ color: 'var(--sti-navy)' }}>{open ? 'Hide' : 'View'}</span>
-              </button>
-              {open && <div className="mt-1">{docPreview(m, url)}</div>}
-            </div>
-            )
-          })}
-        </div>
-        )}
+        {/* All docs shown inline as clickable thumbnails (click to zoom) */}
+        <DocumentViewer media={viewerMedia} />
       </div>
 
       {/* History — mini timeline with role-colored dots */}
