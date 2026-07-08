@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { isValidName, isValidStudentNumber, isValidCode } from '@/lib/validation'
 
 function clean(v: FormDataEntryValue | null, max = 120) {
   return String(v ?? '').trim().slice(0, max)
@@ -14,6 +15,7 @@ export async function updateProfile(formData: FormData) {
 
   const fullName = clean(formData.get('full_name'))
   if (!fullName) return { error: 'Full name is required' }
+  if (!isValidName(fullName)) return { error: 'Enter a valid full name (letters only).' }
 
   // Only ever touch safe, self-editable fields — never role / is_active.
   const yearRaw = clean(formData.get('year_level'), 4)
@@ -22,14 +24,24 @@ export async function updateProfile(formData: FormData) {
     return { error: 'Year level must be between 1 and 6' }
   }
 
+  // Validate the free-text identity fields so they can't hold junk.
+  const studentNumber = clean(formData.get('student_number'), 40)
+  if (studentNumber && !isValidStudentNumber(studentNumber)) {
+    return { error: 'Enter a valid student number (digits only, e.g. 2024-00001).' }
+  }
+  const course = clean(formData.get('course'), 60)
+  if (course && !isValidCode(course)) return { error: 'Enter a valid course (letters and numbers only).' }
+  const section = clean(formData.get('section'), 20)
+  if (section && !isValidCode(section)) return { error: 'Enter a valid section (letters and numbers only).' }
+
   const { error } = await supabase
     .from('profiles')
     .update({
       full_name: fullName,
-      student_number: clean(formData.get('student_number'), 40) || null,
-      course: clean(formData.get('course'), 60) || null,
+      student_number: studentNumber || null,
+      course: course || null,
       year_level: yearLevel,
-      section: clean(formData.get('section'), 20) || null,
+      section: section || null,
     })
     .eq('id', user.id)
 

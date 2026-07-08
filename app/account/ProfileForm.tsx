@@ -92,7 +92,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Student number</label>
-              <input name="student_number" defaultValue={profile.student_number ?? ''} className={inputClass} placeholder="e.g. 2024-00001" />
+              <input name="student_number" defaultValue={profile.student_number ?? ''} className={inputClass} placeholder="e.g. 2024-00001" inputMode="numeric" maxLength={40} pattern="[0-9-]{4,20}" title="Digits only (with optional dashes), e.g. 2024-00001" />
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Course</label>

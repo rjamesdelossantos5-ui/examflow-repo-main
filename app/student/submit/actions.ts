@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getActivePeriod, computeWindow } from '@/lib/examSettings'
+import { isValidPhone, isValidStudentNumber } from '@/lib/validation'
 import type { ExcusedReason } from '@/lib/supabase/types'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
@@ -86,6 +87,21 @@ export async function submitRequest(formData: FormData) {
     snap_year_level: Number.isInteger(yearNum) && yearNum! >= 1 && yearNum! <= 6 ? yearNum : null,
     snap_section: String(formData.get('section') ?? '').trim().slice(0, 20) || null,
     snap_contact_number: String(formData.get('contact_number') ?? '').trim().slice(0, 40) || null,
+  }
+
+  // Reject garbage in the free-text identity fields (the client also checks, but
+  // this server guard is what actually stops a crafted POST). Contact number is
+  // required; student number is optional but must look like one if given.
+  const fieldErrors: string[] = []
+  if (!isValidPhone(snapshot.snap_contact_number ?? '')) {
+    fieldErrors.push('Enter a valid contact number (e.g. 09171234567).')
+  }
+  if (snapshot.snap_student_number && !isValidStudentNumber(snapshot.snap_student_number)) {
+    fieldErrors.push('Enter a valid student number (digits only, e.g. 2024-00001).')
+  }
+  if (fieldErrors.length) {
+    const back = resubmitFrom ? `&from=${resubmitFrom}` : ''
+    return redirect(`/student/submit?error=${encodeURIComponent(fieldErrors.join(' '))}${back}`)
   }
 
   const parentId = formData.get('parent_id') as File | null

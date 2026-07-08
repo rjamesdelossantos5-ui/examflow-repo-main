@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { isValidEmail, isValidName, isValidStudentNumber, isValidCode } from '@/lib/validation'
 import type { UserRole } from '@/lib/supabase/types'
 
 const ALLOWED_ROLES: UserRole[] = ['admin', 'registrar', 'subject_teacher', 'program_head', 'student']
@@ -32,6 +33,12 @@ export async function createUser(formData: FormData) {
   if (!fullName || !email || !password || !ALLOWED_ROLES.includes(role)) {
     return { error: 'Missing or invalid fields' }
   }
+  if (!isValidName(fullName)) return { error: 'Enter a valid full name (letters only).' }
+  if (!isValidEmail(email)) return { error: 'Enter a valid email address.' }
+  if (password.length < 6) return { error: 'Password must be at least 6 characters.' }
+  if (studentNumber && !isValidStudentNumber(studentNumber)) return { error: 'Enter a valid student number (digits only, e.g. 2024-00001).' }
+  if (course && !isValidCode(course)) return { error: 'Enter a valid course (letters and numbers only).' }
+  if (section && !isValidCode(section)) return { error: 'Enter a valid section (letters and numbers only).' }
 
   // Create auth user via admin API — requires service role key on server
   // We use the standard signUp as a workaround; in production use supabase admin client

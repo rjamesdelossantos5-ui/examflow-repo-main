@@ -209,11 +209,30 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Contact number *</label>
-              <input name="contact_number" required defaultValue={prefill?.contactNumber ?? ''} className={inputClass} placeholder="09XX XXX XXXX" inputMode="tel" />
+              <input
+                name="contact_number"
+                required
+                defaultValue={prefill?.contactNumber ?? ''}
+                className={inputClass}
+                placeholder="09XX XXX XXXX"
+                inputMode="tel"
+                maxLength={40}
+                pattern="[0-9+ ()-]{10,15}"
+                title="Enter a valid contact number — digits only, e.g. 09171234567"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Student number</label>
-              <input name="student_number" defaultValue={eff.student_number} className={inputClass} placeholder="2024-00001" />
+              <input
+                name="student_number"
+                defaultValue={eff.student_number}
+                className={inputClass}
+                placeholder="2024-00001"
+                inputMode="numeric"
+                maxLength={40}
+                pattern="[0-9-]{4,20}"
+                title="Student number should be digits (with optional dashes), e.g. 2024-00001"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Course / Program *</label>
