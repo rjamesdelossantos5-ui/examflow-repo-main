@@ -41,6 +41,18 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Bump the whole Tailwind type scale by ~1px for readability. Only font sizes
+   change here (line-heights scale with them); spacing/padding is untouched, so
+   layouts keep their proportions — text just reads a little larger. */
+@theme {
+  --text-xs: 0.8125rem;   /* 12 → 13px */
+  --text-sm: 0.9375rem;   /* 14 → 15px */
+  --text-base: 1.0625rem; /* 16 → 17px */
+  --text-lg: 1.1875rem;   /* 18 → 19px */
+  --text-xl: 1.3125rem;   /* 20 → 21px */
+  --text-2xl: 1.5625rem;  /* 24 → 25px */
+}
+
 html {
   /* smooth theme transitions without flashing on first paint */
   color-scheme: light;
