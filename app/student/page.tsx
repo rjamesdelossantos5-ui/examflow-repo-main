@@ -144,8 +144,6 @@ export default async function StudentPage() {
         termLabel={activePeriod ? TERM_LABEL[activePeriod.term] : null}
         open={win.open}
         notStarted={win.notStarted}
-        daysRemaining={win.daysRemaining}
-        windowDays={activePeriod?.windowDays ?? 7}
         start={win.start}
         end={win.end}
         examDay={activePeriod?.examDay ?? null}
