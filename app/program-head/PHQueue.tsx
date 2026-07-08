@@ -11,6 +11,15 @@ import RejectReasonPicker from '@/components/RejectReasonPicker'
 import { PH_REJECT_EXCUSED, PH_REJECT_PAID, PH_RECEIPT_REJECT } from '@/lib/rejectReasons'
 import { ordinalYear } from '@/lib/ordinal'
 
+// Timeline dot color per actor role (mirrors the shared RequestReviewPanel).
+const ROLE_DOT: Record<string, string> = {
+  student: '#3b82f6',
+  registrar: '#a855f7',
+  subject_teacher: '#6366f1',
+  program_head: '#f59e0b',
+  admin: '#64748b',
+}
+
 interface MediaItem {
   id: string
   media_type: string
@@ -240,93 +249,125 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
         </div>
       )}
 
-      <div>
-        <h3 className="font-bold text-base" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
-        {r.student.student_number && <p className="text-gray-400 text-xs">#{r.student.student_number}</p>}
-        <p className="text-gray-500 text-xs">{r.student.course} · {ordinalYear(r.student.year_level)} · {r.student.section}</p>
-        <p className="mt-1">{r.subject.subject_code} — {r.subject.subject_name}</p>
-        {r.subject.teacher && <p className="text-gray-400 text-xs">Teacher: {r.subject.teacher.full_name}</p>}
+      {/* Header — subject-code chip + student identity */}
+      <div className="flex items-start gap-3">
+        <span
+          className="w-11 h-11 rounded-xl grid place-items-center font-bold text-sm shrink-0"
+          style={{ background: 'var(--sti-navy)', color: 'var(--sti-gold)' }}
+        >
+          {r.subject.subject_code.slice(0, 3).toUpperCase()}
+        </span>
+        <div className="min-w-0">
+          <h3 className="font-bold text-base leading-tight" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
+          {r.student.student_number && <p className="ef-muted text-xs">#{r.student.student_number}</p>}
+          <p className="ef-muted text-xs">{r.student.course} · {ordinalYear(r.student.year_level)} · {r.student.section}</p>
+          <p className="mt-1 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.subject.subject_code} — {r.subject.subject_name}</p>
+          {r.subject.teacher && <p className="ef-muted text-xs">Teacher: {r.subject.teacher.full_name}</p>}
+        </div>
       </div>
 
       {/* Approval chain badges */}
       <div className="flex gap-2 flex-wrap">
-        <span className="px-2 py-0.5 rounded text-xs bg-purple-50 text-purple-700">✓ Registrar verified</span>
-        <span className="px-2 py-0.5 rounded text-xs bg-indigo-50 text-indigo-700">✓ Teacher approved</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300">✓ Registrar verified</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">✓ Teacher approved</span>
       </div>
 
       {/* Documents */}
-      <div className="space-y-2">
-        {r.media.map((m) => {
-          const url = m.signed_url ?? urls[m.id]
-          return (
-          <div key={m.id}>
-            <button
-              onClick={() => handleExpand(m)}
-              className="w-full flex items-center gap-2 p-2 rounded border hover:bg-gray-50 text-xs text-left"
-            >
-              <span className="capitalize font-medium">{m.media_type.replace(/_/g, ' ')}</span>
-              <span className="ml-auto text-gray-400">{expanded === m.id ? '▲' : '▼'}</span>
-            </button>
-            {expanded === m.id && (
-              <div className="mt-1 rounded border overflow-hidden">
-                {!url ? (
-                  <div className="p-2 text-xs text-gray-400">Loading…</div>
-                ) : m.mime_type.startsWith('image/') ? (
-                  <div className="relative w-full h-48">
-                    <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
-                  </div>
-                ) : (
-                  <a href={url} target="_blank" rel="noreferrer"
-                    className="block p-2 text-xs text-blue-600 hover:underline">Open PDF: {m.file_name}</a>
-                )}
-              </div>
-            )}
-          </div>
-          )
-        })}
+      <div>
+        <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
+          <Icon name="file" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> Documents
+        </h4>
+        <div className="space-y-2">
+          {r.media.map((m) => {
+            const url = m.signed_url ?? urls[m.id]
+            const open = expanded === m.id
+            return (
+            <div key={m.id}>
+              <button
+                onClick={() => handleExpand(m)}
+                className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-xs text-left transition-colors"
+              >
+                <span className="w-6 h-6 rounded-md grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: '#b45309' }}>
+                  <Icon name="file" className="w-3.5 h-3.5" />
+                </span>
+                <span className="capitalize font-medium" style={{ color: 'var(--card-foreground)' }}>{m.media_type.replace(/_/g, ' ')}</span>
+                <span className="ml-auto font-semibold" style={{ color: 'var(--sti-navy)' }}>{open ? 'Hide' : 'View'}</span>
+              </button>
+              {open && (
+                <div className="mt-1 rounded-lg border ef-border overflow-hidden">
+                  {!url ? (
+                    <div className="p-2 text-xs ef-muted">Loading…</div>
+                  ) : m.mime_type.startsWith('image/') ? (
+                    <div className="relative w-full h-48" style={{ background: 'var(--background)' }}>
+                      <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
+                    </div>
+                  ) : (
+                    <a href={url} target="_blank" rel="noreferrer"
+                      className="block p-2 text-xs text-blue-600 dark:text-blue-400 hover:underline">Open PDF: {m.file_name}</a>
+                  )}
+                </div>
+              )}
+            </div>
+            )
+          })}
+        </div>
       </div>
 
-      {/* History */}
-      <div className="border-t pt-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">History</p>
-        {r.logs.map((l) => (
-          <p key={l.id} className="text-xs text-gray-500">{new Date(l.created_at).toLocaleString()} — {l.action}</p>
-        ))}
+      {/* History — mini timeline with role-colored dots */}
+      <div className="border-t ef-border pt-3">
+        <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
+          <Icon name="history" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> History
+        </h4>
+        <ol className="space-y-2.5">
+          {r.logs.map((l) => (
+            <li key={l.id} className="flex gap-2.5 text-xs">
+              <span className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ background: ROLE_DOT[l.actor_role] ?? '#64748b' }} />
+              <div className="min-w-0">
+                <p style={{ color: 'var(--card-foreground)' }}>{l.action}</p>
+                <p className="ef-muted mt-0.5">{new Date(l.created_at).toLocaleString()}</p>
+              </div>
+            </li>
+          ))}
+          {r.logs.length === 0 && <li className="text-xs ef-muted">No activity yet.</li>}
+        </ol>
       </div>
 
       {/* Actions */}
       {r.status === 'approved_by_teacher' && !rejectMode && (
-        <div className="space-y-3 border-t pt-3">
+        <div className="space-y-3 border-t ef-border pt-3">
           <button onClick={handleAccept} disabled={isPending}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
+            className="w-full py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-            {isPending ? 'Processing…' : isExcused ? 'Mark scheduled' : 'Accept'}
+            {isPending ? 'Processing…' : (<><Icon name="check" className="w-4 h-4" /> {isExcused ? 'Mark scheduled' : 'Accept'}</>)}
           </button>
           {!isExcused && <p className="text-[11px] ef-muted text-center -mt-1">Student uploads the cashier receipt after this.</p>}
           <button onClick={() => setRejectMode('request')}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50">
-            Reject
+            className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
+            <Icon name="x" className="w-4 h-4" /> Reject
           </button>
         </div>
       )}
 
       {r.status === 'receipt_uploaded' && !rejectMode && (
-        <div className="space-y-3 border-t pt-3">
-          <p className="text-xs text-gray-600">Student has uploaded a payment receipt. Please verify it.</p>
+        <div className="space-y-3 border-t ef-border pt-3">
+          <div className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs" style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 30%, transparent)', color: 'var(--card-foreground)' }}>
+            <Icon name="receipt" className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#b45309' }} />
+            Student has uploaded a payment receipt. Please verify it.
+          </div>
           <button onClick={handleConfirmReceipt} disabled={isPending}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
+            className="w-full py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-            {isPending ? 'Confirming…' : 'Confirm Receipt → Mark Scheduled'}
+            {isPending ? 'Confirming…' : (<><Icon name="check" className="w-4 h-4" /> Confirm Receipt → Mark Scheduled</>)}
           </button>
           <button onClick={() => setRejectMode('receipt')}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50">
-            Reject Receipt
+            className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
+            <Icon name="x" className="w-4 h-4" /> Reject Receipt
           </button>
         </div>
       )}
 
       {rejectMode && (
-        <div className="space-y-3 border-t pt-3">
+        <div className="space-y-3 border-t ef-border pt-3">
           <RejectReasonPicker
             presets={rejectMode === 'receipt' ? PH_RECEIPT_REJECT : isExcused ? PH_REJECT_EXCUSED : PH_REJECT_PAID}
             onChange={setReason}
@@ -335,12 +376,12 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
             <button
               onClick={rejectMode === 'receipt' ? handleRejectReceipt : handleRejectRequest}
               disabled={isPending || !reason.trim()}
-              className="flex-1 py-2 rounded-lg font-semibold text-sm bg-red-600 text-white disabled:opacity-50"
+              className="flex-1 py-2 rounded-lg font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
             >
               {isPending ? 'Rejecting…' : 'Confirm Reject'}
             </button>
             <button onClick={() => { setRejectMode(null); setReason('') }}
-              className="px-4 py-2 rounded-lg border text-sm">Cancel</button>
+              className="px-4 py-2 rounded-lg border ef-border text-sm hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import { getSignedUrl } from '@/app/media-actions'
 import RejectReasonPicker from '@/components/RejectReasonPicker'
+import { Icon, type IconName } from '@/components/Icon'
 import { ordinalYear } from '@/lib/ordinal'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -51,6 +52,26 @@ interface Props {
   onDone?: () => void
 }
 
+// Timeline dot color per actor role — a small, consistent splash of color that
+// makes the history readable at a glance (who did what).
+const ROLE_DOT: Record<string, string> = {
+  student: '#3b82f6',
+  registrar: '#a855f7',
+  subject_teacher: '#6366f1',
+  program_head: '#f59e0b',
+  admin: '#64748b',
+}
+
+// Small gold-accented section header used down the left column.
+function SectionLabel({ icon, children }: { icon: IconName; children: React.ReactNode }) {
+  return (
+    <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
+      <Icon name={icon} className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} />
+      {children}
+    </h4>
+  )
+}
+
 export default function RequestReviewPanel({
   requestId,
   studentName,
@@ -79,6 +100,8 @@ export default function RequestReviewPanel({
   const [expanded, setExpanded] = useState<string | null>(null)
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
+
+  const isPaid = examType === 'paid'
 
   // Fetch the document's signed URL only when it's actually opened.
   function handleExpand(m: MediaItem) {
@@ -112,31 +135,43 @@ export default function RequestReviewPanel({
     <div className="grid md:grid-cols-2 gap-6">
       {/* Left: request info */}
       <div className="space-y-4">
-        <div>
-          <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>{studentName}</h3>
-          {studentInfo?.student_number && <p className="text-xs text-gray-400">#{studentInfo.student_number}</p>}
-          {(studentInfo?.course || studentInfo?.year_level) && (
-            <p className="text-sm text-gray-500">
-              {studentInfo?.course}{studentInfo?.course && studentInfo?.year_level ? ' · ' : ''}
-              {studentInfo?.year_level ? ordinalYear(studentInfo.year_level) : ''}
-              {studentInfo?.section ? ` · ${studentInfo.section}` : ''}
-            </p>
-          )}
-          <p className="mt-1 text-sm ef-muted">{subjectCode} — {subjectName}</p>
-          <div className="flex gap-3 mt-2 text-sm">
-            <span className={`px-2 py-0.5 rounded font-semibold text-xs ${examType === 'paid' ? 'bg-yellow-50 text-yellow-700' : 'bg-teal-50 text-teal-700'}`}>
-              {examType === 'paid' ? 'Paid' : 'Excused'}
-            </span>
-            {excusedReason && (
-              <span className="text-gray-600 capitalize">{excusedReason}{otherReason ? ` — ${otherReason}` : ''}</span>
+        {/* Header — subject-code chip + student identity */}
+        <div className="flex items-start gap-3">
+          <span
+            className="w-11 h-11 rounded-xl grid place-items-center font-bold text-sm shrink-0"
+            style={{ background: 'var(--sti-navy)', color: 'var(--sti-gold)' }}
+          >
+            {subjectCode.slice(0, 3).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-bold text-lg leading-tight" style={{ color: 'var(--card-foreground)' }}>{studentName}</h3>
+            {studentInfo?.student_number && <p className="text-xs ef-muted">#{studentInfo.student_number}</p>}
+            {(studentInfo?.course || studentInfo?.year_level) && (
+              <p className="text-sm ef-muted">
+                {studentInfo?.course}{studentInfo?.course && studentInfo?.year_level ? ' · ' : ''}
+                {studentInfo?.year_level ? ordinalYear(studentInfo.year_level) : ''}
+                {studentInfo?.section ? ` · ${studentInfo.section}` : ''}
+              </p>
             )}
+            <p className="mt-1 text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>{subjectCode} — {subjectName}</p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <span className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${isPaid ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300'}`}>
+                {isPaid ? 'Paid' : 'Excused'}
+              </span>
+              {excusedReason && (
+                <span className="text-xs capitalize ef-muted">{excusedReason}{otherReason ? ` — ${otherReason}` : ''}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Form details — what the student filled in */}
+        {/* Form details — what the student filled in (soft gold-tinted panel) */}
         {studentInfo && (
-          <div className="rounded-xl border ef-border p-3.5">
-            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2.5">Form Details</h4>
+          <div
+            className="rounded-xl p-4"
+            style={{ background: 'color-mix(in srgb, var(--sti-gold) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--sti-gold) 30%, transparent)' }}
+          >
+            <SectionLabel icon="list">Form Details</SectionLabel>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
               {[
                 ['Contact No.', studentInfo.contact_number],
@@ -147,7 +182,7 @@ export default function RequestReviewPanel({
                 ['Teacher', teacherName],
               ].map(([label, value]) => (
                 <div key={label as string}>
-                  <dt className="text-[11px] text-gray-400 uppercase tracking-wide">{label}</dt>
+                  <dt className="text-[11px] uppercase tracking-wide ef-muted">{label}</dt>
                   <dd className="font-medium" style={{ color: 'var(--card-foreground)' }}>{value ?? '—'}</dd>
                 </div>
               ))}
@@ -158,30 +193,37 @@ export default function RequestReviewPanel({
         {/* Documents list */}
         {showDocuments && (
         <div>
-          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Documents</h4>
+          <SectionLabel icon="file">Documents</SectionLabel>
           <div className="space-y-2">
             {media.map((m) => {
               const url = m.signed_url ?? urls[m.id]
+              const open = expanded === m.id
               return (
               <div key={m.id}>
                 <button
                   onClick={() => handleExpand(m)}
-                  className="w-full flex items-center gap-2 p-2 rounded border hover:bg-gray-50 text-sm text-left"
+                  className="w-full flex items-center gap-2.5 p-2.5 rounded-lg border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05] text-sm text-left transition-colors"
                 >
-                  <span className="capitalize font-medium">{m.media_type.replace(/_/g, ' ')}</span>
-                  <span className="text-gray-400 text-xs ml-auto">{expanded === m.id ? '▲ hide' : '▼ view'}</span>
+                  <span
+                    className="w-7 h-7 rounded-md grid place-items-center shrink-0"
+                    style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: '#b45309' }}
+                  >
+                    <Icon name="file" className="w-4 h-4" />
+                  </span>
+                  <span className="capitalize font-medium" style={{ color: 'var(--card-foreground)' }}>{m.media_type.replace(/_/g, ' ')}</span>
+                  <span className="text-xs font-semibold ml-auto" style={{ color: 'var(--sti-navy)' }}>{open ? 'Hide' : 'View'}</span>
                 </button>
-                {expanded === m.id && (
-                  <div className="mt-1 rounded overflow-hidden border">
+                {open && (
+                  <div className="mt-1 rounded-lg overflow-hidden border ef-border">
                     {!url ? (
-                      <div className="p-3 text-xs text-gray-400">Loading…</div>
+                      <div className="p-3 text-xs ef-muted">Loading…</div>
                     ) : m.mime_type.startsWith('image/') ? (
-                      <div className="relative w-full h-64 cursor-zoom-in">
+                      <div className="relative w-full h-64 cursor-zoom-in" style={{ background: 'var(--background)' }}>
                         <Image src={url} alt={m.media_type} fill className="object-contain" unoptimized />
                       </div>
                     ) : (
                       <a href={url} target="_blank" rel="noreferrer"
-                        className="block p-3 text-sm text-blue-600 hover:underline">
+                        className="block p-3 text-sm text-blue-600 dark:text-blue-400 hover:underline">
                         Open PDF: {m.file_name}
                       </a>
                     )}
@@ -194,16 +236,20 @@ export default function RequestReviewPanel({
         </div>
         )}
 
-        {/* History */}
+        {/* History — mini timeline with role-colored dots */}
         <div>
-          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">History</h4>
-          <ol className="space-y-1 text-xs">
+          <SectionLabel icon="history">History</SectionLabel>
+          <ol className="space-y-2.5">
             {logs.map((l) => (
-              <li key={l.id} className="text-gray-600">
-                <span className="text-gray-400">{new Date(l.created_at).toLocaleString()} · </span>
-                {l.action}
+              <li key={l.id} className="flex gap-2.5 text-xs">
+                <span className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ background: ROLE_DOT[l.actor_role] ?? '#64748b' }} />
+                <div className="min-w-0">
+                  <p style={{ color: 'var(--card-foreground)' }}>{l.action}</p>
+                  <p className="ef-muted mt-0.5">{new Date(l.created_at).toLocaleString()}</p>
+                </div>
               </li>
             ))}
+            {logs.length === 0 && <li className="text-xs ef-muted">No activity yet.</li>}
           </ol>
         </div>
       </div>
@@ -211,7 +257,7 @@ export default function RequestReviewPanel({
       {/* Right: actions */}
       <div className="space-y-4">
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
             {error} <button className="underline ml-1" onClick={() => setError(null)}>Dismiss</button>
           </div>
         )}
@@ -220,19 +266,19 @@ export default function RequestReviewPanel({
           <button
             onClick={handleVerify}
             disabled={isPending}
-            className="w-full py-3 rounded-lg font-semibold text-sm disabled:opacity-50"
+            className="w-full py-3 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
           >
-            {isPending ? 'Processing…' : verifyLabel}
+            {isPending ? 'Processing…' : (<><Icon name="check" className="w-4 h-4" /> {verifyLabel}</>)}
           </button>
         )}
 
         {onReject && isActionable && !rejectMode && (
           <button
             onClick={() => setRejectMode(true)}
-            className="w-full py-3 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50"
+            className="w-full py-3 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
           >
-            Reject
+            <Icon name="x" className="w-4 h-4" /> Reject
           </button>
         )}
 
@@ -242,37 +288,38 @@ export default function RequestReviewPanel({
               <RejectReasonPicker presets={rejectPresets} onChange={setReason} />
             ) : (
               <>
-                <label className="block text-sm font-medium text-gray-700">Rejection reason *</label>
+                <label className="block text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>Rejection reason *</label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={3}
                   maxLength={1000}
-                  className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
+                  className="w-full border ef-border rounded-lg px-3 py-2 text-sm resize-none bg-transparent focus:outline-none focus:ring-2 focus:ring-red-400"
+                  style={{ color: 'var(--card-foreground)' }}
                   placeholder="Explain why the request is rejected…"
                 />
               </>
             )}
             <div className="flex gap-2">
               <button onClick={handleReject} disabled={isPending || !reason.trim()}
-                className="flex-1 py-2 rounded-lg font-semibold text-sm bg-red-600 text-white disabled:opacity-50">
+                className="flex-1 py-2 rounded-lg font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50">
                 {isPending ? 'Rejecting…' : 'Confirm Reject'}
               </button>
               <button onClick={() => { setRejectMode(false); setReason('') }}
-                className="px-4 py-2 rounded-lg border text-sm">Cancel</button>
+                className="px-4 py-2 rounded-lg border ef-border text-sm hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
             </div>
           </div>
         )}
 
         {status === 'verified_by_registrar' && actionableStatus === 'submitted' && (
-          <div className="rounded-lg bg-purple-50 border border-purple-200 px-4 py-3 text-sm text-purple-700">
-            ✓ Verified — forwarded to Subject Teacher
+          <div className="flex items-center gap-2 rounded-lg bg-purple-50 border border-purple-200 px-4 py-3 text-sm text-purple-700 dark:bg-purple-500/10 dark:border-purple-500/30 dark:text-purple-300">
+            <Icon name="check" className="w-4 h-4 shrink-0" /> Verified — forwarded to Subject Teacher
           </div>
         )}
 
         {status === 'rejected' && (
-          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            ✗ Rejected
+          <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
+            <Icon name="x" className="w-4 h-4 shrink-0" /> Rejected
           </div>
         )}
       </div>
