@@ -222,14 +222,52 @@ interface ResubmitFields {
 // Re-open a rejected request: keep its files, replace only the slots the student
 // re-uploaded, reset it to 'submitted', and clear the rejection.
 async function resubmitRequest(supabase: DB, userId: string, oldId: string, fields: ResubmitFields, f: SubmissionFiles) {
-  const { data: old } = await supabase
-    .from('special_exam_requests')
-    .select('id, status')
-    .eq('id', oldId)
-    .eq('student_id', userId)
-    .maybeSingle()
-  if (!old || old.status !== 'rejected') {
+  // Fetch the rejected request WITH its current values so we can tell whether
+  // the student actually changed anything on this resubmit.
+  const OLD_COLS = 'id, status, subject_id, exam_type, excused_reason, other_reason, snap_name, snap_student_number, snap_course, snap_year_level, snap_section, snap_contact_number'
+  let hasSnapshotCols = true
+  let oldRow: Record<string, unknown> | null = null
+  {
+    const res = await supabase.from('special_exam_requests').select(OLD_COLS).eq('id', oldId).eq('student_id', userId).maybeSingle()
+    if (res.error || !res.data) {
+      // Snapshot columns may not be migrated on older DBs — retry with core fields.
+      hasSnapshotCols = false
+      const res2 = await supabase.from('special_exam_requests').select('id, status, subject_id, exam_type, excused_reason, other_reason').eq('id', oldId).eq('student_id', userId).maybeSingle()
+      oldRow = (res2.data as Record<string, unknown> | null)
+    } else {
+      oldRow = res.data as Record<string, unknown>
+    }
+  }
+  if (!oldRow || oldRow.status !== 'rejected') {
     return redirect('/student/submit?error=' + encodeURIComponent('This request can no longer be resubmitted.'))
+  }
+
+  // A resubmit must actually differ from the rejected request — either a new
+  // document is uploaded OR some field is edited. Re-submitting the exact same
+  // thing is blocked, since the reviewer rejected it for a reason.
+  const norm = (v: unknown) => (v == null ? '' : String(v).trim())
+  const snap = fields.snapshot as {
+    snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null
+    snap_year_level?: number | null; snap_section?: string | null; snap_contact_number?: string | null
+  }
+  const effectiveOther = fields.examType === 'excused' && fields.excusedReason === 'other' ? fields.otherReason : ''
+  const fileChanged = hasUpload(f.parentId) || hasUpload(f.parentIdBack) || hasUpload(f.parentSig) || hasUpload(f.supportDoc)
+  let fieldsChanged =
+    fields.subjectId !== oldRow.subject_id ||
+    fields.examType !== oldRow.exam_type ||
+    norm(fields.excusedReason) !== norm(oldRow.excused_reason) ||
+    norm(effectiveOther) !== norm(oldRow.other_reason)
+  if (hasSnapshotCols) {
+    fieldsChanged = fieldsChanged ||
+      norm(snap.snap_name) !== norm(oldRow.snap_name) ||
+      norm(snap.snap_student_number) !== norm(oldRow.snap_student_number) ||
+      norm(snap.snap_course) !== norm(oldRow.snap_course) ||
+      norm(snap.snap_year_level) !== norm(oldRow.snap_year_level) ||
+      norm(snap.snap_section) !== norm(oldRow.snap_section) ||
+      norm(snap.snap_contact_number) !== norm(oldRow.snap_contact_number)
+  }
+  if (!fileChanged && !fieldsChanged) {
+    return redirect(`/student/submit?from=${oldId}&error=${encodeURIComponent('Nothing changed — edit a detail or re-upload a document before resubmitting.')}`)
   }
 
   const { data: media } = await supabase.from('application_media').select('media_type').eq('request_id', oldId)
