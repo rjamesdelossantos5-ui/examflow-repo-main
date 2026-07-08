@@ -98,7 +98,7 @@ export default function DashboardLayout({ role, userId, userName, email, navItem
       )}
 
       {/* Page content */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-4 pb-6 sm:pb-8">
         {children}
       </main>
     </div>
