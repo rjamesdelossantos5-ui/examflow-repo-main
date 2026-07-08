@@ -5,12 +5,12 @@ import type { RequestStatus } from '@/lib/supabase/types'
 // check); later stages are gray. The final node is only ever "done", never
 // current. 'rejected' never renders this — the card shows a resubmit strip.
 //
-// Paid and excused differ by one node: a paid exam has an extra "Receipt" stage
-// (Program Head accepts → student uploads cashier receipt → Program Head
-// verifies → Scheduled). An excused exam has no payment, so Program Head
-// acceptance schedules it directly.
+// Paid and excused differ at the end: a paid exam adds a payment sub-flow after
+// Program Head acceptance — the student uploads the cashier receipt ("Receipt"),
+// then the Program Head verifies it ("Checking") before it's Scheduled. An
+// excused exam has no payment, so Program Head acceptance schedules it directly.
 const STEPS_EXCUSED = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Scheduled'] as const
-const STEPS_PAID = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Receipt', 'Scheduled'] as const
+const STEPS_PAID = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Receipt', 'Checking', 'Scheduled'] as const
 
 const CURRENT_EXCUSED: Record<RequestStatus, number> = {
   submitted: 1,
@@ -26,8 +26,8 @@ const CURRENT_PAID: Record<RequestStatus, number> = {
   verified_by_registrar: 2,
   approved_by_teacher: 3,
   accepted: 4, // PH accepted → now waiting on the receipt upload
-  receipt_uploaded: 4, // receipt is in, Program Head verifying it
-  scheduled: 6, // all six done
+  receipt_uploaded: 5, // receipt is in → Program Head verifying it
+  scheduled: 7, // all seven done
   rejected: -1,
 }
 
