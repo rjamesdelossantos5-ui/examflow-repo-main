@@ -11,6 +11,17 @@ export interface ViewerMedia {
   signed_url?: string
 }
 
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif)(\?|$)/i
+
+// Decide whether a file is a viewable image. mime_type is the primary signal,
+// but some (mostly mobile) uploads arrive with an empty or wrong type, so we
+// fall back to the file name / URL extension. PDFs stay non-image.
+function isImageMedia(m: ViewerMedia): boolean {
+  if (m.mime_type?.startsWith('image/')) return true
+  if (m.mime_type === 'application/pdf' || /\.pdf(\?|$)/i.test(m.file_name)) return false
+  return IMAGE_EXT.test(m.file_name || '') || IMAGE_EXT.test(m.signed_url || '')
+}
+
 /**
  * Grid of a request's uploaded documents (IDs, signatures, certificates) for
  * reviewers. Images open in a fullscreen lightbox; PDFs/other files fall back
@@ -29,7 +40,7 @@ export default function DocumentViewer({ media }: { media: ViewerMedia[] }) {
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {media.map((m) => {
-          const isImage = m.mime_type.startsWith('image/')
+          const isImage = isImageMedia(m)
           return (
             <div key={m.id} className="rounded-lg overflow-hidden border ef-border">
               <button
