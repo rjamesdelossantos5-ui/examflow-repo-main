@@ -12,6 +12,9 @@ interface Props {
   examEndDay: string | null
   examLocation: string | null
   examBring: string | null
+  /** Fired after the popup is acknowledged, so a following popup (the
+   *  submission-window one) can appear immediately instead of on next refresh. */
+  onClose?: () => void
 }
 
 function fmtDate(iso: string) {
@@ -32,6 +35,7 @@ export default function ScheduleAnnouncementModal(props: Props) {
   function handleOk() {
     setVisible(false)
     ackSchedule(props.signature)
+    props.onClose?.()
   }
 
   return (

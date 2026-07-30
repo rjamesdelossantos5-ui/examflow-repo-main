@@ -6,8 +6,7 @@ import { computeWindow, keepActive, TERM_LABEL, SEMESTER_LABEL } from '@/lib/exa
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
-import SubmissionStatusModal from './SubmissionStatusModal'
-import ScheduleAnnouncementModal from './ScheduleAnnouncementModal'
+import StudentAnnouncements from './StudentAnnouncements'
 import RequestsPanel, { type StudentRequest } from './RequestsPanel'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -92,30 +91,29 @@ export default async function StudentPage() {
 
   return (
     <div className="space-y-6">
-      {/* Only one popup at a time — the schedule announcement is the rarer,
-          more directly actionable one, so it takes priority. */}
-      {showSchedulePopup ? (
-        <ScheduleAnnouncementModal
-          show
-          signature={scheduleSignature!}
-          termLabel={termLabel}
-          examDay={activePeriod!.examDay!}
-          examEndDay={activePeriod?.examEndDay ?? null}
-          examLocation={activePeriod?.examLocation ?? null}
-          examBring={activePeriod?.examBring ?? null}
-        />
-      ) : (
-        <SubmissionStatusModal
-          termLabel={termLabel}
-          open={win.open}
-          notStarted={win.notStarted}
-          daysRemaining={win.daysRemaining}
-          start={win.start}
-          end={win.end}
-          show={showWindowModal}
-          persistSignature={windowSignature}
-        />
-      )}
+      {/* The schedule popup shows first (higher priority); dismissing it reveals
+          the submission-window popup immediately — see StudentAnnouncements. */}
+      <StudentAnnouncements
+        schedule={showSchedulePopup ? {
+          show: true,
+          signature: scheduleSignature!,
+          termLabel,
+          examDay: activePeriod!.examDay!,
+          examEndDay: activePeriod?.examEndDay ?? null,
+          examLocation: activePeriod?.examLocation ?? null,
+          examBring: activePeriod?.examBring ?? null,
+        } : null}
+        window={{
+          show: showWindowModal,
+          termLabel,
+          open: win.open,
+          notStarted: win.notStarted,
+          daysRemaining: win.daysRemaining,
+          start: win.start,
+          end: win.end,
+          persistSignature: windowSignature,
+        }}
+      />
       <SubmissionStatusBanner
         termLabel={termLabel}
         open={win.open}
