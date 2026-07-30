@@ -100,10 +100,25 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const teacherName = courseOfferings.find((o) => o.subjectId === subjectId && o.section === section)?.teacherName ?? null
 
   const formRef = useRef<HTMLFormElement>(null)
+  const [attachError, setAttachError] = useState<string | null>(null)
 
   function openConfirm() {
     if (!submissionOpen) return
-    if (formRef.current?.reportValidity()) setConfirming(true)
+    const form = formRef.current
+    if (!form) return
+    // HTML `required` on <input type="file"> is unreliable on some mobile
+    // browsers (a form could submit with no file), so explicitly verify every
+    // required file field has a file before opening the confirm dialog. The
+    // server re-checks this too, but this gives the student a clear message.
+    const fileInputs = Array.from(form.querySelectorAll<HTMLInputElement>('input[type="file"]'))
+    const missing = fileInputs.find((i) => i.required && (!i.files || i.files.length === 0))
+    if (missing) {
+      setAttachError('Please attach all required documents before submitting.')
+      missing.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setAttachError(null)
+    if (form.reportValidity()) setConfirming(true)
   }
 
   const docLabel = REASONS.find((r) => r.value === reason)?.doc ?? 'Supporting Document'
@@ -321,6 +336,12 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             inputClass={inputClass}
             kept={kept.has('supporting_document')}
           />
+        )}
+
+        {attachError && (
+          <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
+            {attachError}
+          </div>
         )}
 
         {/* Opens the confirmation dialog (does not submit directly) */}

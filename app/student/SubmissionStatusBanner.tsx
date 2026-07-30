@@ -85,7 +85,7 @@ export default function SubmissionStatusBanner(props: Props) {
       >
         <Icon name="clock" className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: '#b45309' }} />
         <p className="text-[11px] font-medium" style={{ color: 'var(--card-foreground)' }}>
-          Get the printed form from the Registrar&apos;s office — submitting here alone does not finish your request.
+          Please get the printed form from the Registrar&apos;s office — submitting here alone does not finish your request.
         </p>
       </div>
 

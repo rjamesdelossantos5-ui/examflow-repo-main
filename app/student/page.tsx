@@ -136,13 +136,26 @@ export default async function StudentPage() {
           </h1>
           <p className="text-sm ef-muted">Here&apos;s an overview of your special exam requests.</p>
         </div>
-        <Link
-          href="/student/submit"
-          className="px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity shrink-0"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-        >
-          + New Request
-        </Link>
+        {win.open ? (
+          <Link
+            href="/student/submit"
+            className="px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity shrink-0"
+            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          >
+            + New Request
+          </Link>
+        ) : (
+          // Submissions are closed — no new requests can be filed, so the button
+          // is shown disabled with a tooltip rather than leading to a dead form.
+          <span
+            aria-disabled="true"
+            title="Submissions are closed"
+            className="px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm shrink-0 opacity-50 cursor-not-allowed select-none"
+            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          >
+            + New Request
+          </span>
+        )}
       </div>
 
       {/* Stat cards + request list — the cards double as status filters */}
