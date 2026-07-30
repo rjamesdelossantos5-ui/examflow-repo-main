@@ -215,11 +215,17 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
     )
   }
 
+  // Today in the PH's local time (yyyy-MM-dd) — the earliest allowed exam date.
+  // A date in the past means the exam has already happened.
+  const todayStr = toLocalInput(new Date().toISOString())
+
   function submit(e: React.FormEvent) {
     e.preventDefault()
     onError(null); setSaved(false); setInfo(null)
     if (!active) { onError('Set and activate a submission window first.'); return }
     if (!examStart) { onError('Set the exam date.'); return }
+    if (examStart < todayStr) { onError('The exam date can’t be in the past.'); return }
+    if (examEnd && examEnd < todayStr) { onError('The last exam day can’t be in the past.'); return }
     if (alreadySet && unchanged()) { setInfo('You haven’t changed anything, so there’s nothing to save.'); return }
     setConfirmOpen(true) // in-app confirmation instead of a browser popup
   }
@@ -271,11 +277,11 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className={label}>Exam date *</label>
-          <input type="date" value={examStart} onChange={(e) => setExamStart(e.target.value)} disabled={!active} className={input} />
+          <input type="date" value={examStart} min={todayStr} onChange={(e) => setExamStart(e.target.value)} disabled={!active} className={input} />
         </div>
         <div>
           <label className={label}>Last day (optional, if multi-day)</label>
-          <input type="date" value={examEnd} onChange={(e) => setExamEnd(e.target.value)} disabled={!active} className={input} />
+          <input type="date" value={examEnd} min={examStart || todayStr} onChange={(e) => setExamEnd(e.target.value)} disabled={!active} className={input} />
         </div>
       </div>
 

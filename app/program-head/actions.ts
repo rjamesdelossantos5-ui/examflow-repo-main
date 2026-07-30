@@ -375,6 +375,12 @@ export async function saveExamSchedule(input: ScheduleInput) {
   if (!input.examStart) return { error: 'Set the exam date.' }
   const start = new Date(input.examStart)
   if (isNaN(start.getTime())) return { error: 'Invalid exam start date.' }
+  // Reject a date that has already passed. The client blocks anything before
+  // today; here we allow a 1-day slack so a legitimate "today" isn't rejected
+  // just because the server (UTC) and the school (UTC+8) disagree on the date.
+  if (start.getTime() < Date.now() - 24 * 60 * 60 * 1000) {
+    return { error: 'The exam date can’t be in the past.' }
+  }
   const end = input.examEnd ? new Date(input.examEnd) : null
   if (end && isNaN(end.getTime())) return { error: 'Invalid exam end date.' }
   if (end && end.getTime() < start.getTime()) return { error: 'Exam end must be on or after the start.' }
