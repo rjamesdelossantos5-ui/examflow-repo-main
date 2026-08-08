@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import { savePeriod, saveExamSchedule } from '../actions'
 import { computeWindow, TERMS, TERM_LABEL, SEMESTERS, SEMESTER_LABEL, type ExamPeriod, type Term, type Semester } from '@/lib/examSettings'
 import Select from '@/components/Select'
@@ -71,6 +72,8 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
   const [saved, setSaved] = useState(false)
   const [info, setInfo] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const closeConfirm = useCallback(() => setConfirmOpen(false), [])
+  useEscapeKey(closeConfirm, confirmOpen)
 
   // The saved period for whichever semester + term is currently selected (not
   // necessarily the active one — the PH can set up a future term here).
@@ -200,6 +203,8 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
   const [saved, setSaved] = useState(false)
   const [info, setInfo] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const closeConfirm = useCallback(() => setConfirmOpen(false), [])
+  useEscapeKey(closeConfirm, confirmOpen)
 
   const alreadySet = !!active?.examDay
 

@@ -64,7 +64,7 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
       >
         <Icon name="bell" className="w-5 h-5 text-white/85" />
         {count > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center ring-2 ring-[var(--header)]">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-3xs font-bold grid place-items-center ring-2 ring-[var(--header)]">
             {count}
           </span>
         )}
@@ -84,7 +84,7 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
                 <p className="font-bold text-sm" style={{ color: 'var(--card-foreground)' }}>Notifications</p>
               </div>
               {count > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+                <span className="px-2 py-0.5 rounded-full text-3xs font-bold bg-red-500 text-white">
                   {count} new
                 </span>
               )}

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 import StatusBadge from '@/components/StatusBadge'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import { overrideAccept, requestOverride } from '../actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -55,6 +56,8 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
   const [requestFor, setRequestFor] = useState<OverviewRow | null>(null)
   const [reasonType, setReasonType] = useState<'absent' | 'on_leave' | 'other'>('absent')
   const [reasonNote, setReasonNote] = useState('')
+  const closeRequestModal = useCallback(() => setRequestFor(null), [])
+  useEscapeKey(closeRequestModal, requestFor !== null)
 
   const counts = rows.reduce<Record<string, number>>((acc, r) => {
     acc[r.status] = (acc[r.status] ?? 0) + 1

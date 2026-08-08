@@ -26,10 +26,10 @@ export default function GlobalError({
               EXAM<span style={{ color: '#FDB913' }}>FLOW</span>
             </div>
             <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1f2937', margin: 0 }}>
-              Something went wrong
+              EXAMFLOW didn&apos;t load
             </h2>
-            <p style={{ fontSize: '0.9375rem', color: '#6b7280', marginTop: 8, marginBottom: 24 }}>
-              The page couldn&apos;t load. This is usually temporary — please try again.
+            <p style={{ fontSize: '0.9375rem', color: '#4b5563', marginTop: 8, marginBottom: 24 }}>
+              The connection dropped while starting the app. Nothing you submitted was lost — please try again.
             </p>
             <button
               type="button"
@@ -39,7 +39,7 @@ export default function GlobalError({
               Try again
             </button>
             {error.digest && (
-              <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 20, marginBottom: 0 }}>
+              <p style={{ fontSize: 12, color: '#6b7280', marginTop: 20, marginBottom: 0 }}>
                 Reference code: {error.digest}
               </p>
             )}

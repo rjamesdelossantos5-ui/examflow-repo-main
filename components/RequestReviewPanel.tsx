@@ -158,7 +158,7 @@ export default function RequestReviewPanel({
                 neither is repeated here. */}
             <h3 className="font-bold text-lg leading-tight" style={{ color: 'var(--card-foreground)' }}>{studentName}</h3>
             <div className="flex flex-wrap items-center gap-2 mt-1.5">
-              <span className={`px-2 py-0.5 rounded-full font-semibold text-[11px] ${isPaid ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300'}`}>
+              <span className={`px-2 py-0.5 rounded-full font-semibold text-2xs ${isPaid ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300'}`}>
                 {isPaid ? 'Paid' : 'Excused'}
               </span>
               {excusedReason && (
@@ -185,7 +185,7 @@ export default function RequestReviewPanel({
                 ['Teacher', teacherName],
               ].map(([label, value]) => (
                 <div key={label as string} className="min-w-0">
-                  <dt className="text-[11px] uppercase tracking-wide ef-muted">{label}</dt>
+                  <dt className="text-2xs uppercase tracking-wide ef-muted">{label}</dt>
                   <dd className="font-medium break-words" style={{ color: 'var(--card-foreground)' }}>{value ?? '—'}</dd>
                 </div>
               ))}

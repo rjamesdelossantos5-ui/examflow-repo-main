@@ -67,7 +67,7 @@ export default function RequestStepper({ status, paid }: { status: RequestStatus
                 {done ? '✓' : i + 1}
               </div>
               <span
-                className="text-[10px] sm:text-[11px] text-center leading-tight"
+                className="text-3xs sm:text-2xs text-center leading-tight"
                 style={{ color: active ? 'var(--card-foreground)' : 'var(--muted)', fontWeight: active ? 600 : 400 }}
               >
                 {label}

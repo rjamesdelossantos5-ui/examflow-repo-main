@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Icon } from '@/components/Icon'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import { dismissModal, ackWindow } from './bannerActions'
 
 interface Props {
@@ -32,10 +33,20 @@ function fmtDate(iso: string | null) {
 // that state.
 export default function SubmissionStatusModal(props: Props) {
   const [visible, setVisible] = useState(props.show)
+
+  // Escape acknowledges the popup exactly like the Okay button does.
+  const handleOkRef = useCallback(() => {
+    setVisible(false)
+    if (props.persistSignature) ackWindow(props.persistSignature)
+    else dismissModal()
+  }, [props.persistSignature])
+  useEscapeKey(handleOkRef, visible)
+
   if (!visible) return null
 
   const { open, notStarted, daysRemaining, termLabel } = props
-  const tone = open ? '#16a34a' : notStarted ? '#f59e0b' : '#dc2626'
+  // Theme-aware, AA-contrast status colors (see --status-* in globals.css).
+  const tone = open ? 'var(--status-success)' : notStarted ? 'var(--status-warning)' : 'var(--status-danger)'
   const base = open ? 'Submission window is open' : notStarted ? 'Submissions open soon' : 'Submissions are closed'
   const title = termLabel ? `${termLabel} — ${base}` : base
   const headline = open
@@ -48,11 +59,7 @@ export default function SubmissionStatusModal(props: Props) {
         ? `Closed ${fmtDate(props.end)}`
         : 'Check back later'
 
-  function handleOk() {
-    setVisible(false)
-    if (props.persistSignature) ackWindow(props.persistSignature)
-    else dismissModal()
-  }
+  const handleOk = handleOkRef
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={handleOk}>

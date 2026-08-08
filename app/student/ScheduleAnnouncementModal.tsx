@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Icon } from '@/components/Icon'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import { ackSchedule } from './bannerActions'
 
 interface Props {
@@ -26,28 +27,32 @@ function fmtDate(iso: string) {
 // dismissed across logins and only reappears if the schedule changes again.
 export default function ScheduleAnnouncementModal(props: Props) {
   const [visible, setVisible] = useState(props.show)
+
+  // Escape acknowledges the announcement exactly like the Okay button does.
+  const { signature, onClose } = props
+  const handleOk = useCallback(() => {
+    setVisible(false)
+    ackSchedule(signature)
+    onClose?.()
+  }, [signature, onClose])
+  useEscapeKey(handleOk, visible)
+
   if (!visible) return null
 
   const examRange = props.examEndDay
     ? `${fmtDate(props.examDay)} → ${fmtDate(props.examEndDay)}`
     : fmtDate(props.examDay)
 
-  function handleOk() {
-    setVisible(false)
-    ackSchedule(props.signature)
-    props.onClose?.()
-  }
-
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={handleOk}>
       <div className="ef-card rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-        <div className="mx-auto mb-3 w-14 h-14 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, #16a34a 16%, transparent)', color: '#16a34a' }}>
+        <div className="mx-auto mb-3 w-14 h-14 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--status-success) 16%, transparent)', color: 'var(--status-success)' }}>
           <Icon name="calendar" className="w-7 h-7" />
         </div>
         <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>
           {props.termLabel ? `${props.termLabel} exam is scheduled` : 'Exam is scheduled'}
         </h3>
-        <p className="text-sm font-semibold mt-1" style={{ color: '#16a34a' }}>{examRange}</p>
+        <p className="text-sm font-semibold mt-1" style={{ color: 'var(--status-success)' }}>{examRange}</p>
         {(props.examLocation || props.examBring) && (
           <div className="mt-3 text-sm text-left rounded-lg border ef-border p-3 space-y-1">
             {props.examLocation && <p><span className="ef-muted">Where: </span><span style={{ color: 'var(--card-foreground)' }}>{props.examLocation}</span></p>}

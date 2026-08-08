@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { logout } from '@/app/login/actions'
 import ThemeToggle from './ThemeToggle'
 import { Icon } from './Icon'
 import { initials } from '@/lib/initials'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import type { UserRole } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -33,6 +34,13 @@ export default function UserMenu({
   const [open, setOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
+  // Escape backs out of the sign-out confirmation, then the dropdown itself.
+  const onEscape = useCallback(() => {
+    if (confirmLogout) setConfirmLogout(false)
+    else setOpen(false)
+  }, [confirmLogout])
+  useEscapeKey(onEscape, open || confirmLogout)
 
   // Close the dropdown on any click outside of it.
   useEffect(() => {
@@ -76,7 +84,7 @@ export default function UserMenu({
             </p>
             {email && <p className="text-xs ef-muted truncate">{email}</p>}
             <span
-              className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+              className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-3xs font-semibold"
               style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
             >
               {ROLE_LABELS[role]}

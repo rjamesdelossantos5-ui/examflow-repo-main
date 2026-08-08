@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
 import { toggleUserActive, deleteUser, createUser, toggleOverride } from './actions'
 import Select from '@/components/Select'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
@@ -29,6 +30,8 @@ export default function UserTable({
   const [showCreate, setShowCreate] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const closeCreate = useCallback(() => setShowCreate(false), [])
+  useEscapeKey(closeCreate, showCreate)
 
   function handleToggle(userId: string, current: boolean) {
     startTransition(async () => {

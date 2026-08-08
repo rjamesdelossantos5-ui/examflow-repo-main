@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import Image from 'next/image'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 
 export interface ViewerMedia {
   id: string
@@ -24,6 +25,8 @@ const isPdf = (m: ViewerMedia) =>
 export default function DocumentViewer({ media }: { media: ViewerMedia[] }) {
   // Holds the signed URL of the image being zoomed; null = lightbox closed.
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const closeLightbox = useCallback(() => setLightbox(null), [])
+  useEscapeKey(closeLightbox, lightbox !== null)
 
   if (media.length === 0) {
     return <p className="text-sm ef-muted">No documents uploaded.</p>
@@ -89,7 +92,7 @@ function DocCard({ m, onZoom }: { m: ViewerMedia; onZoom: (url: string) => void 
             <div className="h-full flex items-center justify-center text-3xl">📄</div>
           )}
           {canPreview && (
-            <span className="absolute bottom-1 right-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded">
+            <span className="absolute bottom-1 right-1 text-3xs bg-black/60 text-white px-1.5 py-0.5 rounded">
               click to zoom
             </span>
           )}
@@ -100,11 +103,11 @@ function DocCard({ m, onZoom }: { m: ViewerMedia; onZoom: (url: string) => void 
           {m.media_type.replace(/_/g, ' ')}
         </p>
         {m.signed_url ? (
-          <a href={m.signed_url} target="_blank" rel="noreferrer" className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline">
+          <a href={m.signed_url} target="_blank" rel="noreferrer" className="text-2xs text-blue-600 dark:text-blue-400 hover:underline">
             Open original
           </a>
         ) : (
-          <span className="text-[11px] ef-muted">unavailable</span>
+          <span className="text-2xs ef-muted">unavailable</span>
         )}
       </div>
     </div>

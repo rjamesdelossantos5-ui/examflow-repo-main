@@ -139,7 +139,7 @@ export default function PHQueue({
                   <div className="min-w-0">
                     <p className="font-semibold truncate flex items-center gap-2" style={{ color: 'var(--card-foreground)' }}>
                       {g.name}
-                      {anyResub && <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
+                      {anyResub && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                     </p>
                     <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_code).join(', ')}</p>
                   </div>
@@ -319,7 +319,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
             {isPending ? 'Processing…' : (<><Icon name="check" className="w-4 h-4" /> {isExcused ? 'Mark scheduled' : 'Accept'}</>)}
           </button>
-          {!isExcused && <p className="text-[11px] ef-muted text-center -mt-1">Student uploads the cashier receipt after this.</p>}
+          {!isExcused && <p className="text-2xs ef-muted text-center -mt-1">Student uploads the cashier receipt after this.</p>}
           <button onClick={() => setRejectMode('request')}
             className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
             <Icon name="x" className="w-4 h-4" /> Reject

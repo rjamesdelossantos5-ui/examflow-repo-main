@@ -64,7 +64,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
           <p className="font-bold text-lg truncate" style={{ color: 'var(--card-foreground)' }}>{profile.full_name}</p>
           <p className="text-sm ef-muted truncate">{profile.email}</p>
           <span
-            className="inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+            className="inline-block mt-1 px-2 py-0.5 rounded-full text-2xs font-semibold"
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
           >
             {ROLE_LABELS[profile.role] ?? profile.role}
@@ -91,7 +91,9 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
         {isStudent && (
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium ef-muted mb-1">Student number</label>
+              <label className="block text-sm font-medium ef-muted mb-1">
+                Student number <span className="font-normal text-2xs">(optional)</span>
+              </label>
               <input name="student_number" defaultValue={profile.student_number ?? ''} className={inputClass} placeholder="e.g. 2024-00001" inputMode="numeric" maxLength={40} pattern="[0-9-]{4,20}" title="Digits only (with optional dashes), e.g. 2024-00001" />
             </div>
             <div>

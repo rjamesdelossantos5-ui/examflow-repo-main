@@ -114,7 +114,7 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
                   <div className="min-w-0">
                     <p className="font-semibold truncate flex items-center gap-2" style={{ color: 'var(--card-foreground)' }}>
                       {g.name}
-                      {anyResub && <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
+                      {anyResub && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                     </p>
                     <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_code).join(', ')}</p>
                   </div>

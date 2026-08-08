@@ -35,7 +35,8 @@ export default function SubmissionStatusBanner(props: Props) {
 
   if (dismissed) return null
 
-  const tone = open ? '#16a34a' : notStarted ? '#f59e0b' : '#dc2626'
+  // Theme-aware, AA-contrast status colors (see --status-* in globals.css).
+  const tone = open ? 'var(--status-success)' : notStarted ? 'var(--status-warning)' : 'var(--status-danger)'
   const statusText = open ? 'Submission window open' : notStarted ? 'Opens soon' : 'Submissions closed'
   const deadline = open
     ? props.end ? `closes ${fmtDate(props.end)}` : null
@@ -84,7 +85,7 @@ export default function SubmissionStatusBanner(props: Props) {
         style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', borderLeft: '3px solid #f59e0b' }}
       >
         <Icon name="clock" className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: '#b45309' }} />
-        <p className="text-[11px] font-medium" style={{ color: 'var(--card-foreground)' }}>
+        <p className="text-2xs font-medium" style={{ color: 'var(--card-foreground)' }}>
           Please get the printed form from the Registrar&apos;s office — submitting here alone does not finish your request.
         </p>
       </div>

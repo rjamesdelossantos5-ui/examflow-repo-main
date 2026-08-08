@@ -26,16 +26,18 @@ export interface StudentRequest {
 }
 
 // Friendly, student-facing status pill (label + tone color) for the card.
+// Tones are theme-aware CSS variables so the pill text keeps AA contrast in
+// both light and dark mode (see --status-* in globals.css).
 function cardStatus(status: RequestStatus): { label: string; tone: string } {
   switch (status) {
-    case 'submitted': return { label: 'Submitted', tone: '#64748b' }
-    case 'verified_by_registrar': return { label: 'In Review', tone: '#3b82f6' }
-    case 'approved_by_teacher': return { label: 'In Review', tone: '#3b82f6' }
-    case 'accepted': return { label: 'Awaiting Receipt', tone: '#f59e0b' }
-    case 'receipt_uploaded': return { label: 'Receipt In Review', tone: '#f59e0b' }
-    case 'scheduled': return { label: 'Scheduled', tone: '#16a34a' }
-    case 'rejected': return { label: 'Rejected', tone: '#dc2626' }
-    default: return { label: status, tone: '#64748b' }
+    case 'submitted': return { label: 'Submitted', tone: 'var(--status-neutral)' }
+    case 'verified_by_registrar': return { label: 'In Review', tone: 'var(--status-info)' }
+    case 'approved_by_teacher': return { label: 'In Review', tone: 'var(--status-info)' }
+    case 'accepted': return { label: 'Awaiting Receipt', tone: 'var(--status-warning)' }
+    case 'receipt_uploaded': return { label: 'Receipt In Review', tone: 'var(--status-warning)' }
+    case 'scheduled': return { label: 'Scheduled', tone: 'var(--status-success)' }
+    case 'rejected': return { label: 'Rejected', tone: 'var(--status-danger)' }
+    default: return { label: status, tone: 'var(--status-neutral)' }
   }
 }
 
@@ -62,12 +64,13 @@ function StatCard({ label, value, accent, icon, active, onClick }: {
       onClick={onClick}
       className={`ef-card rounded-xl shadow-sm p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0 text-left w-full transition-all hover:shadow-md ${active ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
     >
-      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: accent + '22' }}>
+      {/* color-mix (not hex + '22') because `accent` is now a CSS variable */}
+      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${accent} 16%, transparent)` }}>
         <Icon name={icon} className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: accent }} />
       </div>
       <div className="min-w-0">
         <p className="text-lg sm:text-2xl font-bold leading-none" style={{ color: 'var(--card-foreground)' }}>{value}</p>
-        <p className="text-[11px] sm:text-xs ef-muted mt-1 truncate">{label}</p>
+        <p className="text-2xs sm:text-xs ef-muted mt-1 truncate">{label}</p>
       </div>
     </button>
   )
@@ -102,10 +105,10 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
     <>
       {/* Stat cards — also act as status filters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total Requests" value={counts.total} accent="#64748b" icon="layers" active={filter === 'all'} onClick={() => setFilter('all')} />
-        <StatCard label="In Progress" value={counts.inProgress} accent="#3b82f6" icon="clock" active={filter === 'inProgress'} onClick={() => toggle('inProgress')} />
-        <StatCard label="Scheduled" value={counts.scheduled} accent="#16a34a" icon="calendar" active={filter === 'scheduled'} onClick={() => toggle('scheduled')} />
-        <StatCard label="Rejected" value={counts.rejected} accent="#dc2626" icon="x-circle" active={filter === 'rejected'} onClick={() => toggle('rejected')} />
+        <StatCard label="Total Requests" value={counts.total} accent="var(--status-neutral)" icon="layers" active={filter === 'all'} onClick={() => setFilter('all')} />
+        <StatCard label="In Progress" value={counts.inProgress} accent="var(--status-info)" icon="clock" active={filter === 'inProgress'} onClick={() => toggle('inProgress')} />
+        <StatCard label="Scheduled" value={counts.scheduled} accent="var(--status-success)" icon="calendar" active={filter === 'scheduled'} onClick={() => toggle('scheduled')} />
+        <StatCard label="Rejected" value={counts.rejected} accent="var(--status-danger)" icon="x-circle" active={filter === 'rejected'} onClick={() => toggle('rejected')} />
       </div>
 
       {/* Request list */}
@@ -172,12 +175,12 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                   {/* Header: code, subject, type + filed time, status pill */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider ef-muted">{r.subject_code ?? '—'}</p>
+                      <p className="text-2xs font-semibold uppercase tracking-wider ef-muted">{r.subject_code ?? '—'}</p>
                       <h3 className="text-lg font-bold leading-snug truncate" style={{ color: 'var(--card-foreground)' }}>
                         {r.subject_name ?? 'Unknown subject'}
                       </h3>
                       <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${isPaid ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300'}`}>
+                        <span className={`px-2 py-0.5 rounded text-2xs font-semibold ${isPaid ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300'}`}>
                           {isPaid ? 'Paid exam' : 'Excused'}
                         </span>
                         <span className="text-xs ef-muted">Filed {timeAgo(r.submitted_at)}</span>
@@ -210,7 +213,7 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                       </p>
                       <Link
                         href={`/student/requests/${r.id}`}
-                        className="shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                        className="ef-press shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                         style={{ background: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                       >
                         <Icon name="upload" className="w-4 h-4" /> Upload receipt
@@ -226,7 +229,7 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                       </p>
                       <Link
                         href={`/student/submit?from=${r.id}`}
-                        className="shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                        className="ef-press shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                         style={{ background: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                       >
                         <Icon name="pencil" className="w-4 h-4" /> Edit &amp; Resubmit

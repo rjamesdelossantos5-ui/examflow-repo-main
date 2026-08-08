@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import { deleteRequest } from './actions'
 
 export default function DeleteRequestButton({ requestId, label = 'Withdraw this request' }: { requestId: string; label?: string }) {
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const closeConfirm = useCallback(() => setConfirming(false), [])
+  useEscapeKey(closeConfirm, confirming)
 
   function handleDelete() {
     startTransition(async () => {

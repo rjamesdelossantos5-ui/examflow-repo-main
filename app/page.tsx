@@ -87,7 +87,7 @@ export default function LandingPage() {
                 ].map(([label, done]) => (
                   <div key={label as string} className="flex items-center gap-3">
                     <span
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-2xs font-bold shrink-0"
                       style={done ? { background: GOLD, color: NAVY } : { background: '#eef1f5', color: '#94a3b8' }}
                     >
                       {done ? '✓' : '•'}

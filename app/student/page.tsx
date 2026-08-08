@@ -137,7 +137,7 @@ export default async function StudentPage() {
         {win.open ? (
           <Link
             href="/student/submit"
-            className="px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity shrink-0"
+            className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity shrink-0"
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
           >
             + New Request

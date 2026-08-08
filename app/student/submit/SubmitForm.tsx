@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import { submitRequest } from './actions'
 import SubmitButton from '@/components/SubmitButton'
 import { Icon } from '@/components/Icon'
@@ -101,6 +102,8 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
   const formRef = useRef<HTMLFormElement>(null)
   const [attachError, setAttachError] = useState<string | null>(null)
+  const closeConfirm = useCallback(() => setConfirming(false), [])
+  useEscapeKey(closeConfirm, confirming)
 
   function openConfirm() {
     if (!submissionOpen) return
@@ -189,7 +192,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 >
                   <input type="radio" name="excused_reason" value={r.value} required checked={reason === r.value} onChange={() => setReason(r.value)} className="sr-only" />
                   <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>{r.label}</div>
-                  <div className="text-[10px] ef-muted leading-tight mt-0.5">{r.desc}</div>
+                  <div className="text-3xs ef-muted leading-tight mt-0.5">{r.desc}</div>
                 </label>
               ))}
             </div>
@@ -239,7 +242,11 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               />
             </div>
             <div>
-              <label className="block text-sm font-medium ef-muted mb-1">Student number</label>
+              {/* Explicitly marked optional — with every other field carrying a
+                  required "*", an unmarked field is ambiguous. */}
+              <label className="block text-sm font-medium ef-muted mb-1">
+                Student number <span className="font-normal text-2xs">(optional)</span>
+              </label>
               <input
                 name="student_number"
                 defaultValue={eff.student_number}
@@ -282,6 +289,9 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
         {/* Subject → Section → Teacher (dynamic from the class offerings, scoped to the chosen course) */}
         <div className="space-y-4">
+          {/* Header so this block reads as its own group — it previously sat
+              unlabeled between "Your Information" and the documents section. */}
+          <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Exam Details</h2>
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
             <Select

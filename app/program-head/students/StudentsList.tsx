@@ -190,7 +190,7 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
                           <p className="text-sm font-medium truncate" style={{ color: 'var(--card-foreground)' }}>{r.subject_name}</p>
                           <p className="text-xs ef-muted truncate">{r.subject_code}{r.teacher_name ? ` · ${r.teacher_name}` : ''}</p>
                         </div>
-                        <span className="text-[11px] capitalize ef-muted shrink-0">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</span>
+                        <span className="text-2xs capitalize ef-muted shrink-0">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</span>
                         <StatusBadge status={r.status} />
                         <button
                           onClick={() => handleDelete(r.id)}

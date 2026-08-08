@@ -14,8 +14,10 @@ import { Icon } from '@/components/Icon'
  * light and dark mode.
  */
 export default function ErrorState({
-  title = 'Something went wrong',
-  message = 'This is usually temporary. Please try again in a moment.',
+  // Defaults stay specific about what the user can do and what wasn't lost —
+  // a bare "Something went wrong" leaves them unsure whether their data saved.
+  title = "This page didn't load",
+  message = 'The connection dropped while loading. Nothing you submitted was lost — please try again.',
   digest,
   onRetry,
   homeHref,
@@ -61,7 +63,7 @@ export default function ErrorState({
       </div>
 
       {/* Support handle: lets a user quote an id that matches the server logs. */}
-      {digest && <p className="mt-5 text-[11px] ef-muted">Reference code: {digest}</p>}
+      {digest && <p className="mt-5 text-2xs ef-muted">Reference code: {digest}</p>}
     </div>
   )
 }

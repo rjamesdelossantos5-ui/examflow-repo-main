@@ -86,7 +86,7 @@ export default function DashboardLayout({ role, userId, userName, email, navItem
                   {item.icon && <Icon name={item.icon} className="w-4 h-4" />}
                   {item.label}
                   {item.badge ? (
-                    <span className="ml-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center">
+                    <span className="ml-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-3xs font-bold grid place-items-center">
                       {item.badge}
                     </span>
                   ) : null}
