@@ -2,17 +2,19 @@ import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/currentUser'
 
-// Current user's role + department (deduped per request).
+// Current user's role + department (deduped per request). `can_override` rides
+// along so the Program Head Overview can reuse this single cached row instead
+// of issuing its own second profiles query on every load.
 export const getMyProfileMeta = cache(async () => {
   const user = await getCurrentUser()
   if (!user) return null
   const supabase = await createClient()
   const { data } = await supabase
     .from('profiles')
-    .select('role, department_id, full_name, email')
+    .select('role, department_id, full_name, email, can_override')
     .eq('id', user.id)
     .single()
-  return (data as { role: string; department_id: string | null; full_name: string; email: string } | null) ?? null
+  return (data as { role: string; department_id: string | null; full_name: string; email: string; can_override: boolean | null } | null) ?? null
 })
 
 // Subject ids the current Program Head is responsible for (their department).

@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/currentUser'
+import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import { NAV_BY_ROLE } from '@/lib/nav'
 import { getNotifications } from '@/lib/notifications'
@@ -7,15 +9,12 @@ import type { UserRole } from '@/lib/supabase/types'
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached helpers so the layout and the page it wraps share one auth lookup
+  // and one profiles read, instead of each issuing their own.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, full_name, email')
-    .eq('id', user.id)
-    .single()
-
+  const profile = await getMyProfileMeta()
   if (!profile) redirect('/login')
 
   const role = profile.role as UserRole

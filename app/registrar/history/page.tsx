@@ -3,13 +3,15 @@ import { redirect } from 'next/navigation'
 import ReviewHistoryTable, { type HistoryRow } from '@/components/ReviewHistoryTable'
 import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
+import { getCurrentUser } from '@/lib/currentUser'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Registrar History' }
 
 export default async function RegistrarHistoryPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached — reuses the layout's auth lookup instead of a second round-trip.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const [{ data }, activeId] = await Promise.all([

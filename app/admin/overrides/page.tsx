@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/currentUser'
 import OverrideList, { type OverrideRow } from './OverrideList'
 
 export const metadata = { title: 'EXAMFLOW — Override Requests' }
 
 export default async function AdminOverridesPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached — reuses the layout's auth lookup instead of a second round-trip.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const { data } = await supabase

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import SubmitForm from './SubmitForm'
 import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
+import { getCurrentUser } from '@/lib/currentUser'
 
 export const metadata = { title: 'EXAMFLOW — Submit Request' }
 
@@ -14,7 +15,8 @@ export default async function SubmitPage({
   const { error, from } = await searchParams
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached — reuses the layout's auth lookup instead of a second round-trip.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   // Resubmitting a rejected request: pre-fill from its snapshot so the student

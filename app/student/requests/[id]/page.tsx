@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { attachSignedUrls } from '@/lib/supabase/getSignedUrls'
+import { getCurrentUser } from '@/lib/currentUser'
 import StatusBadge from '@/components/StatusBadge'
 import DocumentViewer from '@/components/DocumentViewer'
 import ReceiptUpload from './ReceiptUpload'
@@ -41,7 +42,8 @@ export default async function RequestDetailPage({
   const { submitted } = await searchParams
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached — reuses the layout's auth lookup instead of a second round-trip.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const { data: req } = await supabase

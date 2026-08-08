@@ -4,19 +4,23 @@ import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
 import { keepMyDepartment } from '@/lib/deptFilter'
 import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
+import { getCurrentUser } from '@/lib/currentUser'
+import { getMyProfileMeta } from '@/lib/myProfile'
 import OverviewClient, { type OverviewRow } from './OverviewClient'
 
 export const metadata = { title: 'EXAMFLOW — Overview' }
 
 export default async function OverviewPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached helpers — the layout already resolved both, so these reuse its
+  // results instead of re-hitting the auth server / profiles table.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   // Drop forms whose exam date has already passed before listing (see helper).
   await purgeExpiredExams(supabase)
 
-  const { data: me } = await supabase.from('profiles').select('role, can_override, department_id').eq('id', user.id).single()
+  const me = await getMyProfileMeta()
   const canOverride = me?.role === 'admin' || !!me?.can_override
 
   const { data } = await supabase

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
 import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
+import { getCurrentUser } from '@/lib/currentUser'
 import StudentsList from './StudentsList'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -10,7 +11,8 @@ export const metadata = { title: 'EXAMFLOW — Accepted Students' }
 
 export default async function StudentsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached — reuses the layout's auth lookup instead of a second round-trip.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   // Drop forms whose exam date has already passed before listing (see helper).

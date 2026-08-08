@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { getCurrentUser } from '@/lib/currentUser'
 import ProfileForm from './ProfileForm'
 import { ROLE_HOME } from '@/lib/nav'
 import type { Profile, UserRole } from '@/lib/supabase/types'
@@ -9,9 +10,12 @@ export const metadata = { title: 'EXAMFLOW — My Account' }
 
 export default async function AccountPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached — reuses the layout's auth lookup instead of a second round-trip.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
+  // Full row (all columns + department) — the narrow cached getMyProfileMeta
+  // doesn't cover what the edit form needs, so this query stays.
   const { data: profile } = await supabase
     .from('profiles')
     .select('*, departments(name)')

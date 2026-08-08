@@ -4,6 +4,7 @@ import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import { keepMyDepartment } from '@/lib/deptFilter'
+import { getCurrentUser } from '@/lib/currentUser'
 import PHQueue from '../PHQueue'
 
 export const metadata = { title: 'EXAMFLOW — Second Approval (Receipts)' }
@@ -13,7 +14,8 @@ export const metadata = { title: 'EXAMFLOW — Second Approval (Receipts)' }
 // marks the request Scheduled, which is what puts it on the live Accepted list.
 export default async function ProgramHeadReceiptsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Cached — reuses the layout's auth lookup instead of a second round-trip.
+  const user = await getCurrentUser()
   if (!user) redirect('/login')
 
   const { data: raw } = await supabase
