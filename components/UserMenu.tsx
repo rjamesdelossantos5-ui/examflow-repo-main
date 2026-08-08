@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { logout } from '@/app/login/actions'
 import ThemeToggle from './ThemeToggle'
 import { Icon } from './Icon'
-import { initials } from '@/lib/initials'
+import { initials, displayName } from '@/lib/initials'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import type { UserRole } from '@/lib/supabase/types'
 
@@ -34,6 +34,8 @@ export default function UserMenu({
   const [open, setOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  // Tidy an all-lowercase / all-caps name so the header matches the greeting.
+  const shownName = displayName(userName)
 
   // Escape backs out of the sign-out confirmation, then the dropdown itself.
   const onEscape = useCallback(() => {
@@ -65,7 +67,7 @@ export default function UserMenu({
           {initials(userName)}
         </span>
         <span className="hidden sm:flex flex-col items-start leading-tight max-w-[12rem]">
-          <span className="text-white text-sm font-medium truncate max-w-[12rem]">{userName}</span>
+          <span className="text-white text-sm font-medium truncate max-w-[12rem]">{shownName}</span>
           <span className="text-white/55 text-xs truncate max-w-[12rem]">{ROLE_LABELS[role]}</span>
         </span>
         <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,7 +82,7 @@ export default function UserMenu({
         >
           <div className="px-4 py-3 border-b ef-border">
             <p className="font-semibold text-sm truncate" style={{ color: 'var(--card-foreground)' }}>
-              {userName}
+              {shownName}
             </p>
             {email && <p className="text-xs ef-muted truncate">{email}</p>}
             <span

@@ -202,13 +202,16 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                     </div>
                   )}
 
-                  {/* Fast receipt action — full upload form is on the detail page */}
+                  {/* Fast receipt action — full upload form is on the detail page.
+                      Text and button sit next to each other rather than pinned to
+                      opposite edges: on a full-width card, `flex-1` on the text
+                      left a large empty gap between them. */}
                   {needsReceipt && (
                     <div
-                      className="relative z-10 mt-4 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3"
-                      style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 35%, transparent)' }}
+                      className="relative z-10 mt-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 rounded-xl px-4 py-3"
+                      style={{ background: 'color-mix(in srgb, var(--status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--status-warning) 35%, transparent)' }}
                     >
-                      <p className="text-sm flex-1" style={{ color: 'var(--card-foreground)' }}>
+                      <p className="text-sm" style={{ color: 'var(--card-foreground)' }}>
                         <strong>Payment accepted.</strong> <span className="ef-muted">Upload your cashier receipt to get scheduled.</span>
                       </p>
                       <Link
@@ -223,8 +226,8 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
 
                   {/* Fast resubmit action when rejected */}
                   {isRejected && (
-                    <div className="relative z-10 mt-4 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-red-50 border border-red-200 dark:bg-red-500/10 dark:border-red-500/30">
-                      <p className="text-sm flex-1 text-red-700 dark:text-red-300">
+                    <div className="relative z-10 mt-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 rounded-xl px-4 py-3 bg-red-50 border border-red-200 dark:bg-red-500/10 dark:border-red-500/30">
+                      <p className="text-sm text-red-700 dark:text-red-300">
                         <strong>Rejected.</strong> {r.rejection_reason ? r.rejection_reason : 'Fix the issue and resubmit — your details are kept.'}
                       </p>
                       <Link
