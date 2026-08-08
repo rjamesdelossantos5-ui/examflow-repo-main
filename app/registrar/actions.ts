@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 async function requireRegistrar() {
   const supabase = await createClient()
@@ -29,7 +30,7 @@ export async function verifyRequest(requestId: string) {
     .eq('status', 'submitted')
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('verifyRequest', error, `We couldn't verify this request. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'This request was already handled by someone else.' }
 
   await supabase.from('progress_logs').insert({
@@ -61,7 +62,7 @@ export async function verifyAll(requestIds: string[]) {
     .eq('status', 'submitted')
     .select('id')
 
-  if (error) return { error: error.message, count: 0 }
+  if (error) return { error: friendlyError('verifyAll', error, `We couldn't verify these requests. ${RETRY_HINT}`), count: 0 }
   const verified = updated ?? []
   if (!verified.length) return { error: 'These requests were already handled.', count: 0 }
 
@@ -92,7 +93,7 @@ export async function rejectRequest(requestId: string, reason: string) {
     .eq('id', requestId)
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('rejectRequest', error, `We couldn't save this rejection. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'Request not found or no longer editable.' }
 
   await supabase.from('progress_logs').insert({

@@ -216,6 +216,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               name="full_name"
               required
               readOnly
+              autoComplete="name"
               value={eff.full_name}
               className={`${inputClass} cursor-not-allowed opacity-70`}
             />
@@ -231,6 +232,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 className={inputClass}
                 placeholder="09XX XXX XXXX"
                 inputMode="tel"
+                autoComplete="tel"
                 maxLength={40}
                 pattern="[0-9+ ()-]{10,15}"
                 title="Enter a valid contact number — digits only, e.g. 09171234567"

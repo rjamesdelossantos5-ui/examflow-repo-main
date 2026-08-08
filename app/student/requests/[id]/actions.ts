@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_BYTES = 5 * 1024 * 1024
@@ -42,7 +43,7 @@ export async function deleteRequest(requestId: string) {
     .eq('id', requestId)
     .eq('student_id', user.id)
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('deleteRequest', error, `We couldn't remove this request. ${RETRY_HINT}`) }
 
   revalidatePath('/student')
   redirect('/student')
@@ -79,7 +80,7 @@ export async function uploadReceipt(requestId: string, formData: FormData) {
     .from('exam-documents')
     .upload(path, file, { contentType: file.type, upsert: true })
 
-  if (uploadErr) return { error: uploadErr.message }
+  if (uploadErr) return { error: friendlyError('uploadReceipt', uploadErr, `We couldn't upload your receipt. Check your connection and try again.`) }
 
   // Re-uploads (after a rejected receipt) reuse the same storage path, but the
   // media row must be replaced — otherwise duplicate 'payment_receipt' rows pile

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 // Admin CRUD for departments. Deleting a department does NOT delete its
 // subjects/teachers — their department_id becomes null (FK is on delete set
@@ -30,7 +31,7 @@ export async function createDepartment(formData: FormData) {
   if (!name) return { error: 'Name is required' }
 
   const { error } = await supabase.from('departments').insert({ name })
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('createDepartment', error, `We couldn't create that department. It may already exist. ${RETRY_HINT}`) }
 
   revalidatePath('/admin/departments')
   return { error: null }
@@ -44,7 +45,7 @@ export async function updateDepartment(id: string, formData: FormData) {
   if (!name) return { error: 'Name is required' }
 
   const { error } = await supabase.from('departments').update({ name }).eq('id', id)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('updateDepartment', error, `We couldn't rename that department. ${RETRY_HINT}`) }
 
   revalidatePath('/admin/departments')
   return { error: null }
@@ -55,7 +56,7 @@ export async function deleteDepartment(id: string) {
   if (!supabase) return { error: 'Unauthorized' }
 
   const { error } = await supabase.from('departments').delete().eq('id', id)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('deleteDepartment', error, `We couldn't delete that department. ${RETRY_HINT}`) }
 
   revalidatePath('/admin/departments')
   return { error: null }

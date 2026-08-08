@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 // Admin decisions on Program-Head override requests (a PH asking to
 // fast-track a request stuck earlier in the pipeline).
@@ -32,7 +33,7 @@ async function decide(id: string, status: 'approved' | 'denied') {
     .eq('status', 'pending')
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('decideOverride', error, `We couldn't save that decision. ${RETRY_HINT}`) }
   if (!data?.length) return { error: 'This request was already handled.' }
 
   revalidatePath('/admin/overrides')

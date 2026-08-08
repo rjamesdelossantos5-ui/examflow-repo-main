@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { isValidEmail, isValidName, isValidStudentNumber, isValidCode } from '@/lib/validation'
+import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import type { UserRole } from '@/lib/supabase/types'
 
 const ALLOWED_ROLES: UserRole[] = ['admin', 'registrar', 'subject_teacher', 'program_head', 'student']
@@ -50,7 +51,12 @@ export async function createUser(formData: FormData) {
   })
 
   if (authError || !authData.user) {
-    return { error: authError?.message ?? 'Failed to create user' }
+    // Supabase Auth messages here are written for humans ("a user with this
+    // email is already registered", "password too short") and the admin needs
+    // that detail to fix the form — unlike Postgres errors, they expose no
+    // schema. So we surface it, but still log the full error for debugging.
+    console.error('[createUser.auth]', authError)
+    return { error: authError?.message ?? `We couldn't create this account. ${RETRY_HINT}` }
   }
 
   // Upsert profile with extra fields
@@ -67,7 +73,7 @@ export async function createUser(formData: FormData) {
     is_active: true,
   })
 
-  if (profileError) return { error: profileError.message }
+  if (profileError) return { error: friendlyError('createUser.profile', profileError, `The account was created but we couldn't save its profile details. ${RETRY_HINT}`) }
 
   revalidatePath('/admin/users')
   return { error: null }
@@ -87,7 +93,7 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
     .update({ is_active: isActive })
     .eq('id', userId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('toggleUserActive', error, `We couldn't update this account's status. ${RETRY_HINT}`) }
   revalidatePath('/admin/users')
   return { error: null }
 }
@@ -106,7 +112,7 @@ export async function toggleOverride(userId: string, canOverride: boolean) {
     .update({ can_override: canOverride })
     .eq('id', userId)
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('toggleOverride', error, `We couldn't update override permission. ${RETRY_HINT}`) }
   revalidatePath('/admin/users')
   return { error: null }
 }
@@ -121,7 +127,7 @@ export async function deleteUser(userId: string) {
   if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
 
   const { error } = await supabase.auth.admin.deleteUser(userId)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('deleteUser', error, `We couldn't delete this account. ${RETRY_HINT}`) }
 
   revalidatePath('/admin/users')
   return { error: null }

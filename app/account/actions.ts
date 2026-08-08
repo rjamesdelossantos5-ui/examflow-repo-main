@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { isValidName, isValidStudentNumber, isValidCode } from '@/lib/validation'
+import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 function clean(v: FormDataEntryValue | null, max = 120) {
   return String(v ?? '').trim().slice(0, max)
@@ -45,7 +46,7 @@ export async function updateProfile(formData: FormData) {
     })
     .eq('id', user.id)
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('updateProfile', error, `We couldn't save your changes. ${RETRY_HINT}`) }
 
   revalidatePath('/account')
   revalidatePath('/', 'layout')

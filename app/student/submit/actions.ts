@@ -47,7 +47,13 @@ async function uploadFile(supabase: DB, file: File, requestId: string, mediaType
   const ext = (file.name.split('.').pop() ?? 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin'
   const path = `requests/${requestId}/${mediaType}.${ext}`
   const { error } = await supabase.storage.from('exam-documents').upload(path, file, { contentType: file.type, upsert: true })
-  return { path, error: error?.message ?? null }
+  // Storage errors are shown to the student, so keep them plain — the real one
+  // goes to the server log for debugging.
+  if (error) {
+    console.error(`[uploadFile:${mediaType}]`, error)
+    return { path, error: 'the upload did not complete. Check your connection and try again.' }
+  }
+  return { path, error: null }
 }
 
 export async function submitRequest(formData: FormData) {

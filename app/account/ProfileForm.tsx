@@ -79,7 +79,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
 
         <div>
           <label className="block text-sm font-medium ef-muted mb-1">Full name *</label>
-          <input name="full_name" required defaultValue={profile.full_name} className={inputClass} />
+          <input name="full_name" required autoComplete="name" defaultValue={profile.full_name} className={inputClass} />
         </div>
 
         <div>

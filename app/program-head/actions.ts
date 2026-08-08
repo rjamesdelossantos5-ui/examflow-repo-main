@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getActivePeriod } from '@/lib/examSettings'
+import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 async function requirePH() {
   const supabase = await createClient()
@@ -46,7 +47,7 @@ export async function overrideAccept(requestId: string, scheduleStr: string) {
     .in('status', ['submitted', 'verified_by_registrar', 'approved_by_teacher'])
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('overrideAccept', error, `We couldn't accept this request. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'This request can no longer be overridden (already accepted, scheduled, or rejected).' }
 
   await supabase.from('progress_logs').insert({
@@ -86,7 +87,7 @@ export async function requestOverride(requestId: string, reasonType: string, rea
   const { error } = await supabase
     .from('override_requests')
     .insert({ request_id: requestId, requested_by: userId, reason_type: reasonType, reason_note: note })
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('requestOverride', error, `We couldn't send your override request. ${RETRY_HINT}`) }
 
   revalidatePath('/program-head/overview')
   return { error: null }
@@ -117,7 +118,7 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
     .eq('status', 'approved_by_teacher')
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('acceptRequest', error, `We couldn't accept this request. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'This request was already handled by someone else.' }
 
   await supabase.from('progress_logs').insert({
@@ -193,7 +194,7 @@ export async function rejectPHRequest(requestId: string, reason: string) {
     .eq('id', requestId)
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('rejectPHRequest', error, `We couldn't save this rejection. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'Request not found or no longer editable.' }
 
   await supabase.from('progress_logs').insert({
@@ -219,7 +220,7 @@ export async function confirmReceipt(requestId: string) {
     .eq('status', 'receipt_uploaded')
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('confirmReceipt', error, `We couldn't confirm this receipt. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'No receipt is awaiting confirmation for this request.' }
 
   await supabase.from('progress_logs').insert({
@@ -250,7 +251,7 @@ export async function rejectReceipt(requestId: string, reason: string) {
     .eq('status', 'receipt_uploaded')
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('rejectReceipt', error, `We couldn't save this receipt rejection. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'No receipt is awaiting review for this request.' }
 
   await supabase.from('progress_logs').insert({
@@ -286,7 +287,7 @@ export async function deleteFinishedRequest(requestId: string) {
     .in('status', ['accepted', 'scheduled'])
     .select('id')
 
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('deleteFinishedRequest', error, `We couldn't delete this record. ${RETRY_HINT}`) }
   if (!deleted?.length) return { error: 'Only accepted or scheduled records can be deleted.' }
 
   revalidatePath('/program-head/students')
@@ -343,7 +344,7 @@ export async function savePeriod(input: PeriodInput) {
       .select('id')
       .single())
   }
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('savePeriod', error, `We couldn't save the submission window. ${RETRY_HINT}`) }
 
   // Exactly one active period.
   await supabase.from('exam_periods').update({ is_active: false }).neq('id', saved!.id)
@@ -400,7 +401,7 @@ export async function saveExamSchedule(input: ScheduleInput) {
     // migration is applied, but the PH isn't blocked from setting the date.
     ;({ error } = await supabase.from('exam_periods').update(base).eq('id', active.id))
   }
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('saveExamSchedule', error, `We couldn't save the exam schedule. ${RETRY_HINT}`) }
 
   revalidatePath('/program-head/settings')
   revalidatePath('/student')
@@ -413,7 +414,7 @@ export async function setActivePeriod(id: string) {
   const { supabase } = ctx
 
   const { error } = await supabase.from('exam_periods').update({ is_active: true }).eq('id', id)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('setActivePeriod', error, `We couldn't switch the active term. ${RETRY_HINT}`) }
   await supabase.from('exam_periods').update({ is_active: false }).neq('id', id)
 
   revalidatePath('/program-head/settings')
@@ -442,7 +443,7 @@ export async function deletePeriod(id: string) {
   if (count) return { error: `Can't delete — ${count} request${count === 1 ? '' : 's'} ${count === 1 ? 'is' : 'are'} already tied to this term.` }
 
   const { error } = await supabase.from('exam_periods').delete().eq('id', id)
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyError('deletePeriod', error, `We couldn't delete this term. ${RETRY_HINT}`) }
 
   revalidatePath('/program-head/settings')
   return { error: null }
