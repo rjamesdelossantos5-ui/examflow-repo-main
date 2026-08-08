@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { computeWindow, keepActive, TERM_LABEL, SEMESTER_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
+import { getMyProfileMeta } from '@/lib/myProfile'
 import { displayName } from '@/lib/initials'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
 import StudentAnnouncements from './StudentAnnouncements'
@@ -18,11 +19,10 @@ export default async function StudentPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, schedule_ack, window_ack')
-    .eq('id', user.id)
-    .single()
+  // Cached — the layout already resolved this, so it costs no round-trip here.
+  // It also used to be awaited on its own line, which blocked the queries below
+  // from even starting until it came back.
+  const profile = await getMyProfileMeta()
 
   const [{ data: requests }, activePeriod] = await Promise.all([
     supabase
