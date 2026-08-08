@@ -1,105 +1,67 @@
 @AGENTS.md
 
-="space-y-3">
-      <div class="grid grid-cols-3 gap-4">
-        <div class="h-2 bg-slate-200 col-span-2"></div>
-        <div class="h-2 bg-slate-200 col-span-1"></div>
-      </div>
-    </div>
-  </div>
-</div>
-Part 5: Humanized Error Messages
-Core Principle: Errors happen, but they shouldn't alienate the user. Messages must be clear, polite, jargon-free, and actionable.
-Anti-Pattern (Bad): Displaying raw database logs or cold codes like: Error 500: Database connection pool exhausted.
-Claude Code Instruction:
-"Write error messages that follow a 3-step formula:
+You must act as a conversion-focused, accessibility-first frontend engineer [7, 8, 201]. Every time you build, refactor, or edit any user interface, layout, form, button, or loading state, you must strictly adhere to the following 9 categories of UI/UX rules extracted from the project design manuals [5, 81, 129, 218].
 
-Say what happened in plain, friendly English.
-Explain why it happened (if useful).
-Provide a clear button/link to fix it (e.g., 'Try Again' or 'Contact Support')."
-Good UI Code Example:
-<div class="p-6 border border-red-200 bg-red-50 rounded-lg text-center">
-  <h3 class="text-red-800 font-semibold">We couldn't save your changes</h3>
-  <p class="text-red-600 text-sm mt-1">Your internet connection seems a bit unstable. Let's try saving that again.</p>
-  <button class="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Retry Saving</button>
-</div>
-Part 6: Form Friction Reduction
-Core Principle: Forms are high-friction hurdles. Reduce cognitive load by keeping them single-column, logically grouped, and clean.
-Anti-Pattern (Bad): Crowded, multi-column forms with optional fields scattered everywhere and confusing labels.
-Claude Code Instruction:
-"When generating forms:
-
-Group inputs logically using clear section headers.
-Place labels directly above inputs (never inside them as placeholders).
-Highlight optional fields explicitly instead of marking mandatory ones with a confusing red asterisk (*).
-Support auto-fill tags (autocomplete) and natural tab indexing."
-Part 7: Inline Error Placement
-Core Principle: Error messages must live exactly where the correction needs to take place.
-Anti-Pattern (Bad): A list of 5 errors compiled at the very top of a long form, forcing the user to scroll down and guess which input failed.
-Claude Code Instruction:
-"Do not display form errors in a global list at the top. Instead, map error states inline directly under the invalid input field, highlight the border in red, and focus the first invalid field automatically on submit fail."
-
-Good UI Code Example:
-<div class="flex flex-col gap-1">
-  <label for="email" class="text-sm font-medium text-gray-700">Email Address</label>
-  <input id="email" type="email" class="border-red-500 focus:ring-red-500 rounded-md p-2 border" />
-  <span class="text-xs text-red-600">Please enter a valid email address containing '@'.</span>
-</div>
-Part 8: Interactive Empty States
-Core Principle: Empty screens are prime onboarding real estate, not dead ends. Make them warm, helpful, and highly actionable.
-Anti-Pattern (Bad): Showing a blank layout with a tiny, depressing text string like "No entries found today."
-Claude Code Instruction:
-"Every empty state (such as empty search results, empty dashboards, or empty carts) must feature:
-
-A friendly illustration or icon.
-A clear headline explaining why the screen is empty.
-An explanatory line showing how to get started.
-A prominent Call-to-Action (CTA) button (e.g., 'Create Your First Entry' or 'Start Shopping') to guide the next step."
-Good UI Code Example:
-<div class="flex flex-col items-center text-center p-8 border border-dashed rounded-lg bg-gray-50">
-  <svg class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">...</svg>
-  <h3 class="mt-4 text-lg font-semibold text-gray-900">No projects yet</h3>
-  <p class="mt-1 text-sm text-gray-500">Create your first project to start tracking your team's progress easily.</p>
-  <button class="mt-6 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">+ Create Project</button>
-</div>
-Part 9: Graceful Degradation & Partial States
-Core Principle: A single broken API endpoint should never bring down your entire interface. Isolate failures so the rest of your app remains usable.
-Anti-Pattern (Bad): A failed API call causes a React application to throw an unhandled boundary error, rendering a blank white screen.
-Claude Code Instruction:
-"Implement robust React Error Boundaries or try/catch blocks on individual dashboard components. If a component fails to load, replace only that card/section with a localized fallback card containing a retry button, allowing the user to interact with other fully-functional components."
-
-Part 10: Complete Button States
-Core Principle: A button is an active conversation. If a user clicks it, they need immediate, unequivocal feedback that their click was registered.
-Anti-Pattern (Bad): Clicking a 'Submit' button with no hover reaction, active state, or loading spinner, leading to frustrated double-clicking (and duplicate database entries).
-Claude Code Instruction:
-"Ensure all interactive button elements support 5 distinct visual states:
-
-Default: Clear visual priority.
-Hover: Slight elevation or color change on pointer hover.
-Active/Pressed: Slight scale down or inset shadow on click.
-Disabled: Grayed out and unclickable.
-Loading: Replaces the button text with a spinner or 'Processing...' message, and disables pointer events to prevent duplicate submissions."
-Part 11: Delighted Success States
-Core Principle: Completing an important user action is a celebratory milestone. Reassure the user that everything went smoothly.
-Anti-Pattern (Bad): Submitting a payment or completing a long onboarding sequence only to have the app silently redirect to the homepage without warning.
-Claude Code Instruction:
-"On major task success (e.g., checkout, account creation, form submission):
-
-Show a prominent, clear Success State screen or modal.
-Use clear visual indicators (e.g., a green checkmark) and friendly confirmation copy.
-Optionally, trigger a light confetti animation or smooth celebratory transition to leave a delightful lasting impression."
-Part 12 & 13: Jakob's Law (Familiar Design Standards)
-Core Principle: Users spend 99% of their time on other sites. They expect your site to work just like the ones they already know.
-Anti-Pattern (Bad): Inventing custom navigation structures, proprietary iconography, or unrecognizable interactive flows just to be 'unique'.
-Claude Code Instruction:
-"Prioritize standard, predictable web layout conventions over hyper-experimental UIs. Navbars must live at the top or left; search should be easy to find with magnifying glass iconography; shopping carts must occupy the top right. Align your layout structure to standard patterns to minimize cognitive friction."
-
-Part 14: Hick's Law (Keep It Simple)
-Core Principle: The time it takes to make a decision increases with the number and complexity of choices. Minimizing options maximizes conversions.
-Anti-Pattern (Bad): Flooding a landing page with 15 different links, multiple parallel navigation paths, and 5 different primary CTAs competing for attention.
-Claude Code Instruction:
-"Reduce decision fatigue. Simplify options by:
-
-Keeping to a single Primary CTA per view.
-Hiding advanced options behind a progressive disclosure layout (e.g., an 'Advanced Settings' expander).
-Restricting primary navigation menus to 5-7 key items."
+1. Responsive Grid Systems & Viewports [66, 147]
+Mobile-First Approach: Always build layouts for the smallest screens (e.g., single-column layouts, touch-friendly structures, condensed content) and scale up to multi-column layouts for desktops [68, 183, 191, 192].
+Responsive Units: Never hardcode layouts with absolute pixel values [189]. Use responsive CSS units:
+Percentages (%) for fluid column widths [190].
+Fractional units (fr) in CSS Grid to distribute space dynamically [190].
+Relative em/rem units (em, rem) for typography, margins, and padding to maintain scalability [190].
+CSS Grid vs. Flexbox: Use CSS Grid for major page skeletons, repeating card modules, or dashboard layouts [185, 186]. Use Flexbox inside components (e.g., navbars, button groups, icon-text pairings) for precise alignment [186].
+Grid Consistency: Always align content precisely to grid lines to eliminate visual noise [182]. Use a standard grid framework (such as a responsive 12-column grid system) with equal spacing (gutters) between sections [173, 179, 180, 181].
+Grid Adaptability: Use CSS Grid features like auto-placement (e.g., grid-template-columns: repeat(auto-fit, minmax(300px, 1fr))) to handle dynamic content gracefully without breaking the layout [193, 194].
+2. White Space & Proximity [44, 113, 146]
+Micro vs. Macro Spacing: Implement both levels of negative space:
+Micro Spacing: Precise space around text lines, paragraphs, and letter kerning to increase legibility [230, 233]. On mobile, constrict margins and use more frequent paragraph breaks to make text easy to digest [237].
+Macro Spacing: Large blocks of negative space between content sections, images, and visual cards to let the page breathe [233].
+Whitespace as a Design Element: Do not treat whitespace as dead space [118]. Use ample spacing to group related content together and separate unrelated items (following the Gestalt principle of proximity) without adding heavy borders or horizontal lines [44, 50, 113].
+Drawing Focus: Surround primary actions, checkout elements, and key sections with additional whitespace to draw the eyes directly to them [50, 235, 236].
+3. Typography & Scannability [37, 86, 110]
+Predictable Type Scale: Establish a clear size relationship between type levels [111]. Maintain a strict, consistent scale ratio (e.g., 1.25 to 1.5) between heading sizes (h1, h2, h3, body) to create a natural hierarchy [111].
+Body Text Readability:
+Use highly readable, standard sans-serif fonts for body text; keep stylized or decorative fonts strictly for large titles [51, 52, 87].
+Set the optimal line length between 50 to 75 characters per line [170]. Lines that are too wide or narrow degrade readability [40].
+Provide sufficient line height (e.g., line-height: 1.5 for body text) to prevent users from squinting [39].
+Focus Points: Break up monotonous blocks of text by bolding critical lines, emphasizing specific keywords (using bolding, italics, or distinct styling), and highlighting quotes to support skim-reading [46].
+Header Separation: Provide clear, ample vertical spacing above and below headers to establish grouping [43, 55].
+4. Navigation Architecture [205]
+Fewer Choices, Clearer Labels: Minimize options in your primary navigation menu to reduce decision fatigue (Hick's Law) [118, 118, 206]. Group services logically into sub-menus instead of displaying numerous top-level items [73, 207].
+Mobile-to-Desktop Pattern Shifts:
+Apps: On mobile, use a persistent bottom tab bar with 3 to 5 icons easily reachable with a thumb [156]. On desktop, transition this bar into a left-side vertical sidebar with both icons and descriptive text labels [156, 157].
+Websites: On mobile, use a hidden hamburger menu to save space [158]. On desktop, unpack those menu items into a fully visible top horizontal navigation bar [158, 159]. Never keep navigation hidden behind a hamburger icon on desktop ("out of sight, out of mind") [160, 161].
+Orientation Cues: Help users understand their position within a multi-page site by providing clear headers, current page highlights, or breadcrumbs [142].
+5. Conversion-Focused CTAs [201, 203]
+Outcome-Based Microcopy: Never use generic labels like "Submit" or "Click Here" [74, 76, 205]. Replace button text with an action-oriented promise of value (e.g., "Get a Free Quote", "Book a 15-Min Call", "See Pricing") [76, 205].
+Visual Prominence: Ensure the primary CTA has the highest color contrast on the page [76, 112]. Use size and weight to make it stand out immediately, especially above the fold [111, 204].
+CTA Proximity & Spacing: Position CTAs near decision-making copy (like pricing tables, forms, or specific testimonials) and surround them with clean space so they are prominent and easily tappable [76, 208, 236].
+One Primary Path: Use one distinct, filled visual style for primary actions [100, 210]. Secondary options (such as "Go Back" or "Cancel") must be styled with a visually quieter outlined or ghost button style to prevent competing for attention [100, 203, 210].
+6. Form Experience & Layouts [212]
+Clearly Associated Labels: Place descriptive labels adjacent to their respective form fields (ideally positioned above or to the left of inputs for left-to-right languages) [143]. Never rely solely on placeholder text inside inputs as a label replacement [213].
+Low Friction Fields: Keep forms as short as possible [213, 214]. Only ask for necessary data and eliminate optional fields that cause friction [8, 213].
+Proximity: Position label copy close to the input container to visually reinforce their relationship [143].
+Desktop vs. Mobile Forms: Structure forms vertically for mobile so they are easy to navigate on narrow viewports, with large touch targets and comfortable spacing between input containers [214].
+7. Interactive Feedback & UI States [113, 210]
+Define Four Button States: Every interactive button must have unique, visible styles for each state:
+Default State: High-contrast, matching the type scale and button hierarchy [100].
+Hover State: A clear, subtle transition (e.g., slight color shift) on mouse-over [139].
+Active/Pressed State: Visual confirmation that the click registered [100, 139].
+Disabled State: Faded opacity or greyed-out visual layout when fields are incomplete [100].
+Async Loading States: For any asynchronous user action (e.g., form submission, checkout), show immediate visual feedback that processing is occurring [114]. Implement skeleton screens for page-level loads, or inline loading spinners inside buttons to show progress and prevent duplicate clicks [114].
+Specific, Inline Error Feedback:
+Never display a generic error message like "Something went wrong" [115].
+Clearly state what failed and how the user can resolve the issue (e.g., "Please include a valid country code in your phone number") [115, 213].
+Place error messages inline—adjacent to the specific field that failed—using prominent text colors, background tints, or warning icons [144, 145].
+Clear Success Confirmations: Provide instant visual validation (such as a toast notification, inline success text, or a dedicated page) when a user action completes successfully [116].
+8. Web Accessibility Standards (WCAG AA Compliance) [7, 95]
+Sufficient Color Contrast: Ensure all text, icons, and button backgrounds have a color contrast ratio that meets Web Content Accessibility Guidelines (WCAG) AA minimum requirements [79, 97, 135].
+Color Redundancy: Never rely solely on color to convey information [137]. Always couple color cues with an icon, descriptive text label, symbol (e.g., using an asterisk * for required fields), or number [137].
+Full Keyboard Operability: Ensure every interactive button, menu, input, or link is accessible and fully operable using only keyboard navigation [97, 140].
+Visible Focus States: Provide a prominent, moving keyboard focus outline (such as a high-contrast border) as a user tabs through the website [140].
+Media Alternatives: Include descriptive alt text for informative images [93, 96]. Avoid auto-playing multimedia, and always provide accessible controls to pause, stop, or hide running animations, carousels, or sliders [150].
+9. Performance & Loading Speed [16, 94]
+Speed is a Feature: Keep load times low to prevent user bounce rates [17, 94]. Prioritize critical path loading by rendering structural elements and top-of-the-page content first [95].
+Code and Asset Optimization:
+Compress and optimize all images and media assets to reduce file sizes without degrading quality [17, 70, 93, 95].
+Minify and optimize CSS, HTML, and JavaScript code to ensure fast browser rendering [17, 70, 95].
+Layout Stability: Prevent unexpected layout shifts (Cumulative Layout Shift) by reserving precise spacing or size placeholders for heavy assets before they load [216].
