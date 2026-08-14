@@ -20,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!profile || profile.role !== 'admin') redirect('/login')
   const nav = [
+    { label: 'Analytics', href: '/admin/analytics', icon: 'chart' as const },
     { label: 'Users', href: '/admin/users', icon: 'users' as const },
     { label: 'Subjects', href: '/admin/subjects', icon: 'book' as const },
     { label: 'Departments', href: '/admin/departments', icon: 'building' as const },
