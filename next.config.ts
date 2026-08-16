@@ -32,10 +32,8 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Don't leak full URLs to other origins
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // Lock down powerful browser features the app doesn't use. `camera=(self)`
-  // (not `camera=()`) — an empty allowlist blocks our OWN origin too, which
-  // makes getUserMedia fail outright for the parent ID / selfie capture.
-  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(), interest-cohort=()" },
+  // Lock down powerful browser features the app doesn't use
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
   // Force HTTPS for a year (only honored over HTTPS, e.g. Vercel)
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
   // Isolate cross-origin window references
