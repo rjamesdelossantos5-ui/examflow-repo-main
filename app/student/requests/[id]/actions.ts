@@ -46,6 +46,11 @@ export async function deleteRequest(requestId: string) {
   if (error) return { error: friendlyError('deleteRequest', error, `We couldn't remove this request. ${RETRY_HINT}`) }
 
   revalidatePath('/student')
+  // Also drop the detail route from the client router cache. Without this, the
+  // browser Back button re-served the deleted request from cache as if it still
+  // existed; on refetch it hit notFound() instead. Now Back refetches and lands
+  // on the friendly "no longer available" page (see not-found.tsx here).
+  revalidatePath('/student/requests/[id]', 'page')
   redirect('/student')
 }
 
