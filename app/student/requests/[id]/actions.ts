@@ -82,23 +82,21 @@ export async function uploadReceipt(requestId: string, formData: FormData) {
 
   if (uploadErr) return { error: friendlyError('uploadReceipt', uploadErr, `We couldn't upload your receipt. Check your connection and try again.`) }
 
-  // Re-uploads (after a rejected receipt) reuse the same storage path, but the
-  // media row must be replaced — otherwise duplicate 'payment_receipt' rows pile
-  // up. Clear any prior receipt row before recording the new one.
-  await supabase
-    .from('application_media')
-    .delete()
-    .eq('request_id', requestId)
-    .eq('media_type', 'payment_receipt')
-
-  await supabase.from('application_media').insert({
+  // Re-uploads (after a rejected receipt) reuse the same storage path, and the
+  // media row must be REPLACED — otherwise duplicate 'payment_receipt' rows pile
+  // up. This was a delete-then-insert, which silently duplicated: there was no
+  // RLS delete policy on application_media, so the delete removed nothing.
+  // Upserting on the (request_id, media_type) unique index can't duplicate at
+  // all — see supabase/migration_media_dedupe.sql.
+  await supabase.from('application_media').upsert({
     request_id: requestId,
     media_type: 'payment_receipt',
     storage_path: path,
     file_name: file.name,
     mime_type: file.type,
     size_bytes: file.size,
-  })
+    uploaded_at: new Date().toISOString(),
+  }, { onConflict: 'request_id,media_type' })
 
   // Clear any prior receipt-rejection note now that a fresh receipt is in.
   await supabase.from('special_exam_requests').update({ status: 'receipt_uploaded', rejection_reason: null }).eq('id', requestId)

@@ -232,7 +232,9 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
   const mediaTypes = ['parent_id', 'parent_id_back', 'parent_signature', ...(examType === 'excused' && f.supportDoc ? ['supporting_document'] : [])]
   const filesArr = [f.parentId!, f.parentIdBack!, f.parentSig!, ...(examType === 'excused' && f.supportDoc ? [f.supportDoc] : [])]
 
-  await supabase.from('application_media').insert(
+  // Upsert (not insert) so a retried submission can't leave two rows in the same
+  // document slot — same guard as the resubmit path below.
+  await supabase.from('application_media').upsert(
     uploaded.map((u, i) => ({
       request_id: req.id,
       media_type: mediaTypes[i],
@@ -240,7 +242,8 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
       file_name: filesArr[i].name,
       mime_type: filesArr[i].type,
       size_bytes: filesArr[i].size,
-    }))
+    })),
+    { onConflict: 'request_id,media_type' }
   )
 
   await supabase.from('progress_logs').insert({
@@ -262,12 +265,46 @@ interface ResubmitFields {
   periodId: string
 }
 
+// Where a resubmitted request re-enters the pipeline.
+//
+// The pipeline is: submitted → (registrar) verified_by_registrar → (teacher)
+// approved_by_teacher → (program head) accepted/scheduled. A resubmit used to
+// always restart at 'submitted', which sent it back through the registrar and
+// the teacher even when the Program Head was the one who rejected it — three
+// reviews to fix one blurry photo.
+//
+// So it now returns to whoever rejected it: the reviewers who already approved
+// it don't re-review the same thing. The exception is when the student changes
+// WHAT they are asking for — a different subject, exam type, or section. Those
+// earlier approvals were for a different request (and a new section means a new
+// teacher entirely), so they no longer mean anything and it starts over.
+const STAGE_AFTER_REJECTER: Record<string, 'submitted' | 'verified_by_registrar' | 'approved_by_teacher'> = {
+  registrar: 'submitted',                  // back to the registrar
+  subject_teacher: 'verified_by_registrar', // back to the teacher
+  program_head: 'approved_by_teacher',      // back to the program head
+}
+
+function resumeStatus(
+  oldRow: Record<string, unknown>,
+  fields: ResubmitFields,
+  newSection: string | null,
+  hasSnapshotCols: boolean,
+): 'submitted' | 'verified_by_registrar' | 'approved_by_teacher' {
+  const sectionChanged = hasSnapshotCols
+    && String(newSection ?? '').trim() !== String(oldRow.snap_section ?? '').trim()
+  if (fields.subjectId !== oldRow.subject_id || fields.examType !== oldRow.exam_type || sectionChanged) {
+    return 'submitted'
+  }
+  return STAGE_AFTER_REJECTER[String(oldRow.rejected_by_role ?? '')] ?? 'submitted'
+}
+
 // Re-open a rejected request: keep its files, replace only the slots the student
-// re-uploaded, reset it to 'submitted', and clear the rejection.
+// re-uploaded, put it back in front of the reviewer who rejected it, and clear
+// the rejection.
 async function resubmitRequest(supabase: DB, userId: string, oldId: string, fields: ResubmitFields, f: SubmissionFiles) {
   // Fetch the rejected request WITH its current values so we can tell whether
   // the student actually changed anything on this resubmit.
-  const OLD_COLS = 'id, status, subject_id, exam_type, excused_reason, other_reason, snap_name, snap_student_number, snap_course, snap_year_level, snap_section, snap_contact_number'
+  const OLD_COLS = 'id, status, subject_id, exam_type, excused_reason, other_reason, rejected_by_role, snap_name, snap_student_number, snap_course, snap_year_level, snap_section, snap_contact_number'
   let hasSnapshotCols = true
   let oldRow: Record<string, unknown> | null = null
   {
@@ -275,7 +312,7 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     if (res.error || !res.data) {
       // Snapshot columns may not be migrated on older DBs — retry with core fields.
       hasSnapshotCols = false
-      const res2 = await supabase.from('special_exam_requests').select('id, status, subject_id, exam_type, excused_reason, other_reason').eq('id', oldId).eq('student_id', userId).maybeSingle()
+      const res2 = await supabase.from('special_exam_requests').select('id, status, subject_id, exam_type, excused_reason, other_reason, rejected_by_role').eq('id', oldId).eq('student_id', userId).maybeSingle()
       oldRow = (res2.data as Record<string, unknown> | null)
     } else {
       oldRow = res.data as Record<string, unknown>
@@ -338,7 +375,7 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     exam_type: fields.examType as 'paid' | 'excused',
     excused_reason: fields.excusedReason,
     other_reason: fields.examType === 'excused' && fields.excusedReason === 'other' ? fields.otherReason : null,
-    status: 'submitted' as const,
+    status: resumeStatus(oldRow, fields, snap.snap_section ?? null, hasSnapshotCols),
     rejection_reason: null,
     rejected_by_role: null,
     period_id: fields.periodId,
@@ -363,15 +400,20 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     if (!hasUpload(s.file)) continue
     const up = await uploadFile(supabase, s.file!, oldId, s.type)
     if (up.error) return redirect(`/student/submit?from=${oldId}&error=${encodeURIComponent('File upload failed: ' + up.error)}`)
-    await supabase.from('application_media').delete().eq('request_id', oldId).eq('media_type', s.type)
-    await supabase.from('application_media').insert({
+    // Upsert on (request_id, media_type) so a re-uploaded slot REPLACES the old
+    // row instead of adding a second one. This used to be delete-then-insert,
+    // which silently duplicated: application_media had no RLS delete policy, so
+    // the delete removed nothing and the insert piled on another copy. The
+    // unique index that backs this onConflict is in migration_media_dedupe.sql.
+    await supabase.from('application_media').upsert({
       request_id: oldId,
       media_type: s.type,
       storage_path: up.path,
       file_name: s.file!.name,
       mime_type: s.file!.type,
       size_bytes: s.file!.size,
-    })
+      uploaded_at: new Date().toISOString(),
+    }, { onConflict: 'request_id,media_type' })
   }
 
   await supabase.from('progress_logs').insert({
