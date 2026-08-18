@@ -1,3 +1,3 @@
 @AGENTS.md
 
-all of your
+all information should be correct and factual dont answer based on intuition.
