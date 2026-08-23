@@ -167,8 +167,8 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
 
       {/* In-app confirmation (replaces the browser confirm dialog) */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmOpen(false)}>
-          <div className="ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmOpen(false)}>
+          <div className="ef-dialog ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>
               {alreadySet ? 'Change the submission window?' : 'Set the submission window?'}
             </h3>
@@ -311,8 +311,8 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
 
       {/* In-app confirmation (replaces the browser confirm dialog) */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmOpen(false)}>
-          <div className="ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmOpen(false)}>
+          <div className="ef-dialog ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>
               {alreadySet ? 'Change the exam schedule?' : 'Set the exam schedule?'}
             </h3>

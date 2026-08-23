@@ -59,7 +59,7 @@ export default async function StudentHistoryPage() {
               <Link
                 key={r.id}
                 href={`/student/requests/${r.id}`}
-                className="ef-card group flex items-center gap-4 rounded-xl shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+                className="ef-card group flex items-center gap-4 rounded-xl shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,translate] duration-200 ease-[var(--ease-out)]"
               >
                 <div
                   className="w-11 h-11 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"

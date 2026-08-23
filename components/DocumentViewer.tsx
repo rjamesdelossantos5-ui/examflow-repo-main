@@ -43,7 +43,7 @@ export default function DocumentViewer({ media }: { media: ViewerMedia[] }) {
       {/* Lightbox — click the dark area or the ✕ to close */}
       {lightbox && (
         <div
-          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+          className="ef-overlay fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
           onClick={() => setLightbox(null)}
         >
           <button
@@ -53,7 +53,7 @@ export default function DocumentViewer({ media }: { media: ViewerMedia[] }) {
           >
             ✕
           </button>
-          <div className="relative w-full max-w-3xl h-[80vh]" onClick={(e) => e.stopPropagation()}>
+          <div className="ef-dialog relative w-full max-w-3xl h-[80vh]" onClick={(e) => e.stopPropagation()}>
             <Image src={lightbox} alt="Document preview" fill className="object-contain" unoptimized />
           </div>
         </div>

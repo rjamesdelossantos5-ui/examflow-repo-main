@@ -105,7 +105,7 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         <button
           onClick={() => setFilter('all')}
-          className={`ef-card rounded-xl shadow-sm p-3 text-left transition-all hover:shadow-md ${filter === 'all' ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
+          className={`ef-card rounded-xl shadow-sm p-3 text-left transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${filter === 'all' ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
         >
           <p className="text-2xl font-bold" style={{ color: 'var(--card-foreground)' }}>{rows.length}</p>
           <p className="text-xs ef-muted mt-0.5">All Requests</p>
@@ -114,7 +114,7 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
           <button
             key={s.status}
             onClick={() => setFilter(s.status)}
-            className={`ef-card rounded-xl shadow-sm p-3 text-left transition-all hover:shadow-md ${filter === s.status ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
+            className={`ef-card rounded-xl shadow-sm p-3 text-left transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${filter === s.status ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
           >
             <p className="text-2xl font-bold" style={{ color: 'var(--card-foreground)' }}>{counts[s.status] ?? 0}</p>
             <p className="text-xs ef-muted mt-0.5">{s.label}</p>
@@ -202,8 +202,8 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
 
       {/* Reason modal — request admin override */}
       {requestFor && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setRequestFor(null)}>
-          <div className="ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setRequestFor(null)}>
+          <div className="ef-dialog ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Request admin approval</h3>
             <p className="text-sm ef-muted mt-0.5 mb-4">
               For <strong style={{ color: 'var(--card-foreground)' }}>{requestFor.name}</strong> — {requestFor.subject_code}

@@ -26,7 +26,7 @@ export default function LandingPage() {
           </nav>
           <a
             href="#login"
-            className="px-5 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow transition-all"
+            className="px-5 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow transition-shadow duration-200 ease-[var(--ease-out)]"
             style={{ background: GOLD, color: NAVY }}
           >
             Log In
@@ -149,7 +149,7 @@ export default function LandingPage() {
               { icon: 'receipt', title: 'Receipts & schedule', body: 'For paid exams, upload your payment receipt and get your final exam schedule once approved.' },
               { icon: 'bell', title: 'Always know the status', body: 'See approvals, rejections, and the reason for each — no more chasing people for updates.' },
             ].map((f) => (
-              <div key={f.title} className="rounded-2xl border border-slate-200/80 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all" style={{ background: WHITE }}>
+              <div key={f.title} className="rounded-2xl border border-slate-200/80 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-[box-shadow,translate] duration-200 ease-[var(--ease-out)]" style={{ background: WHITE }}>
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,47,108,0.06)' }}>
                   <Icon name={f.icon as IconName} className="w-6 h-6" style={{ color: NAVY }} />
                 </div>

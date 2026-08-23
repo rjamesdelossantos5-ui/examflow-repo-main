@@ -163,7 +163,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             {(['paid', 'excused'] as const).map((t) => (
               <label
                 key={t}
-                className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                className={`cursor-pointer rounded-xl border-2 p-4 transition-colors duration-200 ease-[var(--ease-out)] ${
                   examType === t ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
                 }`}
               >
@@ -186,7 +186,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               {REASONS.map((r) => (
                 <label
                   key={r.value}
-                  className={`cursor-pointer rounded-xl border-2 p-3 text-center transition-all ${
+                  className={`cursor-pointer rounded-xl border-2 p-3 text-center transition-colors duration-200 ease-[var(--ease-out)] ${
                     reason === r.value ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
                   }`}
                 >
@@ -369,8 +369,8 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
         {/* Confirmation dialog — the real submit lives here */}
         {confirming && (
-          <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirming(false)}>
-            <div className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirming(false)}>
+            <div className="ef-dialog ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
               <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 18%, transparent)' }}>
                 <Icon name="file" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
               </div>

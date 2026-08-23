@@ -30,6 +30,14 @@
   --status-warning: #b45309;
   --status-danger: #b91c1c;
   --status-neutral: #4b5563;
+
+  /* Easing. The built-in CSS keywords are deliberately weak — `ease-out`
+     barely decelerates, so short UI transitions read as linear. These are
+     stronger variants: motion starts fast (the moment the user is watching)
+     and settles gently, which makes a 200ms transition feel faster than the
+     same 200ms on the default curve. Pure timing — zero runtime cost. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
 .dark {
@@ -143,23 +151,70 @@ button:focus-visible,
 .ef-muted { color: var(--muted); }
 .ef-border { border-color: var(--border); }
 
-/* Modern 3D progress stepper node */
-.ef-step-node {
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.15),
-    0 4px 12px rgba(0, 0, 0, 0.12),
-    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+/* ── Dialog entrance ───────────────────────────────────────────
+   Modals used to appear with no transition at all — one frame absent, the
+   next frame fully present. That reads as a glitch rather than as something
+   opening, and it gives the eye no cue about where to look.
+
+   `@starting-style` supplies the pre-open values, so this needs no JS mount
+   flag and no library. Browsers without it (older than Chrome 117 / Safari
+   17.5) simply skip the animation and show the dialog instantly — exactly
+   today's behaviour, so this is safe to ship as progressive enhancement.
+
+   Only opacity and transform animate. Both are composited on the GPU, so
+   this costs no layout or paint work even on a low-end phone. */
+.ef-overlay {
+  opacity: 1;
+  transition: opacity 180ms var(--ease-out);
 }
-.ef-step-done {
-  background: linear-gradient(145deg, #ffd451 0%, var(--sti-gold) 55%, #e0a200 100%);
-  color: var(--sti-navy);
+@starting-style {
+  .ef-overlay { opacity: 0; }
 }
-.ef-step-active {
-  animation: ef-pulse 1.8s ease-in-out infinite;
+
+.ef-dialog {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
 }
-@keyframes ef-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(253, 185, 19, 0.55), 0 4px 12px rgba(0,0,0,0.12); }
-  50%      { box-shadow: 0 0 0 8px rgba(253, 185, 19, 0), 0 4px 12px rgba(0,0,0,0.12); }
+@starting-style {
+  /* 0.96, never 0 — nothing in the real world grows out of nothing, and a
+     dialog that starts at zero size reads as a zoom effect, not an entrance. */
+  .ef-dialog { opacity: 0; transform: scale(0.96); }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────
+   "Reduced" means gentler, not none: opacity changes still explain what
+   happened, so they stay. Everything that MOVES is removed — dialog scale,
+   the toast's slide, smooth scrolling, and hover lift/scale on cards. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .ef-dialog {
+    transform: none;
+    transition: opacity 150ms ease-out;
+  }
+  @starting-style {
+    .ef-dialog { opacity: 0; transform: none; }
+  }
+
+  /* Fade only — same reassurance, no upward slide. */
+  .ef-toast { animation: ef-fade-in 0.2s ease-out; }
+
+  /* Tailwind gates `hover:` behind (hover: hover) on its own, but not behind
+     reduced motion — so the lift/scale on cards still needs cancelling. */
+  .hover\:-translate-y-1:hover,
+  .hover\:-translate-y-0\.5:hover,
+  .hover\:scale-\[1\.03\]:hover,
+  .hover\:rotate-0:hover {
+    translate: none;
+    scale: none;
+    rotate: none;
+  }
+}
+
+@keyframes ef-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* ─────────────────────────────────────────────
@@ -200,4 +255,4 @@ button:focus-visible,
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.ef-toast { animation: ef-toast-in 0.25s ease-out; }
+.ef-toast { animation: ef-toast-in 0.25s var(--ease-out); }

@@ -121,7 +121,7 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
                       </span>
                       <Icon
                         name="chevron-right"
-                        className="w-4 h-4 shrink-0 ef-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+                        className="w-4 h-4 shrink-0 ef-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-[opacity,translate] duration-200 ease-[var(--ease-out)]"
                       />
                     </Link>
                   </li>

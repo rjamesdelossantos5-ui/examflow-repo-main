@@ -122,8 +122,8 @@ export default function UserMenu({
 
       {/* Logout confirmation */}
       {confirmLogout && (
-        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmLogout(false)}>
-          <div className="ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmLogout(false)}>
+          <div className="ef-dialog ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Sign out of EXAMFLOW?</h3>
             <p className="text-sm ef-muted mt-1 mb-5">You can sign back in anytime to pick up where you left off.</p>
             <div className="flex gap-3">

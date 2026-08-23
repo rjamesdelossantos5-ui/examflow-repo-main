@@ -44,7 +44,7 @@ export default function RequestStepper({ status, paid }: { status: RequestStatus
       {/* base track + gold fill, centered on the 2rem-wide nodes */}
       <div className="absolute left-4 right-4 top-4 h-0.5 -translate-y-1/2" style={{ background: 'var(--border)' }} />
       <div
-        className="absolute left-4 top-4 h-0.5 -translate-y-1/2 transition-all duration-700"
+        className="absolute left-4 top-4 h-0.5 -translate-y-1/2 transition-[width] duration-300 ease-[var(--ease-out)]"
         style={{ width: `calc((100% - 2rem) * ${fillPct / 100})`, background: 'linear-gradient(90deg, #e0a200, var(--sti-gold))' }}
       />
 

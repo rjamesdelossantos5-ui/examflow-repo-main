@@ -62,7 +62,7 @@ function StatCard({ label, value, accent, icon, active, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`ef-card rounded-xl shadow-sm p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0 text-left w-full transition-all hover:shadow-md ${active ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
+      className={`ef-card rounded-xl shadow-sm p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0 text-left w-full transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${active ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
     >
       {/* color-mix (not hex + '22') because `accent` is now a CSS variable */}
       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${accent} 16%, transparent)` }}>

@@ -121,7 +121,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
               <button
                 key={g.key}
                 onClick={() => setSelectedKey(g.key === selectedKey ? null : g.key)}
-                className={`ef-card w-full text-left rounded-xl shadow-sm p-4 transition-all hover:shadow-md ${selectedKey === g.key ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
+                className={`ef-card w-full text-left rounded-xl shadow-sm p-4 transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${selectedKey === g.key ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">

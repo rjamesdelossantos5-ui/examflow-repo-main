@@ -46,7 +46,7 @@ export default function ErrorState({
         <button
           type="button"
           onClick={onRetry}
-          className="px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 active:scale-[0.98] transition-all"
+          className="px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 active:scale-[0.98] transition-[opacity,scale] duration-160 ease-[var(--ease-out)]"
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
           Try again
@@ -54,7 +54,7 @@ export default function ErrorState({
         {homeHref && (
           <Link
             href={homeHref}
-            className="px-5 py-2.5 rounded-lg font-semibold text-sm border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05] active:scale-[0.98] transition-all"
+            className="px-5 py-2.5 rounded-lg font-semibold text-sm border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05] active:scale-[0.98] transition-[background-color,scale] duration-160 ease-[var(--ease-out)]"
             style={{ color: 'var(--card-foreground)' }}
           >
             Go back

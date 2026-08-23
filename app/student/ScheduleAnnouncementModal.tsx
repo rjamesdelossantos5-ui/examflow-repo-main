@@ -44,8 +44,8 @@ export default function ScheduleAnnouncementModal(props: Props) {
     : fmtDate(props.examDay)
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={handleOk}>
-      <div className="ef-card rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+    <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={handleOk}>
+      <div className="ef-dialog ef-card rounded-2xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto mb-3 w-14 h-14 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--status-success) 16%, transparent)', color: 'var(--status-success)' }}>
           <Icon name="calendar" className="w-7 h-7" />
         </div>

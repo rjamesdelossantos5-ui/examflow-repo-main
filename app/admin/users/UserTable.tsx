@@ -93,8 +93,8 @@ export default function UserTable({
 
       {/* Create modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+        <div className="ef-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
             <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--sti-navy)' }}>Create User</h3>
             <form onSubmit={handleCreate} className="grid grid-cols-2 gap-3">
               <div className="col-span-2">

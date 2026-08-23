@@ -41,7 +41,7 @@ export default function NotFoundState({
       <div className="mt-6 flex justify-center">
         <Link
           href={homeHref}
-          className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-all"
+          className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity duration-200 ease-[var(--ease-out)]"
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
           {homeLabel}

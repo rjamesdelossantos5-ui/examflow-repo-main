@@ -64,10 +64,10 @@ export default function LoginModal() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} aria-hidden />
+      <div className="ef-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} aria-hidden />
 
       <div
-        className="relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
+        className="ef-dialog relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
         style={{ background: `linear-gradient(160deg, ${NAVY} 0%, #013a85 60%, #024aa6 100%)` }}
         role="dialog"
         aria-modal="true"
