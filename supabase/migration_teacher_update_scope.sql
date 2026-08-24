@@ -6,7 +6,7 @@
 -- ANY request row:
 --
 --   for update using (
---     current_user_role() in ('registrar','subject_teacher','program_head','admin')
+--     current_user_role() in ('registraar','subject_teacher','program_head','admin')
 --   );
 --
 -- The ownership check lived only in the server action
