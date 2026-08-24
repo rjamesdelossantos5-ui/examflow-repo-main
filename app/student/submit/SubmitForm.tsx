@@ -357,6 +357,35 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
         )}
 
         {/* Opens the confirmation dialog (does not submit directly) */}
+        {/* Data Privacy Act (RA 10173) consent. Parent IDs, signatures and medical
+            certificates are SENSITIVE personal information, which may only be
+            processed with consent given BEFORE processing and specific to the
+            purpose — so it lives here, at the point of collection, rather than as
+            a blanket tick at sign-up. It also covers the parent, who is a data
+            subject but never a user of this system. Enforced on the server too
+            (a required checkbox in the browser is trivially bypassed). */}
+        <div className="rounded-xl border ef-border p-4" style={{ background: 'color-mix(in srgb, var(--sti-gold) 6%, transparent)' }}>
+          <label className="flex gap-3 items-start cursor-pointer">
+            <input
+              type="checkbox"
+              name="privacy_consent"
+              value="yes"
+              required
+              className="mt-0.5 w-4 h-4 shrink-0 accent-[var(--sti-gold)]"
+            />
+            <span className="text-2xs sm:text-xs leading-relaxed" style={{ color: 'var(--card-foreground)' }}>
+              I confirm that my parent or guardian has authorised this request, and consent to STI
+              College Sta. Maria collecting and processing the details and documents above — including
+              the ID, signature and any medical document — for reviewing and scheduling this special
+              exam. I understand these are deleted after the exam date, and that I may withdraw consent
+              by removing this request.{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline font-medium" style={{ color: 'var(--status-info)' }}>
+                Read the Privacy Notice
+              </a>
+            </span>
+          </label>
+        </div>
+
         <button
           type="button"
           onClick={openConfirm}

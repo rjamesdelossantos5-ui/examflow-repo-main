@@ -49,6 +49,13 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // Fully public and never redirected away from: a person must be able to read
+  // what will be collected BEFORE signing in, and a signed-in student opening it
+  // from the submit form must not be bounced to their dashboard mid-form.
+  if (pathname === '/privacy') {
+    return supabaseResponse
+  }
+
   // Public routes that don't need auth
   if (pathname === '/login' || pathname === '/') {
     if (user) {

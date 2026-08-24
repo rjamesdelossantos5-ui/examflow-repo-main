@@ -105,6 +105,14 @@ export async function submitRequest(formData: FormData) {
   if (snapshot.snap_student_number && !isValidStudentNumber(snapshot.snap_student_number)) {
     fieldErrors.push('Enter a valid student number (digits only, e.g. 2024-00001).')
   }
+  // Data Privacy Act (RA 10173) consent must exist BEFORE any sensitive personal
+  // information (parent ID, signature, medical certificate) is stored. The
+  // checkbox in the browser is a UX prompt, not the guard — a crafted POST omits
+  // it — so refuse the whole submission here if it isn't present.
+  if (String(formData.get('privacy_consent') ?? '') !== 'yes') {
+    fieldErrors.push('You must agree to the data privacy notice before submitting.')
+  }
+
   if (fieldErrors.length) {
     const back = resubmitFrom ? `&from=${resubmitFrom}` : ''
     return redirect(`/student/submit?error=${encodeURIComponent(fieldErrors.join(' '))}${back}`)
@@ -246,12 +254,24 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
     { onConflict: 'request_id,media_type' }
   )
 
-  await supabase.from('progress_logs').insert({
-    request_id: req.id,
-    actor_id: userId,
-    actor_role: 'student',
-    action: 'Submitted special exam request',
-  })
+  // Two rows: the submission itself, and a timestamped record that consent was
+  // given. RA 10173 requires consent to be "evidenced by written, electronic or
+  // recorded means" — the progress log is that evidence, and it already carries
+  // the actor and an immutable timestamp.
+  await supabase.from('progress_logs').insert([
+    {
+      request_id: req.id,
+      actor_id: userId,
+      actor_role: 'student',
+      action: 'Submitted special exam request',
+    },
+    {
+      request_id: req.id,
+      actor_id: userId,
+      actor_role: 'student',
+      action: 'Data privacy consent given (RA 10173) — parent/guardian authorisation confirmed',
+    },
+  ])
 
   redirect(`/student/requests/${req.id}?submitted=1`)
 }
@@ -416,12 +436,22 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     }, { onConflict: 'request_id,media_type' })
   }
 
-  await supabase.from('progress_logs').insert({
-    request_id: oldId,
-    actor_id: userId,
-    actor_role: 'student',
-    action: 'Resubmitted after rejection',
-  })
+  // Consent is re-given on every resubmit (the checkbox is required there too),
+  // so it is recorded again rather than relying on the original submission's.
+  await supabase.from('progress_logs').insert([
+    {
+      request_id: oldId,
+      actor_id: userId,
+      actor_role: 'student',
+      action: 'Resubmitted after rejection',
+    },
+    {
+      request_id: oldId,
+      actor_id: userId,
+      actor_role: 'student',
+      action: 'Data privacy consent given (RA 10173) — parent/guardian authorisation confirmed',
+    },
+  ])
 
   redirect(`/student/requests/${oldId}?submitted=1`)
 }

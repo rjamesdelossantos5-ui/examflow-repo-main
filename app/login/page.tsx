@@ -87,9 +87,15 @@ export default async function LoginPage({
         <p className="text-center text-xs text-gray-400 mt-6">
           Special Exam Request System
         </p>
-        <p className="text-center mt-3">
+        <p className="text-center mt-3 flex items-center justify-center gap-3">
           <Link href="/" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
             ← Back to Home
+          </Link>
+          <span className="text-xs text-gray-300" aria-hidden="true">·</span>
+          {/* Reachable before sign-in on purpose — someone must be able to read
+              what will be collected before they hand anything over. */}
+          <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            Privacy Notice
           </Link>
         </p>
       </div>
