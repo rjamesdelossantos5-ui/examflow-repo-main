@@ -80,11 +80,15 @@ export default function SubmissionStatusBanner(props: Props) {
       </div>
 
       {/* Reminder */}
+      {/* The tint and the clock icon carry the warning; a thick coloured edge on
+          one side would add nothing the fill doesn't already say. Colour comes
+          from --status-warning, which flips to a light amber in dark mode — the
+          previous literal #b45309 stayed dark and all but vanished there. */}
       <div
-        className="mt-2.5 flex items-start gap-2 rounded-r-md py-1.5 pl-2.5 pr-2.5"
-        style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', borderLeft: '3px solid #f59e0b' }}
+        className="mt-2.5 flex items-start gap-2 rounded-md py-1.5 px-2.5"
+        style={{ background: 'color-mix(in srgb, var(--status-warning) 12%, transparent)' }}
       >
-        <Icon name="clock" className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: '#b45309' }} />
+        <Icon name="clock" className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'var(--status-warning)' }} />
         <p className="text-2xs font-medium" style={{ color: 'var(--card-foreground)' }}>
           Please get the printed form from the Registrar&apos;s office — submitting here alone does not finish your request.
         </p>

@@ -200,6 +200,9 @@ button:focus-visible,
   /* Fade only — same reassurance, no upward slide. */
   .ef-toast { animation: ef-fade-in 0.2s ease-out; }
 
+  /* The scroll cue is an arrow; it still reads as "scroll" standing still. */
+  .ef-drift { animation: none; }
+
   /* Tailwind gates `hover:` behind (hover: hover) on its own, but not behind
      reduced motion — so the lift/scale on cards still needs cancelling. */
   .hover\:-translate-y-1:hover,
@@ -256,3 +259,14 @@ button:focus-visible,
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .ef-toast { animation: ef-toast-in 0.25s var(--ease-out); }
+
+/* Scroll cue drift. Replaces Tailwind's `animate-bounce`, whose squash-and-
+   stretch keyframes read as dated and toy-like. This travels a short distance
+   on the strong in-out curve, so it decelerates at both ends the way a real
+   object does, and it starts from an already-visible position rather than
+   springing into one. Transform only, so the compositor handles it. */
+@keyframes ef-drift {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(5px); }
+}
+.ef-drift { animation: ef-drift 2.4s var(--ease-in-out) infinite; }
