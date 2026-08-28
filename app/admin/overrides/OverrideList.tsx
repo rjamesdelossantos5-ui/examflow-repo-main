@@ -53,7 +53,15 @@ export default function OverrideList({ initial }: { initial: OverrideRow[] }) {
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Override Requests</h2>
-        <p className="text-sm ef-muted">Program Heads asking to fast-track a stuck request (e.g. a reviewer is absent).</p>
+        {/* Plain language on purpose: the admin may open this page a few times
+            a term and shouldn't have to work out what "fast-track a stuck
+            request" meant. Name what happened, who is asking, and what a
+            decision does. */}
+        <p className="text-sm ef-muted">
+          A student&apos;s request can&apos;t move forward because a reviewer hasn&apos;t acted on it —
+          usually the registrar or teacher is absent or on leave. Approving lets the Program Head
+          accept the request without waiting for them.
+        </p>
       </div>
 
       {error && (
