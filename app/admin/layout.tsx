@@ -23,7 +23,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: 'Analytics', href: '/admin/analytics', icon: 'chart' as const },
     { label: 'Users', href: '/admin/users', icon: 'users' as const },
     { label: 'Subjects', href: '/admin/subjects', icon: 'book' as const },
-    { label: 'Departments', href: '/admin/departments', icon: 'building' as const },
+    // Departments is deliberately not listed. It's set up once and then never
+    // touched, so it only added noise to a nav used every day. The page still
+    // works at /admin/departments — reachable by URL when a department has to
+    // be added, which the subject and user Excel imports both require (they
+    // match departments by name and reject unknown ones). Department data also
+    // still drives what a Program Head sees, via lib/deptFilter.ts.
     { label: 'Override Requests', href: '/admin/overrides', icon: 'inbox' as const, badge: overrides },
   ]
 
