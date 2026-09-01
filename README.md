@@ -12,6 +12,8 @@ yarn dev
 pnpm dev
 # or
 bun dev
+
+hiiii this is rjamges makng osemthing hahha
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
