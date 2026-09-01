@@ -13,7 +13,7 @@ pnpm dev
 # or
 bun dev
 
-hiiii this is rjamges makng osemthing hahha
+hiiii this is rjamges makng osemthing hahha1
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
