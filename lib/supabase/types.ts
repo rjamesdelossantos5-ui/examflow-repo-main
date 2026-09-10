@@ -54,6 +54,22 @@ export interface SpecialExamRequest {
   final_schedule: string | null
   submitted_at: string
   updated_at: string
+  // Parent identity verification (Didit) — see supabase/migration_didit.sql.
+  // All optional: rows created before that migration ran won't have them, and
+  // the columns stay null until the parent completes a verification.
+  didit_session_id?: string | null
+  /** Verbatim Didit status ('Approved', 'Declined', 'In Review', …). Text, not
+   *  a union — Didit can add values, and an unknown one must not break a page.
+   *  Read it through statusLabel()/isApproved() in lib/didit.ts. */
+  didit_status?: string | null
+  didit_checked_at?: string | null
+  didit_liveness_score?: number | null
+  didit_face_match_score?: number | null
+  didit_document_type?: string | null
+  /** Name read off the parent's ID. Nothing compares it to anything yet — there
+   *  is no guardian name on file. See migration_didit.sql. */
+  didit_id_name?: string | null
+  didit_warnings?: unknown
 }
 
 export interface ApplicationMedia {

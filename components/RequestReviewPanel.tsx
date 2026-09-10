@@ -50,6 +50,53 @@ interface Props {
   rejectPresets?: string[]
   /** Fired after a successful verify/reject so the queue can drop the card instantly. */
   onDone?: () => void
+  /** Didit parent identity result. Omit to hide the section entirely — a request
+   *  submitted before this feature existed simply has nothing to show. */
+  verification?: VerificationProps
+}
+
+interface VerificationProps {
+  status: string | null
+  livenessScore: number | null
+  faceMatchScore: number | null
+  documentType: string | null
+}
+
+/**
+ * Compact read-only summary of the parent identity check.
+ *
+ * Statuses are matched case-insensitively on purpose: Didit's own documentation
+ * spells the same value both "Kyc Expired" and "KYC Expired", so an exact match
+ * would silently fall through to the default on the real value.
+ */
+function VerificationBadge({ status, livenessScore, faceMatchScore, documentType }: VerificationProps) {
+  const s = (status ?? '').trim().toLowerCase()
+  const tone =
+    s === 'approved' ? { box: 'bg-green-50 border-green-200 dark:bg-green-500/10 dark:border-green-500/30', text: 'text-green-700 dark:text-green-300', label: '✓ Verified' }
+    : s === 'declined' ? { box: 'bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-500/30', text: 'text-red-700 dark:text-red-300', label: '✕ Failed' }
+    : s === 'in review' ? { box: 'bg-amber-50 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/30', text: 'text-amber-800 dark:text-amber-200', label: 'Under review' }
+    : !s || s === 'not started' ? { box: 'ef-border', text: 'ef-muted', label: 'Not verified yet' }
+    : { box: 'bg-blue-50 border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/30', text: 'text-blue-800 dark:text-blue-200', label: 'In progress' }
+
+  return (
+    <div className={`rounded-lg border px-3 py-2.5 text-sm ${tone.box}`}>
+      <p className={`font-semibold ${tone.text}`}>{tone.label}</p>
+      {(livenessScore != null || faceMatchScore != null || documentType) && (
+        <p className={`mt-1 text-xs ${tone.text} opacity-90`}>
+          {documentType && <span>{documentType}</span>}
+          {documentType && livenessScore != null && <span> · </span>}
+          {livenessScore != null && <span>Liveness {livenessScore}</span>}
+          {livenessScore != null && faceMatchScore != null && <span> · </span>}
+          {faceMatchScore != null && <span>Face match {faceMatchScore}</span>}
+        </p>
+      )}
+      {s === 'approved' && (
+        <p className="mt-1.5 text-2xs ef-muted">
+          A live check confirmed the person present matched the ID they scanned. The ID image is not stored.
+        </p>
+      )}
+    </div>
+  )
 }
 
 // Timeline dot color per actor role — a small, consistent splash of color that
@@ -91,6 +138,7 @@ export default function RequestReviewPanel({
   showDocuments = true,
   rejectPresets,
   onDone,
+  verification,
 }: Props) {
   const isActionable = status === actionableStatus
   const [rejectMode, setRejectMode] = useState(false)
@@ -190,6 +238,19 @@ export default function RequestReviewPanel({
                 </div>
               ))}
             </dl>
+          </div>
+        )}
+
+        {/* Parent identity verification.
+            This replaces reading the parent's ID by eye. Only the outcome and
+            the scores are shown: the ID image and selfie are never stored (see
+            supabase/migration_didit.sql), and the name read off the ID is
+            deliberately not surfaced here — a reviewer does not need it to
+            decide, and it is the most sensitive field we hold. */}
+        {verification && (
+          <div>
+            <SectionLabel icon="file">Parent Identity Check</SectionLabel>
+            <VerificationBadge {...verification} />
           </div>
         )}
 

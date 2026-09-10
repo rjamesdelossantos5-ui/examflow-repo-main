@@ -21,6 +21,12 @@ interface RequestRow {
   subject: { subject_code: string; subject_name: string }
   media: { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string; signed_url?: string }[]
   logs: { id: string; action: string; created_at: string; actor_role: string }[]
+  // Parent identity check. Null on requests submitted before the Didit change,
+  // and on any request whose parent hasn't completed verification yet.
+  didit_status?: string | null
+  didit_liveness_score?: number | null
+  didit_face_match_score?: number | null
+  didit_document_type?: string | null
 }
 
 interface Group {
@@ -160,6 +166,12 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
                       status={f.status}
                       media={f.media}
                       logs={f.logs}
+                      verification={{
+                        status: f.didit_status ?? null,
+                        livenessScore: f.didit_liveness_score ?? null,
+                        faceMatchScore: f.didit_face_match_score ?? null,
+                        documentType: f.didit_document_type ?? null,
+                      }}
                       onVerify={verifyRequest}
                       onReject={rejectRequest}
                       onDone={() => dropForm(f.id)}

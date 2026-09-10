@@ -10,6 +10,21 @@ const ROLE_HOME: Record<string, string> = {
 }
 
 export async function proxy(request: NextRequest) {
+  // Inbound webhooks — must run BEFORE anything else here.
+  //
+  // A webhook is a server-to-server POST from another company. It carries no
+  // Supabase session cookie, so `user` below is null and it would fall into the
+  // "Protected routes" branch and be redirected to /login. The sender sees a
+  // 307, the route handler never runs, and the result is lost silently — no
+  // error in the logs, nothing to debug, just requests that never get verified.
+  //
+  // These routes authenticate the SENDER instead, by HMAC signature over the
+  // raw body (see app/api/webhooks/didit/route.ts). Cookie auth is meaningless
+  // here, so it is skipped entirely rather than worked around.
+  if (request.nextUrl.pathname.startsWith('/api/webhooks/')) {
+    return NextResponse.next({ request })
+  }
+
   // Bail out early if env vars are not configured yet
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     const { pathname } = request.nextUrl

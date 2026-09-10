@@ -118,11 +118,12 @@ export async function submitRequest(formData: FormData) {
     return redirect(`/student/submit?error=${encodeURIComponent(fieldErrors.join(' '))}${back}`)
   }
 
-  const parentId = formData.get('parent_id') as File | null
-  const parentIdBack = formData.get('parent_id_back') as File | null
+  // parent_id / parent_id_back are deliberately absent: the parent's ID is no
+  // longer uploaded from the device. It is scanned live, with a liveness-checked
+  // selfie, in the verification step on the request page (see lib/didit.ts).
   const parentSig = formData.get('parent_signature') as File | null
   const supportDoc = formData.get('supporting_document') as File | null
-  const files = { parentId, parentIdBack, parentSig, supportDoc }
+  const files = { parentSig, supportDoc }
 
   // Resubmit path: edit the existing rejected request in place so its uploaded
   // files are kept — the student only re-uploads what they want to replace.
@@ -154,11 +155,7 @@ export async function submitRequest(formData: FormData) {
   }
 
   const errors: string[] = []
-  const idErr = validateFile(parentId, 'Valid ID (front)')
-  const backErr = validateFile(parentIdBack, 'Valid ID (back)')
   const sigErr = validateFile(parentSig, 'Parent Signature')
-  if (idErr) errors.push(idErr)
-  if (backErr) errors.push(backErr)
   if (sigErr) errors.push(sigErr)
 
   if (examType === 'excused') {
@@ -214,16 +211,12 @@ export async function submitRequest(formData: FormData) {
 }
 
 interface SubmissionFiles {
-  parentId: File | null
-  parentIdBack: File | null
   parentSig: File | null
   supportDoc: File | null
 }
 
 async function finishSubmission(supabase: DB, req: { id: string }, userId: string, examType: string, f: SubmissionFiles) {
   const uploads: Promise<{ path: string; error: string | null }>[] = [
-    uploadFile(supabase, f.parentId!, req.id, 'parent_id'),
-    uploadFile(supabase, f.parentIdBack!, req.id, 'parent_id_back'),
     uploadFile(supabase, f.parentSig!, req.id, 'parent_signature'),
   ]
   if (examType === 'excused' && f.supportDoc) {
@@ -237,8 +230,8 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
     return redirect(`/student/submit?error=${encodeURIComponent('File upload failed: ' + uploadErrors[0].error)}`)
   }
 
-  const mediaTypes = ['parent_id', 'parent_id_back', 'parent_signature', ...(examType === 'excused' && f.supportDoc ? ['supporting_document'] : [])]
-  const filesArr = [f.parentId!, f.parentIdBack!, f.parentSig!, ...(examType === 'excused' && f.supportDoc ? [f.supportDoc] : [])]
+  const mediaTypes = ['parent_signature', ...(examType === 'excused' && f.supportDoc ? ['supporting_document'] : [])]
+  const filesArr = [f.parentSig!, ...(examType === 'excused' && f.supportDoc ? [f.supportDoc] : [])]
 
   // Upsert (not insert) so a retried submission can't leave two rows in the same
   // document slot — same guard as the resubmit path below.
@@ -351,7 +344,7 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     snap_year_level?: number | null; snap_section?: string | null; snap_contact_number?: string | null
   }
   const effectiveOther = fields.examType === 'excused' && fields.excusedReason === 'other' ? fields.otherReason : ''
-  const fileChanged = hasUpload(f.parentId) || hasUpload(f.parentIdBack) || hasUpload(f.parentSig) || hasUpload(f.supportDoc)
+  const fileChanged = hasUpload(f.parentSig) || hasUpload(f.supportDoc)
   let fieldsChanged =
     fields.subjectId !== oldRow.subject_id ||
     fields.examType !== oldRow.exam_type ||
@@ -375,11 +368,7 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
 
   // Validate: a slot is required only if there's no file on record for it.
   const errors: string[] = []
-  const idErr = validateFile(f.parentId, 'Valid ID (front)', onRecord.has('parent_id'))
-  const backErr = validateFile(f.parentIdBack, 'Valid ID (back)', onRecord.has('parent_id_back'))
   const sigErr = validateFile(f.parentSig, 'Parent Signature', onRecord.has('parent_signature'))
-  if (idErr) errors.push(idErr)
-  if (backErr) errors.push(backErr)
   if (sigErr) errors.push(sigErr)
   if (fields.examType === 'excused') {
     if (!fields.excusedReason) errors.push('Reason is required for Excused exam')
@@ -410,9 +399,10 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
   }
 
   // Replace only the slots that got a new upload.
+  // parent_id / parent_id_back are intentionally not listed. Rows submitted
+  // before the Didit change may still HAVE those media rows, and those are left
+  // alone — they just can't be replaced from this form any more.
   const slots: { file: File | null; type: string }[] = [
-    { file: f.parentId, type: 'parent_id' },
-    { file: f.parentIdBack, type: 'parent_id_back' },
     { file: f.parentSig, type: 'parent_signature' },
     { file: f.supportDoc, type: 'supporting_document' },
   ]

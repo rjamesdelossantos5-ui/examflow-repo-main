@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/currentUser'
 import StatusBadge from '@/components/StatusBadge'
 import DocumentViewer from '@/components/DocumentViewer'
 import ReceiptUpload from './ReceiptUpload'
+import VerifyParent from './VerifyParent'
 import DeleteRequestButton from './DeleteRequestButton'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
@@ -147,6 +148,21 @@ export default async function RequestDetailPage({
           ))}
         </dl>
       </div>
+
+      {/* Parent/guardian identity verification.
+          Rendered as a step on THIS page rather than inside the submit form for
+          two reasons: it sends the student off to verify.didit.me, so the
+          request must already exist to come back to; and doing it here means a
+          parent who has to step away can finish later without re-filing. The
+          component renders every phase itself, including the verified state. */}
+      <VerifyParent
+        requestId={req.id}
+        status={(req.didit_status as string | null) ?? null}
+        livenessScore={(req.didit_liveness_score as number | null) ?? null}
+        faceMatchScore={(req.didit_face_match_score as number | null) ?? null}
+        documentType={(req.didit_document_type as string | null) ?? null}
+        warnings={req.didit_warnings}
+      />
 
       {/* Receipt upload (Paid + accepted). If a prior receipt was rejected, the
           reason is still on the request — show it so the student can fix it. */}

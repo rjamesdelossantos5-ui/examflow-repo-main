@@ -331,12 +331,23 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           )}
         </div>
 
-        {/* Parent documents */}
+        {/* Parent documents.
+            The two "Valid ID" uploads used to live here. They were removed
+            because a file picker proves nothing — a student could upload any ID
+            photo from their gallery, with no parent involved. The ID is now
+            scanned live, together with a liveness-checked selfie, in the
+            verification step on the request page after submitting. The
+            signature stays: it is a separate consent artefact and is not
+            something the identity check captures. */}
         <div className="space-y-4 pt-2 border-t ef-border">
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Parent / Guardian Documents</h2>
-          <FileField name="parent_id" label="Valid ID — Front" hint="Clear photo of the ID front · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} kept={kept.has('parent_id')} />
-          <FileField name="parent_id_back" label="Valid ID — Back" hint="Photo of the ID back · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} kept={kept.has('parent_id_back')} />
           <FileField name="parent_signature" label="Parent/Guardian Signature" hint="Signed consent · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} kept={kept.has('parent_signature')} />
+          <div className="rounded-lg px-3 py-2.5 text-xs ef-muted border ef-border">
+            <strong style={{ color: 'var(--card-foreground)' }}>Their valid ID is not uploaded here.</strong>{' '}
+            After you submit, you will be asked to verify your parent or guardian&apos;s identity —
+            they scan their ID and take a short selfie. <strong>They need to be with you for that step</strong>,
+            so have them nearby before you submit.
+          </div>
         </div>
 
         {/* Reason-specific supporting document */}
