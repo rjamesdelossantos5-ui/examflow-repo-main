@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { getActivePeriod } from '@/lib/examSettings'
+import { getActivePeriod, TERM_LABEL, SEMESTER_LABEL } from '@/lib/examSettings'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 async function requirePH() {
@@ -447,4 +447,165 @@ export async function deletePeriod(id: string) {
 
   revalidatePath('/program-head/settings')
   return { error: null }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENDING A TERM
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Statuses that still need a REVIEWER to act. These are what "unresolved" means
+// when a term ends, and they map exactly to what sits in the three staff queues:
+//   submitted            → Registrar
+//   verified_by_registrar→ Subject Teacher
+//   approved_by_teacher  → Program Head
+//   receipt_uploaded     → Program Head (confirming a paid receipt)
+//
+// 'accepted' and 'scheduled' are deliberately NOT here: the review is finished,
+// the outcome stands, and there is nothing left for staff to do. 'rejected' is
+// already terminal.
+const UNRESOLVED_STATUSES = [
+  'submitted',
+  'verified_by_registrar',
+  'approved_by_teacher',
+  'receipt_uploaded',
+] as const
+
+// Not exported: a 'use server' module may only export async functions, so a
+// bare string const here would fail the build. The UI doesn't need it — the
+// reason is stored on each rejected request and shown from there.
+const TERM_ENDED_REASON = 'The term ended before this request could be reviewed.'
+
+/**
+ * What ending the term right now would do — used to fill the confirmation dialog
+ * so the Program Head sees the consequences BEFORE committing, not after.
+ *
+ * Read-only.
+ */
+export async function getEndTermPreview() {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' as const, preview: null }
+  const { supabase } = ctx
+
+  const period = await getActivePeriod(supabase)
+  if (!period) return { error: null, preview: null }
+
+  // Only this term's rows. Legacy requests (period_id null, from before terms
+  // existed) belong to no term and are left alone rather than swept up here.
+  const { data, error } = await supabase
+    .from('special_exam_requests')
+    .select('status')
+    .eq('period_id', period.id)
+    .in('status', UNRESOLVED_STATUSES as unknown as string[])
+
+  if (error) {
+    return { error: friendlyError('getEndTermPreview', error, `We couldn't check this term. ${RETRY_HINT}`), preview: null }
+  }
+
+  const rows = (data ?? []) as { status: string }[]
+  const byStatus = rows.reduce<Record<string, number>>((acc, r) => {
+    acc[r.status] = (acc[r.status] ?? 0) + 1
+    return acc
+  }, {})
+
+  return {
+    error: null,
+    preview: {
+      termLabel: `${TERM_LABEL[period.term]} · ${SEMESTER_LABEL[period.semester]}`,
+      total: rows.length,
+      byStatus,
+      // Called out separately in the UI: these students already PAID and are
+      // waiting on receipt confirmation. Rejecting them is the harshest outcome
+      // here, so it must not be buried inside a single total.
+      paidAwaitingConfirmation: byStatus['receipt_uploaded'] ?? 0,
+    },
+  }
+}
+
+/**
+ * Ends the active term.
+ *
+ * Two steps, in this order:
+ *   1. Auto-reject everything still awaiting review, with a stated reason.
+ *   2. Deactivate the term.
+ *
+ * The order matters. Requests are matched by period_id, and after step 2 there
+ * is no active period to identify them by — doing it the other way round would
+ * leave them stranded in the queues.
+ *
+ * Requests are ARCHIVED, never deleted: rows, uploaded documents and progress
+ * logs all stay exactly where they are, and students keep their history. The
+ * queues empty because nothing is left in an actionable status, which is also
+ * why keepActive() needs no change — it filters by term, but the queues filter
+ * by status first, and after this nothing matches.
+ */
+export async function endTerm() {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase, userId, role } = ctx
+
+  const period = await getActivePeriod(supabase)
+  if (!period) return { error: 'There is no active term to end.' }
+
+  // 1. Auto-reject the leftovers. Returns the ids so each one gets a progress
+  //    log entry — a student opening an old request must be able to see WHY it
+  //    was rejected, not just that it was.
+  const { data: rejected, error: rejErr } = await supabase
+    .from('special_exam_requests')
+    .update({
+      status: 'rejected',
+      rejection_reason: TERM_ENDED_REASON,
+      rejected_by_role: role,
+    })
+    .eq('period_id', period.id)
+    .in('status', UNRESOLVED_STATUSES as unknown as string[])
+    .select('id')
+
+  if (rejErr) {
+    return { error: friendlyError('endTerm:reject', rejErr, `We couldn't close the pending requests. ${RETRY_HINT}`) }
+  }
+
+  const ids = ((rejected ?? []) as { id: string }[]).map((r) => r.id)
+  if (ids.length) {
+    const { error: logErr } = await supabase.from('progress_logs').insert(
+      ids.map((id) => ({
+        request_id: id,
+        // logs_insert requires actor_id = auth.uid(), so this records the
+        // Program Head who ended the term — which is accurate: they did it.
+        actor_id: userId,
+        actor_role: role,
+        action: `Rejected — ${TERM_ENDED_REASON}`,
+      })),
+    )
+    // A failed log must not undo real rejections that already succeeded. The
+    // rejection reason is stored on the request itself, so the student still
+    // sees why; only the timeline entry is missing.
+    if (logErr) console.error('[endTerm] progress log failed', logErr)
+  }
+
+  // 2. Close the term. ended_at distinguishes "deliberately ended" from
+  //    "superseded when a later term was activated" — both are is_active=false.
+  let { error: closeErr } = await supabase
+    .from('exam_periods')
+    .update({ is_active: false, ended_at: new Date().toISOString() })
+    .eq('id', period.id)
+
+  // migration_end_term.sql not applied yet (no `ended_at` column) — still end
+  // the term rather than failing after the rejections have already been written.
+  if (closeErr) {
+    ;({ error: closeErr } = await supabase
+      .from('exam_periods')
+      .update({ is_active: false })
+      .eq('id', period.id))
+  }
+  if (closeErr) {
+    return { error: friendlyError('endTerm:close', closeErr, `Pending requests were closed, but the term is still active. ${RETRY_HINT}`) }
+  }
+
+  revalidatePath('/program-head')
+  revalidatePath('/program-head/settings')
+  revalidatePath('/registrar')
+  revalidatePath('/teacher')
+  revalidatePath('/student')
+  revalidatePath('/student/submit')
+  return { error: null, rejectedCount: ids.length }
 }
