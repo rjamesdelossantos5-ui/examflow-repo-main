@@ -230,6 +230,26 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
     return redirect(`/student/submit?error=${encodeURIComponent('File upload failed: ' + uploadErrors[0].error)}`)
   }
 
+  // Mark this request as one that REQUIRES parent verification before the
+  // Registrar ever sees it.
+  //
+  // This stamp is what separates a new request from a legacy one. Both have no
+  // Didit session yet, so didit_session_id can't tell them apart — but a request
+  // submitted before this feature has didit_status NULL, and one submitted after
+  // has 'Not Started'. The Registrar's queue keeps showing NULL (nothing to
+  // verify, nothing to wait for) and hides 'Not Started' until it turns
+  // 'Approved'. See app/registrar/page.tsx.
+  //
+  // Best-effort on purpose: if migration_didit.sql hasn't been run the column
+  // doesn't exist and this fails, leaving the request unstamped and therefore
+  // visible to the Registrar — i.e. exactly the old behaviour. Failing the other
+  // way would block every submission on an unrun migration.
+  const { error: stampErr } = await supabase
+    .from('special_exam_requests')
+    .update({ didit_status: 'Not Started' })
+    .eq('id', req.id)
+  if (stampErr) console.error('[finishSubmission] could not stamp didit_status', stampErr)
+
   const mediaTypes = ['parent_signature', ...(examType === 'excused' && f.supportDoc ? ['supporting_document'] : [])]
   const filesArr = [f.parentSig!, ...(examType === 'excused' && f.supportDoc ? [f.supportDoc] : [])]
 

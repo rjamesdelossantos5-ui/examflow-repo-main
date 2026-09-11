@@ -79,7 +79,7 @@ export default function VerifyParent({
           </p>
           <p className="mt-1 text-xs text-green-700/80 dark:text-green-300/80">
             A live identity check confirmed the person present matched the ID they presented.
-            {documentType ? ` Document: ${documentType}.` : ''}
+            {documentType ? ` Document: ${documentType}.` : ''} Your request is now with the Registrar.
           </p>
           {(livenessScore != null || faceMatchScore != null) && (
             <p className="mt-2 text-xs text-green-700/80 dark:text-green-300/80">
@@ -111,7 +111,8 @@ export default function VerifyParent({
             </p>
           )}
           <p className="mt-2 text-xs text-red-700/90 dark:text-red-300/90">
-            Your parent or guardian can try again with good lighting and an unexpired ID.
+            Your request will not reach the Registrar until this passes. Your parent or guardian can try again with
+            good lighting and an unexpired ID.
           </p>
         </div>
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -157,6 +158,7 @@ export default function VerifyParent({
           <p className="font-semibold">Verification in progress</p>
           <p className="mt-1 text-xs">
             The result usually appears within a few seconds of your parent or guardian finishing.
+            Your request goes to the Registrar once it passes.
           </p>
         </div>
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -192,8 +194,10 @@ export default function VerifyParent({
             Action Required: Verify Parent/Guardian Identity
           </h3>
           <p className="text-sm ef-muted mt-0.5">
-            Your parent or guardian needs to be <strong style={{ color: 'var(--card-foreground)' }}>with you now</strong>.
-            They will scan their own valid ID and take a short selfie to confirm they know about this request.
+            <strong style={{ color: 'var(--card-foreground)' }}>This request has not been sent to the Registrar yet.</strong>{' '}
+            It stays here until your parent or guardian is verified — they need to be{' '}
+            <strong style={{ color: 'var(--card-foreground)' }}>with you now</strong> to scan their own valid ID and
+            take a short selfie.
           </p>
         </div>
       </div>

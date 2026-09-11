@@ -12,18 +12,48 @@ export default async function RegistrarPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const { data: raw } = await supabase
-    .from('special_exam_requests')
-    .select(`
+  const SELECT = `
       *,
       profiles!student_id(full_name, student_number, course, year_level, section),
       routed_teacher:profiles!teacher_id(full_name),
       subjects(subject_code, subject_name, profiles!teacher_id(full_name)),
       application_media(id, media_type, storage_path, file_name, mime_type),
       progress_logs(id, action, created_at, actor_role)
-    `)
+    `
+
+  // A request only reaches the Registrar once the parent's identity has been
+  // verified. Filling in the form is no longer enough to enter the queue —
+  // otherwise the Registrar could verify and forward a request whose parent was
+  // never actually present, which is the whole point of the check.
+  //
+  // NULL is included deliberately: those are requests submitted before this
+  // feature existed. They have no verification to wait for, and excluding them
+  // would silently strand every in-flight request the day this ships. New
+  // requests are stamped 'Not Started' at submission, so they are held back
+  // until Didit reports 'Approved' (see app/student/submit/actions.ts).
+  const verified = await supabase
+    .from('special_exam_requests')
+    .select(SELECT)
     .eq('status', 'submitted')
+    .or('didit_status.is.null,didit_status.eq.Approved')
     .order('submitted_at', { ascending: false })
+
+  let raw = verified.data
+
+  // migration_didit.sql not applied yet — didit_status doesn't exist, so the
+  // filter above errors and would leave the Registrar staring at an empty queue
+  // with no explanation. Fall back to the unfiltered query: without the column
+  // there is no verification to gate on anyway, so this is the pre-Didit
+  // behaviour rather than a silent outage. Same guard as savePeriod().
+  if (verified.error) {
+    console.error('[registrar] verification filter unavailable — is migration_didit.sql applied?', verified.error)
+    const fallback = await supabase
+      .from('special_exam_requests')
+      .select(SELECT)
+      .eq('status', 'submitted')
+      .order('submitted_at', { ascending: false })
+    raw = fallback.data
+  }
 
   // Only the active term's forms show; the previous term drops off once a new
   // term is activated in Settings.
