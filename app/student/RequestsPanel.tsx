@@ -23,6 +23,10 @@ export interface StudentRequest {
   rejection_reason: string | null
   subject_code: string | null
   subject_name: string | null
+  /** Filled in but not actually submitted — parent not verified, or verified
+   *  but the student hasn't pressed Submit. Optional so rows built before this
+   *  existed still type-check. */
+  pending_submission?: boolean
 }
 
 // Friendly, student-facing status pill (label + tone color) for the card.
@@ -159,7 +163,12 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
               // Paid + accepted = the cashier receipt still needs to be uploaded.
               const needsReceipt = isPaid && status === 'accepted'
               const isRejected = status === 'rejected'
-              const pill = cardStatus(status)
+              // A request awaiting verification or the final Submit is still
+              // 'submitted' underneath, so the plain status pill would read
+              // "Submitted" and the student would think they were done.
+              const pill = r.pending_submission
+                ? { label: 'Not submitted yet', tone: 'var(--status-warning)' }
+                : cardStatus(status)
               return (
                 // The whole card links to the full detail page (files, submitted
                 // details, activity timeline) via a stretched overlay link — but

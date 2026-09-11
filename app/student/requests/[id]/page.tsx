@@ -64,6 +64,12 @@ export default async function RequestDetailPage({
   const subj = req.subjects as unknown as { subject_code: string; subject_name: string } | null
   const isRejected = req.status === 'rejected'
 
+  // The form has been filled in and the row exists, but the request has NOT been
+  // submitted: the parent still has to pass verification and the student still
+  // has to press Submit. Requests predating parent verification have no
+  // didit_status and were submitted the old way, so they are never "pending".
+  const pendingSubmission = !!req.didit_status && !req.student_confirmed_at
+
   const logs = (req.progress_logs as { id: string; action: string; created_at: string; actor_role: UserRole }[]) ?? []
   const rawMedia = (req.application_media as { id: string; file_name: string; media_type: string; mime_type: string; storage_path: string }[]) ?? []
   const signed = await attachSignedUrls(supabase, rawMedia)
@@ -75,10 +81,21 @@ export default async function RequestDetailPage({
         ← Back to My Requests
       </Link>
 
+      {/* Saying "submitted successfully" here was wrong: filling in the form
+          creates the row, but the request is not submitted until the parent has
+          been verified AND the student presses Submit. A green tick claiming
+          otherwise is the single most misleading thing this page could show. */}
       {submitted && (
-        <div className="ef-toast rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
-          ✓ Request submitted successfully!
-        </div>
+        pendingSubmission ? (
+          <div className="ef-toast rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+            Your details are saved — <strong>but this request has not been submitted yet.</strong> Verify your
+            parent or guardian below to send it to the Registrar.
+          </div>
+        ) : (
+          <div className="ef-toast rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
+            ✓ Request submitted successfully!
+          </div>
+        )
       )}
 
       {/* Header */}
@@ -90,7 +107,15 @@ export default async function RequestDetailPage({
             </h1>
             <p className="text-sm ef-muted">{subj?.subject_code}</p>
           </div>
-          <StatusBadge status={req.status as RequestStatus} />
+          {/* The row's status is 'submitted' from the moment it is created, so
+              StatusBadge would read "Submitted" before it actually is. */}
+          {pendingSubmission ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 whitespace-nowrap">
+              Not submitted yet
+            </span>
+          ) : (
+            <StatusBadge status={req.status as RequestStatus} />
+          )}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
@@ -101,7 +126,7 @@ export default async function RequestDetailPage({
             </span>
           </div>
           <div>
-            <span className="ef-muted">Submitted: </span>
+            <span className="ef-muted">{pendingSubmission ? 'Started: ' : 'Submitted: '}</span>
             <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>
               {new Date(req.submitted_at).toLocaleDateString()}
             </span>

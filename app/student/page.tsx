@@ -53,6 +53,11 @@ export default async function StudentPage() {
       exam_type: r.exam_type as string,
       submitted_at: r.submitted_at as string,
       rejection_reason: (r.rejection_reason as string | null) ?? null,
+      // Row exists but the request was never actually submitted: the parent
+      // still has to pass verification and the student still has to press
+      // Submit. The underlying status is 'submitted' from creation, so without
+      // this the card would claim "Submitted" before it is true.
+      pending_submission: !!r.didit_status && !r.student_confirmed_at,
       subject_code: subj?.subject_code ?? null,
       subject_name: subj?.subject_name ?? null,
     }
