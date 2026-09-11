@@ -286,7 +286,16 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
     },
   ])
 
-  redirect(`/student/requests/${req.id}?submitted=1`)
+  // verify=1 makes the request page open Didit immediately instead of showing a
+  // "Start verification" button the student has to find and press. The form's
+  // button says "Continue to Parent Verification", so landing on an intermediate
+  // page and stopping would be a broken promise.
+  //
+  // This can't be a redirect straight to verify.didit.me: submitRequest runs as
+  // a Server Action, i.e. a form POST, and Chrome and Safari block cross-origin
+  // redirects that follow one under `form-action 'self'`. So we bounce through
+  // our own page, which then navigates client-side.
+  redirect(`/student/requests/${req.id}?submitted=1&verify=1`)
 }
 
 interface ResubmitFields {
@@ -463,5 +472,8 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     },
   ])
 
-  redirect(`/student/requests/${oldId}?submitted=1`)
+  // Same verify=1 as the new-submission path. A resubmit of a request whose
+  // parent already passed won't re-open Didit — the page only auto-starts when
+  // there is no usable verification on record.
+  redirect(`/student/requests/${oldId}?submitted=1&verify=1`)
 }

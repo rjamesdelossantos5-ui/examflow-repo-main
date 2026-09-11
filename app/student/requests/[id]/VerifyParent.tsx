@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { startParentVerification, refreshParentVerification, confirmSubmission } from './actions'
 
 interface Props {
@@ -14,6 +14,9 @@ interface Props {
    *  actually been sent to the Registrar. Passing verification alone does not
    *  submit it. */
   confirmed: boolean
+  /** Set when the student arrived straight from the submit form (?verify=1).
+   *  Opens Didit on mount instead of waiting for a button press. */
+  autoStart?: boolean
 }
 
 /** Mirrors lib/didit.ts — matching is case-insensitive because Didit's own docs
@@ -37,7 +40,7 @@ function phaseOf(status: string | null): Phase {
 }
 
 export default function VerifyParent({
-  requestId, status, livenessScore, faceMatchScore, documentType, warnings, confirmed,
+  requestId, status, livenessScore, faceMatchScore, documentType, warnings, confirmed, autoStart,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -68,6 +71,31 @@ export default function VerifyParent({
       if (res.error) setError(res.error)
     })
   }
+
+  // Arrived from the submit form via ?verify=1 — open Didit straight away.
+  //
+  // The ref guard matters: without it React's strict-mode double-invoke, or any
+  // re-render, would fire a second createVerificationSession. Didit dedupes on
+  // vendor_data so it wouldn't create two sessions, but it would still be a
+  // wasted round-trip and a second navigation.
+  //
+  // Skipped whenever phase isn't 'idle', so a request that already passed (or is
+  // mid-flight) never gets bounced back out to Didit — which is what makes the
+  // resubmit path safe.
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || phase !== 'idle') return
+    autoStarted.current = true
+    startTransition(async () => {
+      const res = await startParentVerification(requestId)
+      if (res.error || !res.url) {
+        setError(res.error ?? 'Could not start verification.')
+        return
+      }
+      setLeaving(true)
+      window.location.href = res.url
+    })
+  }, [autoStart, phase, requestId])
 
   function handleConfirm() {
     setError(null)
@@ -213,6 +241,22 @@ export default function VerifyParent({
             Resume verification
           </button>
         </div>
+      </div>
+    )
+  }
+
+  // ── Auto-starting ──────────────────────────────────────────────────────────
+  // Straight from the submit form. Showing the full "here's what to expect" card
+  // for the split second before we navigate would just flash and vanish.
+  if (autoStart && (isPending || leaving) && !error) {
+    return (
+      <div className="ef-card rounded-xl p-6">
+        <p className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>
+          Opening parent verification…
+        </p>
+        <p className="mt-1 text-xs ef-muted">
+          Taking you to our verification partner. Your parent or guardian will scan their ID and take a selfie.
+        </p>
       </div>
     )
   }

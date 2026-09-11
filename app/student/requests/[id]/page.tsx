@@ -37,10 +37,10 @@ export default async function RequestDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ submitted?: string }>
+  searchParams: Promise<{ submitted?: string; verify?: string }>
 }) {
   const { id } = await params
-  const { submitted } = await searchParams
+  const { submitted, verify } = await searchParams
 
   const supabase = await createClient()
   // Cached — reuses the layout's auth lookup instead of a second round-trip.
@@ -166,6 +166,11 @@ export default async function RequestDetailPage({
         // submitted the old way, so they count as confirmed — otherwise every
         // one of them would show an "unsubmitted" warning that isn't true.
         confirmed={!req.didit_status || !!req.student_confirmed_at}
+        // Arrived straight from the submit form, which promised "Continue to
+        // Parent Verification" — so open Didit rather than making the student
+        // hunt for a button. Ignored when there is already a usable
+        // verification on record.
+        autoStart={verify === '1'}
       />
 
       {/* Receipt upload (Paid + accepted). If a prior receipt was rejected, the
