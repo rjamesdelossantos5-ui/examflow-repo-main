@@ -162,6 +162,10 @@ export default async function RequestDetailPage({
         faceMatchScore={(req.didit_face_match_score as number | null) ?? null}
         documentType={(req.didit_document_type as string | null) ?? null}
         warnings={req.didit_warnings}
+        // Requests predating parent verification have no didit_status and were
+        // submitted the old way, so they count as confirmed — otherwise every
+        // one of them would show an "unsubmitted" warning that isn't true.
+        confirmed={!req.didit_status || !!req.student_confirmed_at}
       />
 
       {/* Receipt upload (Paid + accepted). If a prior receipt was rejected, the

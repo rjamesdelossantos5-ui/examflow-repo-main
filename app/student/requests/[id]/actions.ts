@@ -240,3 +240,53 @@ export async function refreshParentVerification(requestId: string) {
   revalidatePath(`/student/requests/${requestId}`)
   return { error: null }
 }
+
+/**
+ * The final step: the student confirms submission after their parent has passed
+ * verification. This is what actually puts the request in front of the Registrar.
+ *
+ * Splitting it from form-filling is what makes the button labels honest. Filling
+ * in the form creates the row — Didit needs something to attach a session to —
+ * but it is not a submission until this runs.
+ */
+export async function confirmSubmission(requestId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: req } = await supabase
+    .from('special_exam_requests')
+    .select('id, status, didit_status, student_confirmed_at')
+    .eq('id', requestId)
+    .eq('student_id', user.id)
+    .maybeSingle()
+
+  if (!req) return { error: 'Request not found' }
+  if (req.student_confirmed_at) return { error: null } // already submitted; nothing to do
+
+  // The gate. A student cannot reach the Registrar by calling this directly —
+  // the parent has to have passed first.
+  if (!isApproved(req.didit_status)) {
+    return { error: 'Your parent or guardian must be verified before this can be submitted.' }
+  }
+
+  const { error } = await supabase
+    .from('special_exam_requests')
+    .update({ student_confirmed_at: new Date().toISOString(), submitted_at: new Date().toISOString() })
+    .eq('id', requestId)
+    .eq('student_id', user.id)
+
+  if (error) return { error: friendlyError('confirmSubmission', error, `We couldn't submit this request. ${RETRY_HINT}`) }
+
+  await supabase.from('progress_logs').insert({
+    request_id: requestId,
+    actor_id: user.id,
+    actor_role: 'student',
+    action: 'Submitted to the Registrar after parent verification',
+  })
+
+  revalidatePath(`/student/requests/${requestId}`)
+  revalidatePath('/student')
+  revalidatePath('/registrar')
+  return { error: null }
+}

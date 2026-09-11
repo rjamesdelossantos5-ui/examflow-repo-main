@@ -70,6 +70,10 @@ export interface SpecialExamRequest {
    *  is no guardian name on file. See migration_didit.sql. */
   didit_id_name?: string | null
   didit_warnings?: unknown
+  /** When the student pressed "Submit Request" after their parent passed
+   *  verification. Null = the form was filled in but never actually submitted,
+   *  so the Registrar must not see it. See migration_confirm_submit.sql. */
+  student_confirmed_at?: string | null
 }
 
 export interface ApplicationMedia {

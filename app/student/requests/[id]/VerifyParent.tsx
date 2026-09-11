@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { startParentVerification, refreshParentVerification } from './actions'
+import { startParentVerification, refreshParentVerification, confirmSubmission } from './actions'
 
 interface Props {
   requestId: string
@@ -10,6 +10,10 @@ interface Props {
   faceMatchScore: number | null
   documentType: string | null
   warnings: unknown
+  /** True once the student has pressed "Submit Request" — i.e. the request has
+   *  actually been sent to the Registrar. Passing verification alone does not
+   *  submit it. */
+  confirmed: boolean
 }
 
 /** Mirrors lib/didit.ts — matching is case-insensitive because Didit's own docs
@@ -33,7 +37,7 @@ function phaseOf(status: string | null): Phase {
 }
 
 export default function VerifyParent({
-  requestId, status, livenessScore, faceMatchScore, documentType, warnings,
+  requestId, status, livenessScore, faceMatchScore, documentType, warnings, confirmed,
 }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -65,6 +69,14 @@ export default function VerifyParent({
     })
   }
 
+  function handleConfirm() {
+    setError(null)
+    startTransition(async () => {
+      const res = await confirmSubmission(requestId)
+      if (res.error) setError(res.error)
+    })
+  }
+
   const warningList = Array.isArray(warnings)
     ? (warnings as Array<{ short_description?: string; long_description?: string; feature?: string }>)
     : []
@@ -79,7 +91,8 @@ export default function VerifyParent({
           </p>
           <p className="mt-1 text-xs text-green-700/80 dark:text-green-300/80">
             A live identity check confirmed the person present matched the ID they presented.
-            {documentType ? ` Document: ${documentType}.` : ''} Your request is now with the Registrar.
+            {documentType ? ` Document: ${documentType}.` : ''}
+            {confirmed ? ' Your request is now with the Registrar.' : ''}
           </p>
           {(livenessScore != null || faceMatchScore != null) && (
             <p className="mt-2 text-xs text-green-700/80 dark:text-green-300/80">
@@ -89,6 +102,28 @@ export default function VerifyParent({
             </p>
           )}
         </div>
+
+        {/* Verified but not yet submitted. This is the last step, and it is
+            genuinely easy to walk away from — so it states plainly that nothing
+            has been sent yet rather than relying on the button alone. */}
+        {!confirmed && (
+          <>
+            <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+              <strong>One step left.</strong> Your request has <strong>not</strong> been sent to the Registrar yet.
+              Press Submit below to send it.
+            </div>
+            {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={isPending}
+              className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+            >
+              {isPending ? 'Submitting…' : 'Submit Request'}
+            </button>
+          </>
+        )}
       </div>
     )
   }

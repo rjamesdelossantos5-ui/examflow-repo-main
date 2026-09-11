@@ -404,7 +404,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           className="w-full py-3 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
-          {submissionOpen ? 'Submit Request' : 'Submissions Closed'}
+          {/* Not "Submit Request": this button does not submit anything. It saves
+              the form and sends the parent to identity verification — the actual
+              submission happens after that passes, on the request page. */}
+          {submissionOpen ? 'Continue to Parent Verification' : 'Submissions Closed'}
         </button>
 
         {/* Confirmation dialog — the real submit lives here */}
@@ -414,9 +417,11 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 18%, transparent)' }}>
                 <Icon name="file" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
               </div>
-              <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Submit this request?</h3>
+              <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Ready to verify?</h3>
               <p className="text-sm ef-muted mt-1 mb-5">
-                Please double-check your details and documents. Once submitted, it will be sent to the Registrar for review.
+                Double-check your details first. Next you&apos;ll verify your parent or guardian&apos;s identity —
+                <strong style={{ color: 'var(--card-foreground)' }}> they need to be with you now</strong>. Your request is
+                only sent to the Registrar after that passes.
               </p>
               <div className="flex gap-3">
                 <button
@@ -428,11 +433,11 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                   Go Back
                 </button>
                 <SubmitButton
-                  pendingText="Submitting…"
+                  pendingText="Saving…"
                   className="flex-1 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                 >
-                  Yes, Submit
+                  Continue
                 </SubmitButton>
               </div>
             </div>

@@ -35,7 +35,10 @@ export default async function RegistrarPage() {
     .from('special_exam_requests')
     .select(SELECT)
     .eq('status', 'submitted')
-    .or('didit_status.is.null,didit_status.eq.Approved')
+    // Two conditions, not one: the parent must have passed verification AND the
+    // student must have pressed Submit afterwards. Passing verification alone
+    // does not submit a request — see migration_confirm_submit.sql.
+    .or('didit_status.is.null,and(didit_status.eq.Approved,student_confirmed_at.not.is.null)')
     .order('submitted_at', { ascending: false })
 
   let raw = verified.data
@@ -45,14 +48,30 @@ export default async function RegistrarPage() {
   // with no explanation. Fall back to the unfiltered query: without the column
   // there is no verification to gate on anyway, so this is the pre-Didit
   // behaviour rather than a silent outage. Same guard as savePeriod().
+  // Degrade one step at a time rather than straight to "show everything".
+  // A missing column makes PostgREST error, which would otherwise leave the
+  // Registrar staring at an empty queue with no explanation.
   if (verified.error) {
-    console.error('[registrar] verification filter unavailable — is migration_didit.sql applied?', verified.error)
-    const fallback = await supabase
+    console.error('[registrar] confirm filter unavailable — is migration_confirm_submit.sql applied?', verified.error)
+    // student_confirmed_at may be missing; didit_status alone still gates on
+    // whether the parent passed, which is the more important of the two.
+    const diditOnly = await supabase
       .from('special_exam_requests')
       .select(SELECT)
       .eq('status', 'submitted')
+      .or('didit_status.is.null,didit_status.eq.Approved')
       .order('submitted_at', { ascending: false })
-    raw = fallback.data
+    raw = diditOnly.data
+
+    if (diditOnly.error) {
+      console.error('[registrar] verification filter unavailable — is migration_didit.sql applied?', diditOnly.error)
+      const unfiltered = await supabase
+        .from('special_exam_requests')
+        .select(SELECT)
+        .eq('status', 'submitted')
+        .order('submitted_at', { ascending: false })
+      raw = unfiltered.data
+    }
   }
 
   // Only the active term's forms show; the previous term drops off once a new
