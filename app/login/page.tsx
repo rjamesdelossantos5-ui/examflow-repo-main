@@ -75,9 +75,17 @@ export default async function LoginPage({
             >
               Sign In
             </SubmitButton>
+
+            <Link
+              href="/signup"
+              className="block w-full text-center py-2.5 rounded-lg font-medium text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Create a student account
+            </Link>
+
             <Link
               href="/"
-              className="block w-full text-center py-2.5 rounded-lg font-medium text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+              className="block w-full text-center py-2.5 rounded-lg font-medium text-sm text-gray-400 hover:text-gray-600 transition-colors"
             >
               Cancel
             </Link>
