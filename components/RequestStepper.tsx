@@ -6,11 +6,13 @@ import type { RequestStatus } from '@/lib/supabase/types'
 // current. 'rejected' never renders this — the card shows a resubmit strip.
 //
 // Paid and excused differ at the end: a paid exam adds a payment sub-flow after
-// Program Head acceptance — the student uploads the cashier receipt ("Receipt"),
+// Program Head acceptance — the Registrar totals the student's special-exam
+// subjects and passes the amount to the Cashier ("Fee Assessment", their second
+// touch of the request), the student uploads the cashier receipt ("Receipt"),
 // then the Program Head verifies it ("Checking") before it's Scheduled. An
 // excused exam has no payment, so Program Head acceptance schedules it directly.
 const STEPS_EXCUSED = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Scheduled'] as const
-const STEPS_PAID = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Receipt', 'Checking', 'Scheduled'] as const
+const STEPS_PAID = ['Submitted', 'Registrar', 'Teacher', 'Program Head', 'Fee Assessment', 'Receipt', 'Checking', 'Scheduled'] as const
 
 const CURRENT_EXCUSED: Record<RequestStatus, number> = {
   submitted: 1,
@@ -25,15 +27,32 @@ const CURRENT_PAID: Record<RequestStatus, number> = {
   submitted: 1,
   verified_by_registrar: 2,
   approved_by_teacher: 3,
-  accepted: 4, // PH accepted → now waiting on the receipt upload
-  receipt_uploaded: 5, // receipt is in → Program Head verifying it
-  scheduled: 7, // all seven done
+  // PH accepted → now waiting on the Registrar's fee assessment. Once they've
+  // assessed it, `assessed` below advances this one node to the Receipt step.
+  accepted: 4,
+  receipt_uploaded: 6, // receipt is in → Program Head verifying it
+  scheduled: 8, // all eight done
   rejected: -1,
 }
 
-export default function RequestStepper({ status, paid }: { status: RequestStatus; paid: boolean }) {
+export default function RequestStepper({
+  status,
+  paid,
+  assessed = false,
+}: {
+  status: RequestStatus
+  paid: boolean
+  /** Paid exams only: the Registrar has totalled this student's fees and passed
+   *  them to the Cashier (payment_assessed_at is set). Defaults to false so a
+   *  database without migration_payment_assessment.sql just shows the request
+   *  sitting at Fee Assessment rather than mis-reporting a later stage. */
+  assessed?: boolean
+}) {
   const STEP_LABELS = paid ? STEPS_PAID : STEPS_EXCUSED
-  const current = (paid ? CURRENT_PAID : CURRENT_EXCUSED)[status] ?? 0
+  let current = (paid ? CURRENT_PAID : CURRENT_EXCUSED)[status] ?? 0
+  // 'accepted' covers both sides of the Registrar's assessment — there is no
+  // separate request_status for it, only the payment_assessed_at timestamp.
+  if (paid && status === 'accepted' && assessed) current = 5
   const last = STEP_LABELS.length - 1
   // Gold line reaches up to whichever node is current (or the end when done).
   const fillTo = Math.min(current, last)

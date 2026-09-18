@@ -27,6 +27,10 @@ export interface StudentRequest {
    *  but the student hasn't pressed Submit. Optional so rows built before this
    *  existed still type-check. */
   pending_submission?: boolean
+  /** Paid exams only: the Registrar has totalled this student's special-exam
+   *  fees and passed them to the Cashier. Optional — a database without
+   *  migration_payment_assessment.sql simply never sets it. */
+  payment_assessed?: boolean
 }
 
 // Friendly, student-facing status pill (label + tone color) for the card.
@@ -161,14 +165,18 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
               const status = r.status
               const isPaid = r.exam_type === 'paid'
               // Paid + accepted = the cashier receipt still needs to be uploaded.
-              const needsReceipt = isPaid && status === 'accepted'
+              // Paid + accepted, but only AFTER the Registrar has assessed the
+              // fees — before that there is no amount to pay at the Cashier yet.
+              const needsReceipt = isPaid && status === 'accepted' && !!r.payment_assessed
               const isRejected = status === 'rejected'
               // A request awaiting verification or the final Submit is still
               // 'submitted' underneath, so the plain status pill would read
               // "Submitted" and the student would think they were done.
               const pill = r.pending_submission
                 ? { label: 'Not submitted yet', tone: 'var(--status-warning)' }
-                : cardStatus(status)
+                : isPaid && status === 'accepted' && !r.payment_assessed
+                  ? { label: 'Awaiting Fee Assessment', tone: 'var(--status-warning)' }
+                  : cardStatus(status)
               return (
                 // The whole card links to the full detail page (files, submitted
                 // details, activity timeline) via a stretched overlay link — but
@@ -207,7 +215,7 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                   {/* Inline progress rail (rejected shows the strip below instead) */}
                   {!isRejected && (
                     <div className="mt-5">
-                      <RequestStepper status={status} paid={isPaid} />
+                      <RequestStepper status={status} paid={isPaid} assessed={!!r.payment_assessed} />
                     </div>
                   )}
 

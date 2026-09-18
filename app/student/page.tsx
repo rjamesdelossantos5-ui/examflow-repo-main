@@ -58,6 +58,11 @@ export default async function StudentPage() {
       // Submit. The underlying status is 'submitted' from creation, so without
       // this the card would claim "Submitted" before it is true.
       pending_submission: !!r.didit_status && !r.student_confirmed_at,
+      // Paid exams only: the Registrar has totalled this student's fees and
+      // sent them to the Cashier. Read defensively — the column doesn't exist
+      // until migration_payment_assessment.sql runs, and undefined there must
+      // read as 'not assessed yet', not as an error.
+      payment_assessed: !!r.payment_assessed_at,
       subject_code: subj?.subject_code ?? null,
       subject_name: subj?.subject_name ?? null,
     }

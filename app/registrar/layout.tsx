@@ -21,6 +21,10 @@ export default async function RegistrarLayout({ children }: { children: React.Re
   if (!profile || !['registrar', 'admin'].includes(profile.role)) redirect('/login')
   const nav = [
     { label: 'Pending Queue', href: '/registrar', icon: 'inbox' as const, badge: pending },
+    // The Registrar's SECOND touch of a paid request: after the Program Head
+    // accepts, total the student's special-exam subjects and pass the amount to
+    // the Cashier. See app/registrar/assessment/page.tsx.
+    { label: 'Payment Assessment', href: '/registrar/assessment', icon: 'receipt' as const },
     { label: 'Verified History', href: '/registrar/history', icon: 'history' as const },
   ]
 
