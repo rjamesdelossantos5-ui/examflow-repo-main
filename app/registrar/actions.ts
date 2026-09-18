@@ -106,3 +106,57 @@ export async function rejectRequest(requestId: string, reason: string) {
   revalidatePath('/registrar')
   return { error: null }
 }
+
+/**
+ * Marks a student's paid special exams as assessed, unlocking receipt upload.
+ *
+ * This is the Registrar's SECOND touch of a paid request. The Program Head has
+ * already accepted it; the Registrar now totals every accepted paid subject that
+ * student has, passes the figure to the Cashier, and stamps them here. Until
+ * that happens the student cannot upload a receipt — which is what stops them
+ * paying for one subject when they owe for three.
+ *
+ * Deliberately takes a STUDENT, not a request. The Registrar assesses a person's
+ * whole bill in one go; stamping subjects one at a time would let half a
+ * student's exams be assessed and the other half not, which is exactly the
+ * confusion this step exists to prevent.
+ */
+export async function markPaymentAssessed(studentId: string) {
+  const ctx = await requireRegistrar()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase, userId, role } = ctx
+
+  // Same optimistic-concurrency guard as verifyRequest: the .eq/.is filters mean
+  // a second click (or another registrar acting first) matches 0 rows rather
+  // than re-stamping and double-logging.
+  const { data: updated, error } = await supabase
+    .from('special_exam_requests')
+    .update({ payment_assessed_at: new Date().toISOString(), payment_assessed_by: userId })
+    .eq('student_id', studentId)
+    .eq('status', 'accepted')
+    .eq('exam_type', 'paid')
+    .is('payment_assessed_at', null)
+    .select('id')
+
+  if (error) {
+    return { error: friendlyError('markPaymentAssessed', error, `We couldn't record this assessment. ${RETRY_HINT}`) }
+  }
+  if (!updated?.length) return { error: 'This student has already been assessed, or has nothing awaiting assessment.' }
+
+  const ids = (updated as { id: string }[]).map((r) => r.id)
+  const { error: logErr } = await supabase.from('progress_logs').insert(
+    ids.map((id) => ({
+      request_id: id,
+      actor_id: userId,
+      actor_role: role,
+      action: `Payment assessed by Registrar — ${ids.length} subject${ids.length === 1 ? '' : 's'}, forwarded to Cashier`,
+    })),
+  )
+  // The stamp is what gates the student; the log is only the audit trail. Losing
+  // the log must not fail an assessment that already succeeded.
+  if (logErr) console.error('[markPaymentAssessed] progress log failed', logErr)
+
+  revalidatePath('/registrar/assessment')
+  revalidatePath('/student')
+  return { error: null, count: ids.length }
+}

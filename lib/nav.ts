@@ -10,6 +10,9 @@ export const NAV_BY_ROLE: Record<UserRole, NavItem[]> = {
   student: [],
   registrar: [
     { label: 'Queue', href: '/registrar' },
+    // The Registrar's second touch of a paid request: total the student's
+    // subjects after the Program Head accepts, and pass it to the Cashier.
+    { label: 'Payment Assessment', href: '/registrar/assessment' },
     { label: 'History', href: '/registrar/history' },
   ],
   subject_teacher: [

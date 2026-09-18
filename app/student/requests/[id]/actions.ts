@@ -15,6 +15,16 @@ import {
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_BYTES = 5 * 1024 * 1024
 
+/** Shape uploadReceipt needs. Declared here rather than inferred from the query,
+ *  because the fallback path selects fewer columns and `typeof` on a narrowed
+ *  `let` collapses to `never`. Not exported: a 'use server' module may only
+ *  export async functions. */
+type ReceiptRequest = {
+  status: string
+  exam_type: string
+  payment_assessed_at?: string | null
+}
+
 export async function deleteRequest(requestId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -74,16 +84,42 @@ export async function uploadReceipt(requestId: string, formData: FormData) {
   if (!ALLOWED_MIME.includes(file.type)) return { error: 'Only JPG, PNG, or PDF allowed' }
   if (file.size > MAX_BYTES) return { error: 'File exceeds 5 MB' }
 
-  const { data: req } = await supabase
-    .from('special_exam_requests')
-    .select('id, status, exam_type')
-    .eq('id', requestId)
-    .eq('student_id', user.id)
-    .single()
+  // payment_assessed_at may not exist yet (migration_payment_assessment.sql).
+  // Select it separately so an unmigrated database still allows receipt uploads
+  // exactly as before, instead of blocking every student on a missing column.
+  let req: ReceiptRequest | null = null
+  let assessmentEnforced = true
+  {
+    const res = await supabase
+      .from('special_exam_requests')
+      .select('id, status, exam_type, payment_assessed_at')
+      .eq('id', requestId)
+      .eq('student_id', user.id)
+      .maybeSingle()
+    if (res.error) {
+      assessmentEnforced = false
+      const legacy = await supabase
+        .from('special_exam_requests')
+        .select('id, status, exam_type')
+        .eq('id', requestId)
+        .eq('student_id', user.id)
+        .maybeSingle()
+      req = legacy.data as ReceiptRequest | null
+    } else {
+      req = res.data as ReceiptRequest | null
+    }
+  }
 
   if (!req) return { error: 'Request not found' }
   if (req.exam_type !== 'paid') return { error: 'Only Paid requests require a receipt' }
   if (req.status !== 'accepted') return { error: 'Receipt upload not available at this stage' }
+  // The Registrar's second touch. They total every accepted paid subject this
+  // student has and pass one figure to the Cashier — so a student must not pay
+  // for one subject while owing for three. Blocking the upload is what enforces
+  // the real-world order.
+  if (assessmentEnforced && !req.payment_assessed_at) {
+    return { error: 'The Registrar has not assessed your fees yet. Visit the Registrar before paying at the Cashier.' }
+  }
 
   const ext = (file.name.split('.').pop() ?? 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'bin'
   const path = `requests/${requestId}/payment_receipt.${ext}`

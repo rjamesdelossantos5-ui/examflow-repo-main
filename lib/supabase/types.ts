@@ -74,6 +74,13 @@ export interface SpecialExamRequest {
    *  verification. Null = the form was filled in but never actually submitted,
    *  so the Registrar must not see it. See migration_confirm_submit.sql. */
   student_confirmed_at?: string | null
+  /** Paid exams only. When the Registrar totalled this student's special-exam
+   *  fees and passed them to the Cashier — their SECOND touch of the request,
+   *  after the Program Head accepts. Null on an accepted paid request means the
+   *  student cannot upload a receipt yet.
+   *  See supabase/migration_payment_assessment.sql. */
+  payment_assessed_at?: string | null
+  payment_assessed_by?: string | null
 }
 
 export interface ApplicationMedia {

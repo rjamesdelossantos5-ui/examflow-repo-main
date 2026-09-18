@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { uploadReceipt } from './actions'
 import { compressImage } from '@/lib/compressImage'
+import { totalFee, formatPeso } from '@/lib/fees'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_MB = 5
@@ -13,7 +14,21 @@ const MAX_MB = 5
  * 'receipt_uploaded' for the Program Head's second approval. Photos are
  * compressed in the browser before upload (phone camera shots are huge).
  */
-export default function ReceiptUpload({ requestId, rejectedReason }: { requestId: string; rejectedReason?: string | null }) {
+export default function ReceiptUpload({
+  requestId,
+  rejectedReason,
+  assessed,
+  paidSubjectCount,
+}: {
+  requestId: string
+  rejectedReason?: string | null
+  /** The Registrar has totalled this student's fees and sent them to the
+   *  Cashier. Until then there is nothing to pay yet, so no upload form. */
+  assessed: boolean
+  /** How many accepted paid subjects this student has — the Cashier bills for
+   *  all of them at once, so the figure shown must be the total, not ₱200. */
+  paidSubjectCount: number
+}) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -64,6 +79,29 @@ export default function ReceiptUpload({ requestId, rejectedReason }: { requestId
     })
   }
 
+  // The Registrar hasn't assessed the fees yet, so there is no amount to pay and
+  // nothing to upload. Showing the form here would send students to the Cashier
+  // to pay for one subject when they may owe for several.
+  if (!assessed) {
+    return (
+      <div className="ef-card rounded-xl p-6">
+        <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-200">
+          <p className="font-semibold">Next step: visit the Registrar</p>
+          <p className="mt-1 text-xs">
+            Your request was approved. The Registrar now totals the fees for{' '}
+            <strong>
+              all {paidSubjectCount} of your special exam{paidSubjectCount === 1 ? '' : 's'}
+            </strong>{' '}
+            and passes the amount to the Cashier. Once they have, this page will let you upload your receipt.
+          </p>
+          <p className="mt-2 text-xs">
+            Don&apos;t pay at the Cashier before the Registrar has assessed you — they bill for every subject together.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   if (success) {
     return (
       <div className="ef-card rounded-xl p-6">
@@ -86,7 +124,18 @@ export default function ReceiptUpload({ requestId, rejectedReason }: { requestId
             Action Required: Upload Cashier Receipt
           </h3>
           <p className="text-sm ef-muted mt-0.5">
-            Pay the <strong style={{ color: 'var(--card-foreground)' }}>₱200</strong> special exam fee at the Cashier window, then upload your official receipt below. One receipt is required per request.
+            The Registrar has assessed your fees and sent them to the Cashier
+            {paidSubjectCount > 1 ? (
+              <>
+                {' '}— <strong style={{ color: 'var(--card-foreground)' }}>{formatPeso(totalFee(paidSubjectCount))}</strong>{' '}
+                for all {paidSubjectCount} of your special exams.
+              </>
+            ) : (
+              <>
+                {' '}— <strong style={{ color: 'var(--card-foreground)' }}>{formatPeso(totalFee(1))}</strong>.
+              </>
+            )}{' '}
+            Pay at the Cashier window, then upload your official receipt below. One receipt is required per request.
           </p>
         </div>
       </div>

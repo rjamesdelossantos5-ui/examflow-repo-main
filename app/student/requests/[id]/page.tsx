@@ -70,6 +70,29 @@ export default async function RequestDetailPage({
   // didit_status and were submitted the old way, so they are never "pending".
   const pendingSubmission = !!req.didit_status && !req.student_confirmed_at
 
+  // Paid requests only: the Cashier bills for every accepted subject at once, so
+  // the student needs the TOTAL, not this one request's fee. Counted here rather
+  // than in ReceiptUpload because that is a client component.
+  //
+  // `assessed` defaults to TRUE when payment_assessed_at is absent — an
+  // unmigrated database must not lock every student out of paying. The server
+  // action applies the same rule (see uploadReceipt).
+  let assessed = true
+  let paidSubjectCount = 1
+  if (req.exam_type === 'paid' && req.status === 'accepted') {
+    const { data: paidRows, error: paidErr } = await supabase
+      .from('special_exam_requests')
+      .select('id, payment_assessed_at')
+      .eq('student_id', user.id)
+      .eq('status', 'accepted')
+      .eq('exam_type', 'paid')
+    if (!paidErr) {
+      const rows = (paidRows ?? []) as { payment_assessed_at: string | null }[]
+      paidSubjectCount = Math.max(1, rows.length)
+      assessed = !!(req.payment_assessed_at as string | null)
+    }
+  }
+
   const logs = (req.progress_logs as { id: string; action: string; created_at: string; actor_role: UserRole }[]) ?? []
   const rawMedia = (req.application_media as { id: string; file_name: string; media_type: string; mime_type: string; storage_path: string }[]) ?? []
   const signed = await attachSignedUrls(supabase, rawMedia)
@@ -201,7 +224,12 @@ export default async function RequestDetailPage({
       {/* Receipt upload (Paid + accepted). If a prior receipt was rejected, the
           reason is still on the request — show it so the student can fix it. */}
       {req.exam_type === 'paid' && req.status === 'accepted' && (
-        <ReceiptUpload requestId={req.id} rejectedReason={req.rejection_reason as string | null} />
+        <ReceiptUpload
+          requestId={req.id}
+          rejectedReason={req.rejection_reason as string | null}
+          assessed={assessed}
+          paidSubjectCount={paidSubjectCount}
+        />
       )}
 
       {/* Documents */}
