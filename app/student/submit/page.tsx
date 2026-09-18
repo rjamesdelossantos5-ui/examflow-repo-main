@@ -94,10 +94,12 @@ export default async function SubmitPage({
   const termLabel = activePeriod ? `${TERM_LABEL[activePeriod.term]}${activePeriod.schoolYear ? ` · ${activePeriod.schoolYear}` : ''}` : null
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
-  const open = !!activePeriod && win.open
+  // Both halves matter: a term must be active AND its window must be set and
+  // running. A current term with no window yet (configured:false) is closed.
+  const open = !!activePeriod && win.configured && win.open
   const windowMessage = open
     ? null
-    : !activePeriod
+    : !activePeriod || !win.configured
       ? 'Special exam submissions are not open right now. Please check back later.'
       : win.notStarted
         ? `Submissions open on ${new Date(win.start!).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}. You can view your requests in the meantime.`

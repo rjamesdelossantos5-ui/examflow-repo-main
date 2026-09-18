@@ -26,12 +26,27 @@ export function nextTerm(t: Term): Term {
   return TERMS[Math.min(i + 1, TERMS.length - 1)]
 }
 
+// The semester + term that follows this one. Finals rolls into the NEXT
+// semester's Prelim; 2nd Semester Finals is the end of the school year and
+// stays put, since there is no school_year to advance to (it is fixed to ''
+// — see savePeriod). Returning the same pair there is deliberate: it is the
+// caller's cue that the Program Head has to choose, not a suggestion.
+export function nextTermOfSemester(semester: Semester, term: Term): { semester: Semester; term: Term } {
+  if (term !== 'finals') return { semester, term: nextTerm(term) }
+  if (semester === '1st') return { semester: '2nd', term: 'prelim' }
+  return { semester, term }
+}
+
 export interface ExamPeriod {
   id: string
   term: Term
   semester: Semester
   schoolYear: string
-  submissionStart: string // 'yyyy-mm-dd'
+  /** 'yyyy-mm-dd', or null when the term is current but its submission window
+   *  hasn't been set yet. Null means submissions are CLOSED — computeWindow
+   *  reports configured:false for it and every gate checks that.
+   *  See supabase/migration_optional_window.sql. */
+  submissionStart: string | null
   windowDays: number
   examDay: string | null // START of the exam window (ISO)
   examEndDay: string | null // END of the exam window (ISO); null = single day
@@ -47,7 +62,7 @@ interface PeriodRow {
   term: string
   semester: string | null
   school_year: string | null
-  submission_start: string
+  submission_start: string | null
   window_days: number
   exam_day: string | null
   exam_end_day: string | null
@@ -64,7 +79,7 @@ function toPeriod(r: PeriodRow): ExamPeriod {
     term: r.term as Term,
     semester: (r.semester as Semester) ?? '1st',
     schoolYear: r.school_year ?? '',
-    submissionStart: r.submission_start,
+    submissionStart: r.submission_start ?? null,
     windowDays: r.window_days || 7,
     examDay: r.exam_day,
     examEndDay: r.exam_end_day ?? null,

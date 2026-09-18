@@ -68,7 +68,11 @@ export async function submitRequest(formData: FormData) {
   // disabled, but this is the real guard against a crafted request).
   const activePeriod = await getActivePeriod(supabase)
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
-  if (!activePeriod || !win.open) {
+  // configured is false when the term has no submission window set yet — a
+  // deliberate state since migration_optional_window.sql. computeWindow reports
+  // open:true for it (its no-period fallback), so checking win.open alone would
+  // let a student submit into a window that does not exist.
+  if (!activePeriod || !win.configured || !win.open) {
     return redirect(`/student/submit?error=${encodeURIComponent('Special exam submissions are not open right now.')}`)
   }
 

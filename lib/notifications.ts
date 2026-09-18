@@ -180,7 +180,10 @@ export async function getNotifications(
     // became open).
     if (active) {
       const win = computeWindow(active.submissionStart, active.windowDays)
-      if (win.open && new Date(active.submissionStart + 'T00:00:00').getTime() > seenMs) {
+      // configured rules out a term whose window has not been set yet: there
+      // is no "it just opened" moment to compare against, and computeWindow
+      // reports open:true for a null date (its no-period fallback).
+      if (win.configured && win.open && new Date(active.submissionStart + 'T00:00:00').getTime() > seenMs) {
         items.push({
           id: `open-${active.id}`,
           text: `${TERM_LABEL[active.term]} submissions are now open. You have ${win.daysRemaining} day${win.daysRemaining === 1 ? '' : 's'} to submit (closes ${win.end ? new Date(win.end).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}).`,

@@ -90,7 +90,7 @@ export default async function StudentPage() {
   // "settled" state — the popup should only ever nag once, not every login.
   // Anything short of that (not yet open, or open with no end time yet) is
   // still unresolved, so it keeps reappearing every login (cookie-based).
-  const isSettled = win.open && !!activePeriod?.examEndDay
+  const isSettled = win.configured && win.open && !!activePeriod?.examEndDay
   // Re-fires the settled popup if the Program Head changes the window (start /
   // days) or the exam end — same "notify again on change" rule as the schedule.
   const windowSignature = isSettled

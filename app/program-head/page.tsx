@@ -1,7 +1,8 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { keepActive } from '@/lib/examSettings'
-import { activePeriodIdCached } from '@/lib/activePeriod'
+import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import { keepMyDepartment } from '@/lib/deptFilter'
@@ -33,7 +34,8 @@ export default async function ProgramHeadPage() {
     .order('submitted_at', { ascending: false })
 
   // A Program Head only approves their own department's subjects.
-  const [activeId, meta] = await Promise.all([activePeriodIdCached(), getMyProfileMeta()])
+  const [activePeriod, meta] = await Promise.all([getActivePeriodCached(), getMyProfileMeta()])
+  const activeId = activePeriod?.id ?? null
   const requests = keepMyDepartment(keepActive(raw ?? [], activeId), meta?.department_id ?? null).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string
@@ -67,10 +69,22 @@ export default async function ProgramHeadPage() {
   })
 
   return (
-    <PHQueue
-      requests={requests}
-      title="First Approval"
-      emptyText="No requests awaiting first approval."
-    />
+    <div className="space-y-4">
+      {/* A term can now be current without a submission window (see
+          supabase/migration_optional_window.sql). That is deliberate, but it
+          means submissions are shut and nothing else on this page would say so
+          — an empty queue looks the same either way. */}
+      {activePeriod && !activePeriod.submissionStart && (
+        <div className="rounded-lg px-4 py-3 text-sm bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+          <strong>No submission window set</strong> for the current term, so students can&apos;t submit.{' '}
+          <Link href="/program-head/settings" className="underline font-semibold">Set the dates</Link> when you have them.
+        </div>
+      )}
+      <PHQueue
+        requests={requests}
+        title="First Approval"
+        emptyText="No requests awaiting first approval."
+      />
+    </div>
   )
 }

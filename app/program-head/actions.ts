@@ -298,6 +298,9 @@ export async function deleteFinishedRequest(requestId: string) {
 interface PeriodInput {
   term: string
   semester: string
+  /** '' or undefined = make this the current term WITHOUT opening a window.
+   *  Stored as null, which computeWindow reports as configured:false, which
+   *  every submission gate treats as closed. */
   submissionStart: string
   windowDays: number
 }
@@ -314,7 +317,11 @@ export async function savePeriod(input: PeriodInput) {
 
   if (!['prelim', 'midterms', 'prefinals', 'finals'].includes(input.term)) return { error: 'Choose a term.' }
   if (!['1st', '2nd'].includes(input.semester)) return { error: 'Choose a semester.' }
-  if (!input.submissionStart) return { error: 'Set a submission start date.' }
+  // A blank date is allowed on purpose: it makes this the current term while
+  // leaving submissions closed, so the PH can move off a finished term before
+  // the next one's dates are announced instead of inventing one. See
+  // supabase/migration_optional_window.sql.
+  const start = input.submissionStart?.trim() || null
   if (!Number.isInteger(input.windowDays) || input.windowDays < 1 || input.windowDays > 365) {
     return { error: 'Submission window must be 1–365 days.' }
   }
@@ -323,7 +330,7 @@ export async function savePeriod(input: PeriodInput) {
     term: input.term,
     semester: input.semester,
     school_year: '',
-    submission_start: input.submissionStart,
+    submission_start: start,
     window_days: input.windowDays,
     is_active: true,
   }
@@ -343,6 +350,12 @@ export async function savePeriod(input: PeriodInput) {
       .upsert(legacy, { onConflict: 'term,school_year' })
       .select('id')
       .single())
+  }
+  // migration_optional_window.sql not applied yet — submission_start is still
+  // NOT NULL, so a term-only save was rejected by the database. Say exactly
+  // that instead of a generic failure; the PH can still save with a date.
+  if (error && start === null) {
+    return { error: 'Saving a term without a submission date needs supabase/migration_optional_window.sql to be run first. For now, set a start date as well.' }
   }
   if (error) return { error: friendlyError('savePeriod', error, `We couldn't save the submission window. ${RETRY_HINT}`) }
 

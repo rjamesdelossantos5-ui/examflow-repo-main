@@ -21,6 +21,15 @@ function toLocalInput(iso: string | null) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+// 'Opens 3 Nov 2025 · 7 days', or a plain statement when the term is current
+// but has no window yet. Never build this by concatenating submissionStart
+// directly: it is nullable, and TypeScript permits (string | null) + string,
+// so a null slips through the compiler and renders as 'Invalid Date'.
+function windowSummary(p: { submissionStart: string | null; windowDays: number }): string {
+  if (!p.submissionStart) return 'No submission window set'
+  return `Opens ${new Date(p.submissionStart + 'T00:00:00').toLocaleDateString()} · ${p.windowDays} days`
+}
+
 export default function SettingsForm({ active, periods }: { active: ExamPeriod | null; periods: ExamPeriod[] }) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -39,12 +48,22 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
       )}
 
       {active ? (
-        <div className="ef-card rounded-xl shadow-sm p-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs ef-muted">Active term</p>
-            <p className="font-bold" style={{ color: 'var(--card-foreground)' }}>{SEMESTER_LABEL[active.semester]} · {TERM_LABEL[active.term]}</p>
+        <div className="space-y-3">
+          <div className="ef-card rounded-xl shadow-sm p-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs ef-muted">Active term</p>
+              <p className="font-bold" style={{ color: 'var(--card-foreground)' }}>{SEMESTER_LABEL[active.semester]} · {TERM_LABEL[active.term]}</p>
+              <p className="text-xs ef-muted mt-0.5">{windowSummary(active)}</p>
+            </div>
+            <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-green-100 text-green-700">Active</span>
           </div>
-          <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-green-100 text-green-700">Active</span>
+          {/* The cost of letting a term exist without a window: it can be
+              forgotten. Nothing else tells the PH submissions are shut. */}
+          {!active.submissionStart && (
+            <div className="rounded-lg px-4 py-3 text-sm bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+              <strong>Students can&apos;t submit yet.</strong> {SEMESTER_LABEL[active.semester]} · {TERM_LABEL[active.term]} is the current term, but no submission window is set. Add the start date below once you have it.
+            </div>
+          )}
         </div>
       ) : (
         <div className="ef-card rounded-xl shadow-sm p-4 text-sm ef-muted">No active term — students can&apos;t submit until you set one below.</div>
@@ -83,7 +102,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
   function unchanged() {
     return (
       !!existing &&
-      start === existing.submissionStart &&
+      (start || null) === existing.submissionStart &&
       days === existing.windowDays &&
       existing.isActive
     )
@@ -95,7 +114,6 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
   function submit(e: React.FormEvent) {
     e.preventDefault()
     onError(null); setSaved(false); setInfo(null)
-    if (!start) { onError('Set a submission start date.'); return }
     if (unchanged()) { setInfo('You haven’t changed anything, so there’s nothing to save.'); return }
     setConfirmOpen(true) // in-app confirmation instead of a browser popup
   }
@@ -112,14 +130,14 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
   return (
     <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5">
       <div>
-        <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>Submission window</h3>
-        <p className="text-sm ef-muted">When students can submit their request for this term.</p>
+        <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>Current term &amp; submission window</h3>
+        <p className="text-sm ef-muted">Which term the school is processing special exams for, and when students can submit. Leave the date blank to set the term now and add the window later.</p>
       </div>
-      {saved && <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">Window saved and set active.</div>}
+      {saved && <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">{start ? 'Window saved and set active.' : 'Term set as current. Submissions stay closed until you add a start date.'}</div>}
       {info && <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 text-sm text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-300">{info}</div>}
       {existing && !saved && (
         <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
-          Current: <strong>Opens {new Date(existing.submissionStart + 'T00:00:00').toLocaleDateString()} · {existing.windowDays} days</strong>{existing.isActive ? '' : ' (not active)'}
+          Current: <strong>{windowSummary(existing)}</strong>{existing.isActive ? '' : ' (not active)'}
         </div>
       )}
 
@@ -148,8 +166,9 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className={label}>Submission start date *</label>
-          <input type="date" value={start} onChange={(e) => setStart(e.target.value)} required className={input} />
+          <label className={label}>Submission start date</label>
+          <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className={input} />
+          <p className="mt-1 text-xs ef-muted">Optional — leave blank if the dates aren&apos;t announced yet.</p>
         </div>
         <div>
           <label className={label}>Open for (days) *</label>
@@ -158,11 +177,11 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
       </div>
 
       <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
-        {start ? <>Submissions close on <strong>{endLabel}</strong> ({days} day{days !== 1 ? 's' : ''}).</> : <>Set a start date to compute the closing date.</>}
+        {start ? <>Submissions close on <strong>{endLabel}</strong> ({days} day{days !== 1 ? 's' : ''}).</> : <>No window: this becomes the current term and <strong>submissions stay closed</strong> until you set a start date.</>}
       </div>
 
       <button type="submit" disabled={isPending} className="px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-        {isPending ? 'Saving…' : alreadySet ? 'Change window' : 'Save & set active'}
+        {isPending ? 'Saving…' : start ? (alreadySet ? 'Change window' : 'Save & set active') : 'Set as current term'}
       </button>
 
       {/* In-app confirmation (replaces the browser confirm dialog) */}
@@ -170,21 +189,28 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
         <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmOpen(false)}>
           <div className="ef-dialog ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>
-              {alreadySet ? 'Change the submission window?' : 'Set the submission window?'}
+              {!start ? 'Set as the current term?' : alreadySet ? 'Change the submission window?' : 'Set the submission window?'}
             </h3>
             <div className="mt-3 space-y-2 text-sm">
               {existing && (
-                <p className="ef-muted">Current: <span style={{ color: 'var(--card-foreground)' }}>Opens {new Date(existing.submissionStart + 'T00:00:00').toLocaleDateString()} · {existing.windowDays} days</span></p>
+                <p className="ef-muted">Current: <span style={{ color: 'var(--card-foreground)' }}>{windowSummary(existing)}</span></p>
               )}
               <p className="ef-muted">
-                New: <strong style={{ color: 'var(--card-foreground)' }}>Opens {new Date(start + 'T00:00:00').toLocaleDateString()} · {days} days (closes {endLabel})</strong>
+                New: <strong style={{ color: 'var(--card-foreground)' }}>{start ? `Opens ${new Date(start + 'T00:00:00').toLocaleDateString()} · ${days} days (closes ${endLabel})` : 'Current term only — no submission window'}</strong>
               </p>
+              {/* Saving blank over a saved window CLEARS it — the upsert writes
+                  submission_start: null. Never let that happen silently. */}
+              {existing?.submissionStart && !start && (
+                <p className="rounded-md px-3 py-2 text-xs bg-red-50 border border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
+                  This <strong>clears</strong> the window already saved for this term ({windowSummary(existing)}). Students won&apos;t be able to submit until you set a new one.
+                </p>
+              )}
               <p className="ef-muted">This makes {SEMESTER_LABEL[semester]} · {TERM_LABEL[term]} the active term — students will see it right away.</p>
             </div>
             <div className="flex gap-3 mt-5">
               <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
               <button type="button" onClick={doSave} className="flex-1 py-2.5 rounded-lg font-semibold text-sm" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-                {alreadySet ? 'Yes, change it' : 'Yes, set it'}
+                {!start ? 'Yes, set the term' : alreadySet ? 'Yes, change it' : 'Yes, set it'}
               </button>
             </div>
           </div>
