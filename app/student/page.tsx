@@ -125,9 +125,14 @@ export default async function StudentPage() {
           persistSignature: windowSignature,
         }}
       />
+      {/* open must mean BOTH "a term is active" and "its window is set and
+          running". computeWindow(null) returns open:true as its no-period
+          fallback, so passing win.open alone made this banner announce an open
+          window in the gap after a term ends — while /student/submit, which has
+          this guard, correctly refused the submission. */}
       <SubmissionStatusBanner
         termLabel={termLabel}
-        open={win.open}
+        open={!!activePeriod && win.configured && win.open}
         notStarted={win.notStarted}
         start={win.start}
         end={win.end}
