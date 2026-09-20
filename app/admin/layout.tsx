@@ -30,6 +30,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // match departments by name and reject unknown ones). Department data also
     // still drives what a Program Head sees, via lib/deptFilter.ts.
     { label: 'Override Requests', href: '/admin/overrides', icon: 'inbox' as const, badge: overrides },
+    // Testing tool, not a school workflow: wipes every request so a demo run
+    // can start clean. Kept on Admin, away from the daily queues.
+    { label: 'Reset Test Data', href: '/admin/reset', icon: 'x' as const },
   ]
 
   return (
