@@ -183,6 +183,12 @@ export async function submitRequest(formData: FormData) {
       excused_reason: excusedReason,
       other_reason: examType === 'excused' && excusedReason === 'other' ? otherReason : null,
       status: 'submitted',
+      // Written HERE, in the same statement that creates the row, so a request
+      // can never exist unstamped. As a separate best-effort UPDATE afterwards,
+      // any failure left didit_status NULL — which the Registrar queue reads as
+      // "legacy row, nothing to verify" and shows immediately. Fail-open on the
+      // wrong side of a gate whose whole job is to hold the request back.
+      didit_status: 'Not Started',
       period_id: activePeriod.id,
       teacher_id: routedTeacherId,
       ...snapshot,
@@ -234,8 +240,10 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
     return redirect(`/student/submit?error=${encodeURIComponent('File upload failed: ' + uploadErrors[0].error)}`)
   }
 
-  // Mark this request as one that REQUIRES parent verification before the
-  // Registrar ever sees it.
+  // BACKSTOP ONLY. The insert above now writes didit_status in the same
+  // statement that creates the row, so this is reached with the stamp already
+  // in place. It still matters for the fallback insert, which omits the column
+  // so a database missing migration_snapshot.sql can still accept submissions.
   //
   // This stamp is what separates a new request from a legacy one. Both have no
   // Didit session yet, so didit_session_id can't tell them apart — but a request

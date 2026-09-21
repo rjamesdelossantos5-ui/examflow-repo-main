@@ -8,6 +8,7 @@ import DocumentViewer from '@/components/DocumentViewer'
 import ReceiptUpload from './ReceiptUpload'
 import VerifyParent from './VerifyParent'
 import DeleteRequestButton from './DeleteRequestButton'
+import { isApproved } from '@/lib/didit'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
@@ -97,6 +98,36 @@ export default async function RequestDetailPage({
   const rawMedia = (req.application_media as { id: string; file_name: string; media_type: string; mime_type: string; storage_path: string }[]) ?? []
   const signed = await attachSignedUrls(supabase, rawMedia)
   const media = rawMedia.map((m, i) => ({ ...m, signed_url: signed[i]?.signed_url }))
+
+  // Arrived straight from the submit form, which promised to open verification.
+  // Creating the Didit session is a server round-trip to their API, which takes
+  // a few seconds — and the page used to render in full underneath while that
+  // happened, so the student sat looking at their finished-looking request
+  // (timeline, documents, status) before being yanked to another site. Render
+  // ONLY the hand-off until it resolves; every other phase is unaffected.
+  const handingOff = verify === '1' && !isApproved((req.didit_status as string | null) ?? '')
+
+  if (handingOff) {
+    return (
+      <div className="max-w-md mx-auto py-10">
+        <VerifyParent
+          requestId={req.id}
+          status={(req.didit_status as string | null) ?? null}
+          livenessScore={(req.didit_liveness_score as number | null) ?? null}
+          faceMatchScore={(req.didit_face_match_score as number | null) ?? null}
+          documentType={(req.didit_document_type as string | null) ?? null}
+          warnings={req.didit_warnings}
+          confirmed={!req.didit_status || !!req.student_confirmed_at}
+          autoStart
+        />
+        <p className="mt-4 text-center text-xs ef-muted">
+          Your answers are saved. If this doesn&apos;t open,{' '}
+          <Link href={`/student/requests/${req.id}`} className="underline">open the request</Link>{' '}
+          and start verification from there.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl space-y-5">

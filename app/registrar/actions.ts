@@ -149,7 +149,7 @@ export async function markPaymentAssessed(studentId: string) {
       request_id: id,
       actor_id: userId,
       actor_role: role,
-      action: `Payment assessed by Registrar — ${ids.length} subject${ids.length === 1 ? '' : 's'}, forwarded to Cashier`,
+      action: `Payment assessed by Registrar — ${ids.length} subject${ids.length === 1 ? '' : 's'}`,
     })),
   )
   // The stamp is what gates the student; the log is only the audit trail. Losing

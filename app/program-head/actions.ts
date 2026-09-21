@@ -103,12 +103,22 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
   // Excused requests have no receipt step, so accepting one finishes it —
   // it goes straight to 'scheduled'. Paid requests go to 'accepted' and then
   // wait for the student's cashier receipt.
-  const { data: existing } = await supabase
+  const { data: existing, error: readErr } = await supabase
     .from('special_exam_requests')
     .select('exam_type')
     .eq('id', requestId)
     .maybeSingle()
-  const isExcused = existing?.exam_type === 'excused'
+
+  // Stop rather than guess. This used to read `existing?.exam_type === 'excused'`,
+  // so ANY failure to read the row — an error, RLS hiding it, a deleted request —
+  // silently evaluated to false and pushed the request down the PAID path: status
+  // 'accepted' instead of 'scheduled', landing an excused exam in the Registrar's
+  // Payment Assessment tab and billing the student for a fee they do not owe.
+  // The fee path must never be the fallback for "we could not tell".
+  if (readErr || !existing) {
+    return { error: friendlyError('acceptRequest:read', readErr, `We couldn’t read this request, so it was not accepted. ${RETRY_HINT}`) }
+  }
+  const isExcused = existing.exam_type === 'excused'
   const nextStatus = isExcused ? 'scheduled' : 'accepted'
 
   const { data: updated, error } = await supabase

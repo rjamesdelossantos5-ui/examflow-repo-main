@@ -53,8 +53,8 @@ export default function AssessmentList({
       <div>
         <h1 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Payment Assessment</h1>
         <p className="text-sm ef-muted mt-1">
-          Students whose paid special exams the Program Head has approved. Total what each student owes, pass it to
-          the Cashier, then mark them assessed — the student can only upload a receipt after that.
+          Students whose paid special exams the Program Head has approved. Check what each student owes, then mark
+          them assessed — the student can only upload a receipt after that.
         </p>
       </div>
 
@@ -146,7 +146,7 @@ export default function AssessmentList({
                   </p>
                 </div>
                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300 whitespace-nowrap">
-                  ✓ Sent to Cashier
+                  ✓ Assessed
                 </span>
               </div>
             ))}
