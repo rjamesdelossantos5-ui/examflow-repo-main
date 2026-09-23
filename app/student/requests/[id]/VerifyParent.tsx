@@ -51,6 +51,9 @@ export default function VerifyParent({
     setError(null)
     startTransition(async () => {
       const res = await startParentVerification(requestId)
+      // The server found the parent had already passed — nothing to open.
+      // Its revalidatePath re-renders this component into the approved phase.
+      if (res.alreadyVerified) return
       if (res.error || !res.url) {
         setError(res.error ?? 'Could not start verification.')
         return
@@ -88,6 +91,9 @@ export default function VerifyParent({
     autoStarted.current = true
     startTransition(async () => {
       const res = await startParentVerification(requestId)
+      // The server found the parent had already passed — nothing to open.
+      // Its revalidatePath re-renders this component into the approved phase.
+      if (res.alreadyVerified) return
       if (res.error || !res.url) {
         setError(res.error ?? 'Could not start verification.')
         return

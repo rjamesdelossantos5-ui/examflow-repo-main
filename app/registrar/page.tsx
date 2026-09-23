@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { keepActive } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
+import { withRegistrarGate } from '@/lib/registrarGate'
 import RegistrarQueue from './RegistrarQueue'
 
 export const metadata = { title: 'EXAMFLOW — Registrar Queue' }
@@ -21,58 +22,18 @@ export default async function RegistrarPage() {
       progress_logs(id, action, created_at, actor_role)
     `
 
-  // A request only reaches the Registrar once the parent's identity has been
-  // verified. Filling in the form is no longer enough to enter the queue —
-  // otherwise the Registrar could verify and forward a request whose parent was
-  // never actually present, which is the whole point of the check.
-  //
-  // NULL is included deliberately: those are requests submitted before this
-  // feature existed. They have no verification to wait for, and excluding them
-  // would silently strand every in-flight request the day this ships. New
-  // requests are stamped 'Not Started' at submission, so they are held back
-  // until Didit reports 'Approved' (see app/student/submit/actions.ts).
-  const verified = await supabase
-    .from('special_exam_requests')
-    .select(SELECT)
-    .eq('status', 'submitted')
-    // Two conditions, not one: the parent must have passed verification AND the
-    // student must have pressed Submit afterwards. Passing verification alone
-    // does not submit a request — see migration_confirm_submit.sql.
-    .or('didit_status.is.null,and(didit_status.eq.Approved,student_confirmed_at.not.is.null)')
-    .order('submitted_at', { ascending: false })
-
-  let raw = verified.data
-
-  // migration_didit.sql not applied yet — didit_status doesn't exist, so the
-  // filter above errors and would leave the Registrar staring at an empty queue
-  // with no explanation. Fall back to the unfiltered query: without the column
-  // there is no verification to gate on anyway, so this is the pre-Didit
-  // behaviour rather than a silent outage. Same guard as savePeriod().
-  // Degrade one step at a time rather than straight to "show everything".
-  // A missing column makes PostgREST error, which would otherwise leave the
-  // Registrar staring at an empty queue with no explanation.
-  if (verified.error) {
-    console.error('[registrar] confirm filter unavailable — is migration_confirm_submit.sql applied?', verified.error)
-    // student_confirmed_at may be missing; didit_status alone still gates on
-    // whether the parent passed, which is the more important of the two.
-    const diditOnly = await supabase
+  // Only requests the Registrar may see: parent verified AND the student pressed
+  // Submit. The rule lives in lib/registrarGate.ts so this queue, the nav badge
+  // and the notification bell can never disagree again — they used to, and the
+  // bell announced forms that had not been submitted.
+  const { data: raw } = await withRegistrarGate((gate) => {
+    let q = supabase
       .from('special_exam_requests')
       .select(SELECT)
       .eq('status', 'submitted')
-      .or('didit_status.is.null,didit_status.eq.Approved')
-      .order('submitted_at', { ascending: false })
-    raw = diditOnly.data
-
-    if (diditOnly.error) {
-      console.error('[registrar] verification filter unavailable — is migration_didit.sql applied?', diditOnly.error)
-      const unfiltered = await supabase
-        .from('special_exam_requests')
-        .select(SELECT)
-        .eq('status', 'submitted')
-        .order('submitted_at', { ascending: false })
-      raw = unfiltered.data
-    }
-  }
+    if (gate) q = q.or(gate)
+    return q.order('submitted_at', { ascending: false })
+  })
 
   // Only the active term's forms show; the previous term drops off once a new
   // term is activated in Settings.

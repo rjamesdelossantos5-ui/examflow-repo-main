@@ -4,6 +4,7 @@ import type { UserRole } from '@/lib/supabase/types'
 import { getActivePeriodCached, activePeriodIdCached } from '@/lib/activePeriod'
 import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getMyDeptSubjectIds } from '@/lib/myProfile'
+import { withRegistrarGate } from '@/lib/registrarGate'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -27,6 +28,26 @@ export async function countByStatus(
   if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
   if (subjectIds && subjectIds.length) q = q.in('subject_id', subjectIds)
   const { count } = await q
+  return count ?? 0
+}
+
+// The Registrar's nav badge. countByStatus('submitted') counted every row at
+// that status — including forms whose parent had not been verified and that the
+// student had not submitted — so the badge said 3 over an empty queue. This
+// counts through the same gate as the queue itself (lib/registrarGate.ts).
+export async function countRegistrarPending(supabase: SupabaseServer): Promise<number> {
+  const activeId = await activePeriodIdCached()
+  const { count } = await withRegistrarGate((gate) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'submitted')
+    if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
+    // A second .or() is ANDed with the first — PostgREST combines repeated or
+    // params, verified against this database before relying on it.
+    if (gate) q = q.or(gate)
+    return q
+  })
   return count ?? 0
 }
 
@@ -71,17 +92,24 @@ export async function getNotifications(
     tone: NotificationItem['tone'],
     icon: NotificationItem['icon'],
     subjectIds?: string[] | null,
+    /** Apply the Registrar gate (lib/registrarGate.ts). Without it the bell
+     *  announced "X submitted a request" for forms not yet submitted. */
+    gated = false,
   ): Promise<NotificationItem[]> => {
     if (Array.isArray(subjectIds) && subjectIds.length === 0) return []
-    let q = supabase
-      .from('special_exam_requests')
-      .select('id, snap_name, profiles!student_id(full_name), subjects(subject_code)')
-      .eq('status', status)
-      .order('submitted_at', { ascending: false })
-      .limit(MAX_ITEMS)
-    if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
-    if (subjectIds && subjectIds.length) q = q.in('subject_id', subjectIds)
-    const { data } = await q
+    const run = (gate: string | null) => {
+      let q = supabase
+        .from('special_exam_requests')
+        .select('id, snap_name, profiles!student_id(full_name), subjects(subject_code)')
+        .eq('status', status)
+        .order('submitted_at', { ascending: false })
+        .limit(MAX_ITEMS)
+      if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
+      if (subjectIds && subjectIds.length) q = q.in('subject_id', subjectIds)
+      if (gate) q = q.or(gate)
+      return q
+    }
+    const { data } = gated ? await withRegistrarGate(run) : await run(null)
 
     return ((data ?? []) as unknown as QueueRow[]).map((r) => ({
       id: r.id,
@@ -93,7 +121,7 @@ export async function getNotifications(
   }
 
   if (role === 'registrar') {
-    return queueItems('submitted', '/registrar', (name, code) => `${name} submitted a request for ${code}.`, 'info', 'inbox')
+    return queueItems('submitted', '/registrar', (name, code) => `${name} submitted a request for ${code}.`, 'info', 'inbox', null, true)
   }
 
   if (role === 'subject_teacher') {

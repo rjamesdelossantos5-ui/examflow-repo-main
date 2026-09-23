@@ -152,8 +152,14 @@ export async function getSessionDecision(
       console.error('[didit:getDecision]', res.status, body.slice(0, 500))
       return { status: null, decision: null, error: 'Could not read the verification result.' }
     }
-    const json = (await res.json()) as { status?: string; decision?: DiditDecision }
-    return { status: json.status ?? null, decision: json.decision ?? null, error: null }
+    // This endpoint returns id_verifications / liveness_checks / face_matches at
+    // the ROOT of the response. Only the WEBHOOK wraps them in a `decision` key
+    // (confirmed against Didit's own didit-verification-management skill). This
+    // used to read json.decision alone, which is undefined here — so every
+    // result fetched this way saved its status but silently dropped the scores,
+    // document type and ID name. Accept either shape.
+    const json = (await res.json()) as DiditDecision & { status?: string; decision?: DiditDecision }
+    return { status: json.status ?? null, decision: json.decision ?? json, error: null }
   } catch (err) {
     console.error('[didit:getDecision]', err)
     return { status: null, decision: null, error: 'Could not reach the verification service.' }

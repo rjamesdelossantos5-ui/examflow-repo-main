@@ -8,7 +8,8 @@ import DocumentViewer from '@/components/DocumentViewer'
 import ReceiptUpload from './ReceiptUpload'
 import VerifyParent from './VerifyParent'
 import DeleteRequestButton from './DeleteRequestButton'
-import { isApproved } from '@/lib/didit'
+import { isApproved, isTerminal } from '@/lib/didit'
+import { syncDiditResult } from '@/lib/diditSync'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
@@ -61,6 +62,19 @@ export default async function RequestDetailPage({
     .single()
 
   if (!req) notFound()
+
+  // A verification was started but no final result is on record: ask Didit now,
+  // before rendering. Didit sends the parent back here and dispatches its webhook
+  // at the same moment, so this page usually renders BEFORE the webhook has been
+  // processed. Rendered from that stale "Not Started", it showed the "Start
+  // parent verification" button to a parent who had just passed — the verify-
+  // again loop. Syncing here also completes the flow if the webhook never
+  // arrives at all. Once a final result is stored this is skipped, so it costs
+  // one Didit read only while something is actually pending.
+  if (req.didit_session_id && !isTerminal(req.didit_status as string | null)) {
+    const { fields } = await syncDiditResult(supabase, req.id, user.id, req.didit_session_id as string)
+    if (fields) Object.assign(req, fields)
+  }
 
   const subj = req.subjects as unknown as { subject_code: string; subject_name: string } | null
   const isRejected = req.status === 'rejected'

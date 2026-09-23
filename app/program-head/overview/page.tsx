@@ -6,6 +6,7 @@ import { keepMyDepartment } from '@/lib/deptFilter'
 import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
+import { withRegistrarGate } from '@/lib/registrarGate'
 import OverviewClient, { type OverviewRow } from './OverviewClient'
 
 export const metadata = { title: 'EXAMFLOW — Overview' }
@@ -23,16 +24,23 @@ export default async function OverviewPage() {
   const me = await getMyProfileMeta()
   const canOverride = me?.role === 'admin' || !!me?.can_override
 
-  const { data } = await supabase
-    .from('special_exam_requests')
-    .select(`
-      *,
-      profiles!student_id(full_name, section),
-      subjects(subject_code, subject_name, department_id)
-    `)
-    // Once scheduled, a request is done — it drops off the overview.
-    .neq('status', 'scheduled')
-    .order('submitted_at', { ascending: false })
+  // Same gate as the Registrar's queue (lib/registrarGate.ts). Without it this
+  // listed forms the parent had not verified and the student had not submitted
+  // as "Waiting for Registrar" — false, they are waiting on the student — and
+  // offered the override button on them.
+  const { data } = await withRegistrarGate((gate) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .select(`
+        *,
+        profiles!student_id(full_name, section),
+        subjects(subject_code, subject_name, department_id)
+      `)
+      // Once scheduled, a request is done — it drops off the overview.
+      .neq('status', 'scheduled')
+    if (gate) q = q.or(gate)
+    return q.order('submitted_at', { ascending: false })
+  })
 
   // This PH's own override requests, keyed by request (latest per request wins).
   const { data: overrides } = await supabase

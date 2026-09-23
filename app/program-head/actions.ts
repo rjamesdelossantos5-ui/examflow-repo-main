@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getActivePeriod, TERM_LABEL, SEMESTER_LABEL } from '@/lib/examSettings'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
+import { withRegistrarGate } from '@/lib/registrarGate'
 
 async function requirePH() {
   const supabase = await createClient()
@@ -38,25 +39,48 @@ export async function overrideAccept(requestId: string, scheduleStr: string) {
 
   const finalSchedule = scheduleStr ? new Date(scheduleStr).toISOString() : null
 
+  // Read the type first — same rule, and same reason, as acceptRequest. This
+  // used to set 'accepted' unconditionally, so an EXCUSED request fast-tracked
+  // here landed on the PAID path: the student was shown "Awaiting Receipt" for a
+  // fee they do not owe, and the request was stranded for good, because excused
+  // requests have no receipt step that could ever move them on to 'scheduled'.
+  const { data: existing, error: readErr } = await supabase
+    .from('special_exam_requests')
+    .select('exam_type')
+    .eq('id', requestId)
+    .maybeSingle()
+  if (readErr || !existing) {
+    return { error: friendlyError('overrideAccept:read', readErr, `We couldn’t read this request, so it was not accepted. ${RETRY_HINT}`) }
+  }
+  const isExcused = existing.exam_type === 'excused'
+  const nextStatus = isExcused ? 'scheduled' : 'accepted'
+
   // Only override while it's still in an early stage; .select() confirms a row
   // actually changed so we don't log an override that didn't happen.
-  const { data: updated, error } = await supabase
-    .from('special_exam_requests')
-    .update({ status: 'accepted', final_schedule: finalSchedule })
-    .eq('id', requestId)
-    .in('status', ['submitted', 'verified_by_registrar', 'approved_by_teacher'])
-    .select('id')
+  //
+  // The Registrar gate applies here too. An override exists for STAFF being
+  // unavailable — the reasons offered are "absent" and "on leave" — not for
+  // skipping the parent. Without the gate, 'submitted' matched forms whose
+  // parent was never verified and which the student never submitted, so a
+  // fast-track could accept a request that bypassed verification entirely.
+  const { data: updated, error } = await withRegistrarGate((gate) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .update({ status: nextStatus, final_schedule: finalSchedule })
+      .eq('id', requestId)
+      .in('status', ['submitted', 'verified_by_registrar', 'approved_by_teacher'])
+    if (gate) q = q.or(gate)
+    return q.select('id')
+  })
 
   if (error) return { error: friendlyError('overrideAccept', error, `We couldn't accept this request. ${RETRY_HINT}`) }
-  if (!updated?.length) return { error: 'This request can no longer be overridden (already accepted, scheduled, or rejected).' }
+  if (!updated?.length) return { error: 'This request can’t be overridden — it is already accepted, scheduled or rejected, or the parent has not been verified and the student has not submitted it yet.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,
     actor_id: userId,
     actor_role: role,
-    action: scheduleStr
-      ? `Accepted by Program Head (override — earlier stages bypassed). Schedule: ${new Date(scheduleStr).toLocaleString()}`
-      : 'Accepted by Program Head (override — earlier stages bypassed)',
+    action: `${isExcused ? 'Accepted & scheduled' : 'Accepted'} by Program Head (override — earlier stages bypassed)${scheduleStr ? `. Schedule: ${new Date(scheduleStr).toLocaleString()}` : ''}`,
   })
 
   revalidatePath('/program-head')

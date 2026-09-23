@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
-import { getNotifications, countByStatus } from '@/lib/notifications'
+import { getNotifications, countRegistrarPending } from '@/lib/notifications'
 
 export default async function RegistrarLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -15,7 +15,8 @@ export default async function RegistrarLayout({ children }: { children: React.Re
   const [profile, notifications, pending] = await Promise.all([
     getMyProfileMeta(),
     getNotifications(supabase, user.id, 'registrar'),
-    countByStatus(supabase, 'submitted'),
+    // Same gate as the queue — see lib/registrarGate.ts.
+    countRegistrarPending(supabase),
   ])
 
   if (!profile || !['registrar', 'admin'].includes(profile.role)) redirect('/login')
