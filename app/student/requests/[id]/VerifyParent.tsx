@@ -23,13 +23,17 @@ interface Props {
  *  disagree on the casing of "Kyc Expired". */
 const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase()
 
-type Phase = 'idle' | 'pending' | 'approved' | 'declined' | 'review'
+type Phase = 'idle' | 'pending' | 'approved' | 'declined'
 
 function phaseOf(status: string | null): Phase {
   switch (norm(status)) {
     case 'approved': return 'approved'
     case 'declined': return 'declined'
-    case 'in review': return 'review'
+    // Only two outcomes are ever shown: verified or not. "In Review" is
+    // declined server-side (declineSession in lib/didit.ts); this covers the
+    // moment before that lands, or a decline Didit refused. Either way the
+    // student gets a clear result and a retry — never an open-ended wait.
+    case 'in review': return 'declined'
     case 'in progress':
     case 'awaiting user':
     case 'resubmitted': return 'pending'
@@ -193,27 +197,6 @@ export default function VerifyParent({
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
           {leaving ? 'Opening verification…' : isPending ? 'Starting…' : 'Try verification again'}
-        </button>
-      </div>
-    )
-  }
-
-  // ── Under manual review ────────────────────────────────────────────────────
-  if (phase === 'review') {
-    return (
-      <div className="ef-card rounded-xl p-6">
-        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
-          <p className="font-semibold">Verification under review</p>
-          <p className="mt-1 text-xs">
-            The check was not conclusive and is being reviewed. No action is needed from you right now.
-          </p>
-        </div>
-        {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        <button
-          type="button" onClick={handleRefresh} disabled={isPending}
-          className="mt-3 text-xs underline ef-muted disabled:opacity-50"
-        >
-          {isPending ? 'Checking…' : 'Check for an update'}
         </button>
       </div>
     )

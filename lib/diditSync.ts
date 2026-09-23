@@ -1,6 +1,6 @@
 import 'server-only'
 import type { createClient } from '@/lib/supabase/server'
-import { getSessionDecision, summarizeDecision, isTerminal } from '@/lib/didit'
+import { getSessionDecision, summarizeDecision, isTerminal, isInReview, declineSession } from '@/lib/didit'
 
 type DB = Awaited<ReturnType<typeof createClient>>
 
@@ -39,8 +39,19 @@ export async function syncDiditResult(
   studentId: string,
   sessionId: string,
 ): Promise<{ fields: DiditFields | null; error: string | null }> {
-  const { status, decision, error } = await getSessionDecision(sessionId)
-  if (error || !status) return { fields: null, error: error ?? 'Could not read the verification result.' }
+  const got = await getSessionDecision(sessionId)
+  if (got.error || !got.status) return { fields: null, error: got.error ?? 'Could not read the verification result.' }
+  const { decision } = got
+  let status = got.status
+
+  // Never leave a session "In Review" — see declineSession in lib/didit.ts.
+  // Stored as Declined only if Didit accepted the change, so our record never
+  // disagrees with theirs. If it failed, "In Review" is stored as-is: the page
+  // still shows it as not verified, and the next sync tries the decline again.
+  if (isInReview(status)) {
+    const d = await declineSession(sessionId, 'Inconclusive result — declined automatically by EXAMFLOW.')
+    if (d.ok) status = 'Declined'
+  }
 
   const summary = summarizeDecision(decision)
   const fields: DiditFields = {

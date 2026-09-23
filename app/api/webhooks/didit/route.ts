@@ -4,6 +4,8 @@ import {
   summarizeDecision,
   statusLabel,
   isTerminal,
+  isInReview,
+  declineSession,
   type DiditDecision,
 } from '@/lib/didit'
 
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
   }
 
   const sessionId = payload.session_id
-  const status = payload.status
+  let status = payload.status
   if (!sessionId || !status) {
     // Signed, so genuinely from Didit — just not a session event we handle
     // (entity/transaction families share this envelope). Acknowledge it;
@@ -123,6 +125,14 @@ export async function POST(request: Request) {
   if (req.didit_checked_at && eventAt < new Date(req.didit_checked_at)) {
     console.warn('[didit:webhook] stale event for', sessionId, '— ignored')
     return new Response('stale', { status: 200 })
+  }
+
+  // Never leave a session "In Review" — see declineSession in lib/didit.ts.
+  // Only recorded as Declined if Didit accepted it. Didit then sends a
+  // "Declined" webhook of its own, which lands here as a normal update.
+  if (isInReview(status)) {
+    const d = await declineSession(sessionId, 'Inconclusive result — declined automatically by EXAMFLOW.')
+    if (d.ok) status = 'Declined'
   }
 
   const summary = summarizeDecision(payload.decision ?? null)

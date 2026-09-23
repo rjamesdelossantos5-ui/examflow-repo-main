@@ -213,9 +213,11 @@ export async function startParentVerification(requestId: string) {
   const callbackUrl = `${proto}://${host}/student/requests/${requestId}?verified=1`
 
   const { session, error } = await createVerificationSession({
-    // vendor_data doubles as Didit's idempotency key: an unfinished session for
-    // the same request is returned again instead of a new one being created, so
-    // a parent who abandons and retries doesn't burn a second check.
+    // vendor_data ties every session back to this request on Didit's side (their
+    // console can filter by it). It is NOT relied on as an idempotency key: Didit's
+    // documentation does not say that reusing it returns an existing session, and
+    // an earlier version of this comment claimed it did without that ever being
+    // verified. The guard against losing a result is the sync above.
     vendorData: requestId,
     callbackUrl,
     metadata: { request_id: requestId },

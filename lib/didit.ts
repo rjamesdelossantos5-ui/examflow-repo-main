@@ -167,6 +167,43 @@ export async function getSessionDecision(
 }
 
 /**
+ * Resolves a session Didit left "In Review" by declining it.
+ *
+ * In Review means Didit was not confident either way and parked the session
+ * for a human to decide in Didit's console. Nobody at the school does that job,
+ * so the student sat on "We're reviewing your submission" indefinitely.
+ * EXAMFLOW acts as that reviewer and always decides "not verified": uncertain is
+ * never good enough to vouch that a parent was present, and a declined parent
+ * can simply try again with a clearer photo.
+ *
+ * PATCH /v3/session/{id}/update-status/ with new_status "Declined" — verified
+ * against Didit's didit-verification-management skill.
+ */
+export async function declineSession(sessionId: string, comment: string): Promise<{ ok: boolean; error: string | null }> {
+  const key = apiKey()
+  if (!key) return { ok: false, error: DIDIT_NOT_CONFIGURED }
+
+  try {
+    const res = await fetch(`${API_BASE}/v3/session/${encodeURIComponent(sessionId)}/update-status/`, {
+      method: 'PATCH',
+      headers: { 'x-api-key': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_status: 'Declined', comment }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: 'no-store',
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.error('[didit:declineSession]', res.status, body.slice(0, 500))
+      return { ok: false, error: 'Could not update the verification.' }
+    }
+    return { ok: true, error: null }
+  } catch (err) {
+    console.error('[didit:declineSession]', err)
+    return { ok: false, error: 'Could not reach the verification service.' }
+  }
+}
+
+/**
  * Verifies a webhook came from Didit.
  *
  * Uses X-Signature — HMAC-SHA256 over the EXACT RAW BYTES. Didit also sends
@@ -214,6 +251,8 @@ export function verifyWebhookSignature(
 const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase()
 
 export const isApproved = (status: string | null | undefined) => norm(status) === 'approved'
+/** Didit's "In Review" — see declineSession for why EXAMFLOW never leaves one there. */
+export const isInReview = (status: string | null | undefined) => norm(status) === 'in review'
 
 /** True once Didit will send no further updates for this session. */
 export function isTerminal(status: string | null | undefined): boolean {
