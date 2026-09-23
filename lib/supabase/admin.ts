@@ -2,8 +2,10 @@ import 'server-only'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 /**
- * SERVICE-ROLE Supabase client. Used ONLY for Supabase Auth's admin endpoints
- * (creating and deleting auth users), which the anon key cannot call.
+ * SERVICE-ROLE Supabase client, for writes that RLS cannot express safely:
+ * Supabase Auth's admin endpoints, the Didit webhook (which has no user), the
+ * admin test-data reset, and the student's own verification writes on a
+ * 'submitted' request (see lib/diditSync.ts for why RLS blocks those).
  *
  * ⚠️  This key BYPASSES EVERY ROW-LEVEL SECURITY POLICY. Rules:
  *
@@ -12,10 +14,12 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
  *      access. It is deliberately named without the prefix.
  *   2. NEVER import this file from a Client Component. The `server-only` import
  *      above turns that into a build error rather than a silent leak.
- *   3. Only call it from a server action that has ALREADY verified the caller
- *      is an admin — this client will not check for you.
- *   4. Use lib/supabase/server.ts for everything else. Reads and writes should
- *      go through RLS; this exists purely because auth.admin.* requires it.
+ *   3. Only call it AFTER the server has proven the caller's authority with
+ *      their own RLS-bound client: the admin role, or ownership of the exact
+ *      row. This client checks nothing — it acts as no one, touches anything.
+ *   4. Write only fixed columns the server chooses, filtered to the proven
+ *      row. Never pass through anything the caller sent.
+ *   5. Use lib/supabase/server.ts for everything else.
  *
  * Returns null when the key isn't configured, so callers can show a clear
  * "not configured" message instead of crashing with an opaque 403.

@@ -72,7 +72,7 @@ export default async function RequestDetailPage({
   // arrives at all. Once a final result is stored this is skipped, so it costs
   // one Didit read only while something is actually pending.
   if (req.didit_session_id && !isTerminal(req.didit_status as string | null)) {
-    const { fields } = await syncDiditResult(supabase, req.id, user.id, req.didit_session_id as string)
+    const { fields } = await syncDiditResult(req.id, user.id, req.didit_session_id as string)
     if (fields) Object.assign(req, fields)
   }
 

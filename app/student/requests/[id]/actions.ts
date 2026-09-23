@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import { createVerificationSession, isApproved } from '@/lib/didit'
 import { syncDiditResult } from '@/lib/diditSync'
@@ -195,7 +196,7 @@ export async function startParentVerification(requestId: string) {
   // could be sent round to verify again, with the pass lost behind them.
   let currentStatus = req.didit_status as string | null
   if (req.didit_session_id && !isApproved(currentStatus)) {
-    const synced = await syncDiditResult(supabase, requestId, user.id, req.didit_session_id as string)
+    const synced = await syncDiditResult(requestId, user.id, req.didit_session_id as string)
     if (synced.fields) currentStatus = synced.fields.didit_status
   }
   if (isApproved(currentStatus)) {
@@ -227,13 +228,24 @@ export async function startParentVerification(requestId: string) {
   // Record the session id BEFORE sending the parent onward. This is the only
   // link between Didit's webhook and this request — if the write fails, the
   // result comes back and matches nothing, so bail out instead.
-  const { error: updErr } = await supabase
+  //
+  // Written with the service-role client. Through the student's own client this
+  // was silently discarded — students may only update a request that is
+  // 'accepted' or 'rejected' (migration_student_update_scope.sql), and this one
+  // is 'submitted'. PostgREST reports that as success with zero rows, so the
+  // parent was sent to Didit with nothing recorded: the result could never find
+  // its way back, and the page offered to verify again. Ownership was proven by
+  // the RLS-bound read above; the student_id filter repeats it.
+  const admin = createAdminClient()
+  if (!admin) return { url: null, error: SERVICE_KEY_MISSING }
+  const { data: saved, error: updErr } = await admin
     .from('special_exam_requests')
     .update({ didit_session_id: session.session_id, didit_status: session.status ?? 'Not Started' })
     .eq('id', requestId)
     .eq('student_id', user.id)
+    .select('id')
 
-  if (updErr) {
+  if (updErr || !saved?.length) {
     return { url: null, error: friendlyError('startParentVerification', updErr, `We couldn't start verification. ${RETRY_HINT}`) }
   }
 
@@ -264,7 +276,7 @@ export async function refreshParentVerification(requestId: string) {
 
   if (!req?.didit_session_id) return { error: 'No verification has been started for this request.' }
 
-  const { error } = await syncDiditResult(supabase, requestId, user.id, req.didit_session_id as string)
+  const { error } = await syncDiditResult(requestId, user.id, req.didit_session_id as string)
   if (error) return { error: `${error} ${RETRY_HINT}` }
 
   revalidatePath(`/student/requests/${requestId}`)
@@ -300,13 +312,26 @@ export async function confirmSubmission(requestId: string) {
     return { error: 'Your parent or guardian must be verified before this can be submitted.' }
   }
 
-  const { error } = await supabase
+  // Service-role client, same reason as the session-id save in
+  // startParentVerification: the row is 'submitted', which students may not
+  // update through their own client, so Submit used to report success while
+  // changing nothing. The filters repeat every precondition checked above —
+  // owner, verified, not yet submitted — so this can only ever confirm the
+  // request the checks were about, and only once.
+  const admin = createAdminClient()
+  if (!admin) return { error: SERVICE_KEY_MISSING }
+  const now = new Date().toISOString()
+  const { data: saved, error } = await admin
     .from('special_exam_requests')
-    .update({ student_confirmed_at: new Date().toISOString(), submitted_at: new Date().toISOString() })
+    .update({ student_confirmed_at: now, submitted_at: now })
     .eq('id', requestId)
     .eq('student_id', user.id)
+    .eq('didit_status', 'Approved')
+    .is('student_confirmed_at', null)
+    .select('id')
 
   if (error) return { error: friendlyError('confirmSubmission', error, `We couldn't submit this request. ${RETRY_HINT}`) }
+  if (!saved?.length) return { error: `We couldn't submit this request. ${RETRY_HINT}` }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,

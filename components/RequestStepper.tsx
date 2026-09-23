@@ -39,6 +39,7 @@ export default function RequestStepper({
   status,
   paid,
   assessed = false,
+  pending = false,
 }: {
   status: RequestStatus
   paid: boolean
@@ -47,46 +48,69 @@ export default function RequestStepper({
    *  database without migration_payment_assessment.sql just shows the request
    *  sitting at Fee Assessment rather than mis-reporting a later stage. */
   assessed?: boolean
+  /** Filled in but not actually submitted — the parent isn't verified yet, or
+   *  the student hasn't pressed Submit. The row's status is already 'submitted'
+   *  from the moment it is created, so without this the rail ticked "Submitted"
+   *  directly under a pill reading "Not submitted yet". */
+  pending?: boolean
 }) {
   const STEP_LABELS = paid ? STEPS_PAID : STEPS_EXCUSED
   let current = (paid ? CURRENT_PAID : CURRENT_EXCUSED)[status] ?? 0
   // 'accepted' covers both sides of the Registrar's assessment — there is no
   // separate request_status for it, only the payment_assessed_at timestamp.
   if (paid && status === 'accepted' && assessed) current = 5
+  // Still waiting on step one: being submitted at all.
+  if (pending) current = 0
   const last = STEP_LABELS.length - 1
   // Gold line reaches up to whichever node is current (or the end when done).
   const fillTo = Math.min(current, last)
   const fillPct = (fillTo / last) * 100
+  const done = current > last
 
   return (
-    <div className="relative">
-      {/* base track + gold fill, centered on the 2rem-wide nodes */}
-      <div className="absolute left-4 right-4 top-4 h-0.5 -translate-y-1/2" style={{ background: 'var(--border)' }} />
+    // --node is the circle's width. The track and the fill are inset by half of
+    // it at each end so they run centre-to-centre, and it shrinks on phones.
+    <div className="relative [--node:1.5rem] sm:[--node:2rem]">
+      {/* base track + gold fill, centred on the nodes */}
       <div
-        className="absolute left-4 top-4 h-0.5 -translate-y-1/2 transition-[width] duration-300 ease-[var(--ease-out)]"
-        style={{ width: `calc((100% - 2rem) * ${fillPct / 100})`, background: 'linear-gradient(90deg, #e0a200, var(--sti-gold))' }}
+        className="absolute h-0.5 -translate-y-1/2"
+        style={{ left: 'calc(var(--node) / 2)', right: 'calc(var(--node) / 2)', top: 'calc(var(--node) / 2)', background: 'var(--border)' }}
+      />
+      <div
+        className="absolute h-0.5 -translate-y-1/2 transition-[width] duration-300 ease-[var(--ease-out)]"
+        style={{
+          left: 'calc(var(--node) / 2)',
+          top: 'calc(var(--node) / 2)',
+          width: `calc((100% - var(--node)) * ${fillPct / 100})`,
+          background: 'linear-gradient(90deg, #e0a200, var(--sti-gold))',
+        }}
       />
 
       <div className="relative flex justify-between">
         {STEP_LABELS.map((label, i) => {
-          const done = i < current
+          const isDone = i < current
           const active = i === current
           return (
-            <div key={label} className="flex flex-col items-center gap-1.5 w-14 sm:w-16">
+            // Phones: just the circle. Eight labels need ~450px side by side and a
+            // phone card has ~330, so they piled into each other. The one label
+            // that matters — the current step — is spelled out under the rail.
+            <div key={label} className="flex flex-col items-center gap-1.5 sm:w-16">
               <div
-                className="w-8 h-8 rounded-full grid place-items-center text-xs font-bold"
-                style={
-                  done
+                className="grid place-items-center rounded-full font-bold text-2xs sm:text-xs"
+                style={{
+                  width: 'var(--node)',
+                  height: 'var(--node)',
+                  ...(isDone
                     ? { background: 'var(--sti-gold)', color: '#fff' }
                     : active
                       ? { background: 'var(--sti-navy)', color: '#fff' }
-                      : { background: 'var(--card)', border: '2px solid var(--border)', color: 'var(--muted)' }
-                }
+                      : { background: 'var(--card)', border: '2px solid var(--border)', color: 'var(--muted)' }),
+                }}
               >
-                {done ? '✓' : i + 1}
+                {isDone ? '✓' : i + 1}
               </div>
               <span
-                className="text-3xs sm:text-2xs text-center leading-tight"
+                className="hidden sm:block text-2xs text-center leading-tight"
                 style={{ color: active ? 'var(--card-foreground)' : 'var(--muted)', fontWeight: active ? 600 : 400 }}
               >
                 {label}
@@ -95,6 +119,18 @@ export default function RequestStepper({
           )
         })}
       </div>
+
+      {/* Phones only — the step the request is waiting on, in full. */}
+      <p className="sm:hidden mt-2 text-xs" style={{ color: 'var(--card-foreground)' }}>
+        {done ? (
+          <strong>All steps complete</strong>
+        ) : (
+          <>
+            <span className="ef-muted">Step {current + 1} of {STEP_LABELS.length} · </span>
+            <strong>{STEP_LABELS[current]}</strong>
+          </>
+        )}
+      </p>
     </div>
   )
 }

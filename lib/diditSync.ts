@@ -1,8 +1,7 @@
 import 'server-only'
-import type { createClient } from '@/lib/supabase/server'
+import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
 import { getSessionDecision, summarizeDecision, isTerminal, isInReview, declineSession } from '@/lib/didit'
 
-type DB = Awaited<ReturnType<typeof createClient>>
 
 /** The didit_* columns a sync writes, returned so a page can render the fresh
  *  values without re-querying the row it just updated. */
@@ -30,11 +29,20 @@ export interface DiditFields {
  * Reads Didit's API server-side; never trusts the `?status=` the browser comes
  * back with, which Didit's own docs call an "untrusted UI hint".
  *
- * Writes through the caller's RLS-bound client, so a student can only ever sync
- * their own request (the .eq('student_id') filter is defence in depth over RLS).
+ * WRITES WITH THE SERVICE-ROLE CLIENT, and that is load-bearing. Students may
+ * only update their own request while it is 'accepted' or 'rejected'
+ * (supabase/migration_student_update_scope.sql) — deliberately, so the public
+ * API can't be used to push a request forward. Verification happens while the
+ * request is 'submitted', so through the student's own client every one of
+ * these writes was silently discarded: no error, zero rows changed. That was
+ * the real cause of the verify-again loop.
+ *
+ * CALLER CONTRACT: only call this after reading the row with the student's own
+ * RLS-bound client, filtered by their user id — that read is the ownership
+ * check. The write below repeats the student_id filter, and writes only the
+ * didit_* columns this function chooses; nothing the student sends reaches it.
  */
 export async function syncDiditResult(
-  supabase: DB,
   requestId: string,
   studentId: string,
   sessionId: string,
@@ -70,14 +78,24 @@ export async function syncDiditResult(
   // thrown away. A final result, by contrast, should block anything older.
   if (isTerminal(status)) fields.didit_checked_at = new Date().toISOString()
 
-  const { error: updErr } = await supabase
+  const admin = createAdminClient()
+  if (!admin) return { fields: null, error: SERVICE_KEY_MISSING }
+
+  const { data: saved, error: updErr } = await admin
     .from('special_exam_requests')
     .update(fields)
     .eq('id', requestId)
     .eq('student_id', studentId)
+    .select('id')
 
   if (updErr) {
     console.error('[diditSync] update failed', updErr)
+    return { fields: null, error: 'Could not save the verification result.' }
+  }
+  // An update that matches nothing is not an error to PostgREST — it returns
+  // success with zero rows. Treat it as the failure it is, never as "saved".
+  if (!saved?.length) {
+    console.error('[diditSync] update matched no row', requestId)
     return { fields: null, error: 'Could not save the verification result.' }
   }
   return { fields, error: null }

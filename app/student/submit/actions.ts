@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getActivePeriod, computeWindow } from '@/lib/examSettings'
 import { isValidPhone, isValidStudentNumber } from '@/lib/validation'
 import type { ExcusedReason } from '@/lib/supabase/types'
@@ -256,10 +257,19 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
   // doesn't exist and this fails, leaving the request unstamped and therefore
   // visible to the Registrar — i.e. exactly the old behaviour. Failing the other
   // way would block every submission on an unrun migration.
-  const { error: stampErr } = await supabase
-    .from('special_exam_requests')
-    .update({ didit_status: 'Not Started' })
-    .eq('id', req.id)
+  //
+  // Service-role client: through the student's own client this was always a
+  // silent no-op, because students may not update a 'submitted' request
+  // (migration_student_update_scope.sql). Ownership is not in question — this
+  // row was inserted by this user a moment ago; the student_id filter repeats it.
+  const stampClient = createAdminClient()
+  const { error: stampErr } = stampClient
+    ? await stampClient
+        .from('special_exam_requests')
+        .update({ didit_status: 'Not Started' })
+        .eq('id', req.id)
+        .eq('student_id', userId)
+    : { error: new Error('SUPABASE_SERVICE_ROLE_KEY is not configured') }
   if (stampErr) console.error('[finishSubmission] could not stamp didit_status', stampErr)
 
   const mediaTypes = ['parent_signature', ...(examType === 'excused' && f.supportDoc ? ['supporting_document'] : [])]

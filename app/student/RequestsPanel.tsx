@@ -215,7 +215,7 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                   {/* Inline progress rail (rejected shows the strip below instead) */}
                   {!isRejected && (
                     <div className="mt-5">
-                      <RequestStepper status={status} paid={isPaid} assessed={!!r.payment_assessed} />
+                      <RequestStepper status={status} paid={isPaid} assessed={!!r.payment_assessed} pending={!!r.pending_submission} />
                     </div>
                   )}
 
