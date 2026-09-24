@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { signIn } from '@/app/login/actions'
+import { signIn, signInWithMicrosoft } from '@/app/login/actions'
 import { signUpInline } from '@/app/signup/actions'
 import { createClient } from '@/lib/supabase/client'
 
@@ -47,7 +47,6 @@ export default function LoginModal() {
     return () => document.removeEventListener('keydown', onKey)
   }, [open])
 
-  // Load departments once, only when the sign-up view is actually opened.
   useEffect(() => {
     if (view !== 'signup' || departments.length > 0) return
     const supabase = createClient()
@@ -82,7 +81,7 @@ export default function LoginModal() {
     setError(null)
     startTransition(async () => {
       const res = await signIn(fd)
-      if (res?.error) setError(res.error) // success redirects server-side
+      if (res?.error) setError(res.error)
     })
   }
 
@@ -97,7 +96,6 @@ export default function LoginModal() {
       } else if (res && 'needsConfirmation' in res) {
         setSignupSuccess('confirm-email')
       }
-      // else: no return value means it redirected server-side (auto-login case)
     })
   }
 
@@ -182,6 +180,30 @@ export default function LoginModal() {
                   style={{ background: GOLD, color: NAVY }}
                 >
                   {isPending ? 'Signing in…' : `Sign in as ${loginMode === 'student' ? 'Student' : 'Staff'}`}
+                </button>
+              </form>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 my-4">
+                <div className="h-px flex-1 bg-white/15" />
+                <span className="text-xs text-blue-100/50">or</span>
+                <div className="h-px flex-1 bg-white/15" />
+              </div>
+
+              {/* Microsoft sign-in — same for both Student and Admin/Staff modes,
+                  since auth is identical; only the post-login routing differs. */}
+              <form action={signInWithMicrosoft}>
+                <button
+                  type="submit"
+                  className="w-full py-3 rounded-xl font-semibold text-sm bg-white text-gray-800 shadow-lg hover:bg-gray-100 active:scale-[0.99] transition flex items-center justify-center gap-2.5"
+                >
+                  <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true">
+                    <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                    <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                    <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+                  </svg>
+                  Continue with Microsoft
                 </button>
               </form>
 
