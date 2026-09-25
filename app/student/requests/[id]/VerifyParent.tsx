@@ -17,6 +17,9 @@ interface Props {
   /** Set when the student arrived straight from the submit form (?verify=1).
    *  Opens Didit on mount instead of waiting for a button press. */
   autoStart?: boolean
+  /** Who Submit sends the request to. 'Program Head' when they returned it for
+   *  re-verification — it skips the Registrar and Teacher, who already approved it. */
+  sendsTo?: 'Registrar' | 'Program Head'
 }
 
 /** Mirrors lib/didit.ts — matching is case-insensitive because Didit's own docs
@@ -45,6 +48,7 @@ function phaseOf(status: string | null): Phase {
 
 export default function VerifyParent({
   requestId, status, livenessScore, faceMatchScore, documentType, warnings, confirmed, autoStart,
+  sendsTo = 'Registrar',
 }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -130,7 +134,7 @@ export default function VerifyParent({
           <p className="mt-1 text-xs text-green-700/80 dark:text-green-300/80">
             A live identity check confirmed the person present matched the ID they presented.
             {documentType ? ` Document: ${documentType}.` : ''}
-            {confirmed ? ' Your request is now with the Registrar.' : ''}
+            {confirmed ? ` Your request is now with the ${sendsTo}.` : ''}
           </p>
           {(livenessScore != null || faceMatchScore != null) && (
             <p className="mt-2 text-xs text-green-700/80 dark:text-green-300/80">
@@ -147,7 +151,7 @@ export default function VerifyParent({
         {!confirmed && (
           <>
             <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
-              <strong>One step left.</strong> Your request has <strong>not</strong> been sent to the Registrar yet.
+              <strong>One step left.</strong> Your request has <strong>not</strong> been sent to the {sendsTo} yet.
               Press Submit below to send it.
             </div>
             {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -184,7 +188,7 @@ export default function VerifyParent({
             </p>
           )}
           <p className="mt-2 text-xs text-red-700/90 dark:text-red-300/90">
-            Your request will not reach the Registrar until this passes. Your parent or guardian can try again with
+            Your request will not reach the {sendsTo} until this passes. Your parent or guardian can try again with
             good lighting and an unexpired ID.
           </p>
         </div>
@@ -210,7 +214,7 @@ export default function VerifyParent({
           <p className="font-semibold">Verification in progress</p>
           <p className="mt-1 text-xs">
             The result usually appears within a few seconds of your parent or guardian finishing.
-            Your request goes to the Registrar once it passes.
+            Your request goes to the {sendsTo} once it passes.
           </p>
         </div>
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
@@ -262,7 +266,7 @@ export default function VerifyParent({
             Action Required: Verify Parent/Guardian Identity
           </h3>
           <p className="text-sm ef-muted mt-0.5">
-            <strong style={{ color: 'var(--card-foreground)' }}>This request has not been sent to the Registrar yet.</strong>{' '}
+            <strong style={{ color: 'var(--card-foreground)' }}>This request has not been sent to the {sendsTo} yet.</strong>{' '}
             It stays here until your parent or guardian is verified — they need to be{' '}
             <strong style={{ color: 'var(--card-foreground)' }}>with you now</strong> to scan their own valid ID and
             take a short selfie.
@@ -276,7 +280,10 @@ export default function VerifyParent({
           <li>You will be taken to our verification partner, Didit, to complete this securely.</li>
           <li>Your parent scans the front and back of their valid ID, then takes a selfie.</li>
           <li>It takes about 1–2 minutes, and you come straight back here afterwards.</li>
-          <li>EXAMFLOW stores only the result — <strong>the ID photo and selfie are not saved to your record</strong>.</li>
+          <li>
+            <strong>The ID photo and selfie are not saved to your record.</strong> The Program Head views them to confirm
+            it is your parent or guardian, and they are deleted once the Program Head has decided.
+          </li>
         </ul>
       </div>
 

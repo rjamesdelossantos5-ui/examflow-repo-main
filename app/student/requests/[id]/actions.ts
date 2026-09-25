@@ -321,9 +321,13 @@ export async function confirmSubmission(requestId: string) {
   const admin = createAdminClient()
   if (!admin) return { error: SERVICE_KEY_MISSING }
   const now = new Date().toISOString()
+  // Returned by the Program Head for re-verification (returnForReverification):
+  // it was submitted long ago and is already past the Registrar and Teacher,
+  // so it keeps its original submitted_at and goes back to the Program Head.
+  const returnedByPH = req.status === 'approved_by_teacher'
   const { data: saved, error } = await admin
     .from('special_exam_requests')
-    .update({ student_confirmed_at: now, submitted_at: now })
+    .update(returnedByPH ? { student_confirmed_at: now } : { student_confirmed_at: now, submitted_at: now })
     .eq('id', requestId)
     .eq('student_id', user.id)
     .eq('didit_status', 'Approved')
@@ -337,11 +341,13 @@ export async function confirmSubmission(requestId: string) {
     request_id: requestId,
     actor_id: user.id,
     actor_role: 'student',
-    action: 'Submitted to the Registrar after parent verification',
+    action: returnedByPH
+      ? 'Parent verified again — sent back to the Program Head'
+      : 'Submitted to the Registrar after parent verification',
   })
 
   revalidatePath(`/student/requests/${requestId}`)
   revalidatePath('/student')
-  revalidatePath('/registrar')
+  revalidatePath(returnedByPH ? '/program-head' : '/registrar')
   return { error: null }
 }

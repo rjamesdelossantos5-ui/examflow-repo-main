@@ -5,7 +5,7 @@ export const metadata = { title: 'EXAMFLOW — Privacy Notice' }
 /**
  * Privacy Notice, required because EXAMFLOW collects SENSITIVE personal
  * information under the Data Privacy Act of 2012 (RA 10173) — government-issued
- * IDs, signatures, and (for medical excuses) health documents. Sensitive
+ * IDs and (for medical excuses) health documents. Sensitive
  * personal information may generally only be processed with consent given
  * BEFORE processing and specific to the purpose, which is why the submit form
  * carries its own declaration rather than relying on a blanket sign-up tick.
@@ -46,11 +46,11 @@ export default function PrivacyPage() {
             the exam type (paid or excused), the reason given, and the review history — including who
             approved or rejected it and when.</p>
           <p><strong style={{ color: 'var(--card-foreground)' }}>Documents you upload:</strong> the front
-            and back of a parent or guardian&apos;s valid ID, the parent or guardian&apos;s signature, a
+            and back of a parent or guardian&apos;s valid ID, a
             payment receipt for paid exams, and a supporting document for excused exams (for example, a
             medical certificate).</p>
           <p>
-            Government-issued IDs, signatures, and health records such as medical certificates are
+            Government-issued IDs and health records such as medical certificates are
             <strong style={{ color: 'var(--card-foreground)' }}> sensitive personal information</strong> under
             the law. They are collected only with your consent, which you give on the submission form.
           </p>
@@ -117,7 +117,7 @@ export default function PrivacyPage() {
 
         <Section title="A note on parent and guardian documents">
           <p>
-            A parent or guardian&apos;s ID and signature belong to <em>them</em>, not to the student
+            A parent or guardian&apos;s ID belongs to <em>them</em>, not to the student
             uploading them. Before submitting, you must confirm that your parent or guardian knows about
             and has authorised the request. Please show them this notice.
           </p>

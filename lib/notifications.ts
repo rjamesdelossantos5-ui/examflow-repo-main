@@ -15,19 +15,28 @@ export async function countByStatus(
   supabase: SupabaseServer,
   status: string,
   subjectIds?: string[] | null,
+  /** Apply the Registrar gate (lib/registrarGate.ts), as the queue under this
+   *  badge does. The Program Head's First Approval needs it: a request returned
+   *  for re-verification stays 'approved_by_teacher' while the parent verifies
+   *  again, and must not be counted until it is back. */
+  gated = false,
 ): Promise<number> {
   // A dept-scoped caller (Program Head) passes their department's subject ids.
   // Empty array = department has no subjects yet = nothing to count.
   if (Array.isArray(subjectIds) && subjectIds.length === 0) return 0
 
   const activeId = await activePeriodIdCached()
-  let q = supabase
-    .from('special_exam_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', status)
-  if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
-  if (subjectIds && subjectIds.length) q = q.in('subject_id', subjectIds)
-  const { count } = await q
+  const run = (gate: string | null) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', status)
+    if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
+    if (subjectIds && subjectIds.length) q = q.in('subject_id', subjectIds)
+    if (gate) q = q.or(gate)
+    return q
+  }
+  const { count } = gated ? await withRegistrarGate(run) : await run(null)
   return count ?? 0
 }
 
@@ -132,7 +141,9 @@ export async function getNotifications(
     // Scope the PH bell to their own department's subjects.
     const deptIds = await getMyDeptSubjectIds()
     const [first, second] = await Promise.all([
-      queueItems('approved_by_teacher', '/program-head', (name, code) => `${name} — ${code} is awaiting first approval.`, 'info', 'inbox', deptIds),
+      // Gated for the same reason as the queue: a request returned for
+      // re-verification is not awaiting the Program Head until it is back.
+      queueItems('approved_by_teacher', '/program-head', (name, code) => `${name} — ${code} is awaiting first approval.`, 'info', 'inbox', deptIds, true),
       queueItems('receipt_uploaded', '/program-head/receipts', (name, code) => `${name} uploaded a payment receipt for ${code}.`, 'warning', 'receipt', deptIds),
     ])
 
@@ -190,9 +201,13 @@ export async function getNotifications(
     const seenAt = (profileRow as { notifications_seen_at: string | null } | null)?.notifications_seen_at
     const seenMs = seenAt ? new Date(seenAt).getTime() : 0
 
+    // '*' rather than a column list: the returned-for-re-verification check below
+    // reads student_confirmed_at, which only exists once
+    // migration_confirm_submit.sql has run — naming it would break the whole
+    // bell on a database without it, where '*' just leaves it undefined.
     const { data: allData } = await supabase
       .from('special_exam_requests')
-      .select('id, status, exam_type, updated_at, period_id, subjects(subject_code)')
+      .select('*, subjects(subject_code)')
       .eq('student_id', userId)
       .in('status', ['accepted', 'scheduled', 'rejected', 'submitted', 'verified_by_registrar', 'approved_by_teacher', 'receipt_uploaded'])
       .order('updated_at', { ascending: false })
@@ -252,6 +267,11 @@ export async function getNotifications(
         items.push({ id: r.id, text: `Your special exam for ${code} is scheduled.`, href, tone: 'success', icon: 'calendar' })
       else if (r.status === 'rejected')
         items.push({ id: r.id, text: `Your request for ${code} was rejected.`, href, tone: 'danger', icon: 'x-circle' })
+      // Returned by the Program Head for re-verification: still at first
+      // approval, but the parent's verification was cleared. Nothing else leaves
+      // an 'approved_by_teacher' request unconfirmed (see lib/registrarGate.ts).
+      else if (r.status === 'approved_by_teacher' && r.didit_status && !r.student_confirmed_at)
+        items.push({ id: r.id, text: `Action needed: your Program Head asked your parent or guardian to verify again for ${code}.`, href, tone: 'warning', icon: 'user' })
     }
 
     return items

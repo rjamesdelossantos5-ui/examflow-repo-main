@@ -1,5 +1,6 @@
 import 'server-only'
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import type { VerificationPhoto } from '@/lib/verificationPhotos'
 
 /**
  * Didit identity verification — hosted flow.
@@ -48,8 +49,12 @@ export interface DiditDecision {
     first_name?: string
     last_name?: string
     warnings?: DiditWarning[]
+    // Short-lived presigned links — see photoUrl() below.
+    portrait_image?: string
+    front_image?: string
+    back_image?: string
   }>
-  liveness_checks?: Array<{ status?: string; method?: string; score?: number; warnings?: DiditWarning[] }>
+  liveness_checks?: Array<{ status?: string; method?: string; score?: number; warnings?: DiditWarning[]; reference_image?: string }>
   face_matches?: Array<{ status?: string; score?: number; warnings?: DiditWarning[] }>
 }
 
@@ -204,6 +209,48 @@ export async function declineSession(sessionId: string, comment: string): Promis
 }
 
 /**
+ * Deletes a session at Didit, with everything Didit stored for it: the ID
+ * images, the selfie and liveness video, the extracted data and the face
+ * embedding.
+ *
+ * Called once the Program Head is done with the photos: when they accept the
+ * request, or return it for re-verification (app/program-head/actions.ts).
+ * Not any earlier — the Program Head compares the ID and selfie by hand at
+ * first approval. EXAMFLOW keeps only the result (see migration_didit.sql), and
+ * without this Didit would keep its copy for good — its default retention is
+ * "unlimited". Requests that never reach the Program Head are not deleted
+ * here; the retention window in Didit's console is the backstop for those.
+ *
+ * DELETE /v3/session/{id}/delete/ — verified against Didit's Delete Session
+ * reference. Irreversible: there is no restore endpoint. The API key needs
+ * Didit's delete:sessions privilege; without it Didit answers 403 and the
+ * photos stay until the retention window in Didit's console (App Settings →
+ * Data) removes them. A 404 counts as done — the session is already gone.
+ *
+ * Best-effort: a failure is logged, never shown. The result is already saved.
+ */
+export async function deleteSession(sessionId: string): Promise<{ ok: boolean; error: string | null }> {
+  const key = apiKey()
+  if (!key) return { ok: false, error: DIDIT_NOT_CONFIGURED }
+
+  try {
+    const res = await fetch(`${API_BASE}/v3/session/${encodeURIComponent(sessionId)}/delete/`, {
+      method: 'DELETE',
+      headers: { 'x-api-key': key },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: 'no-store',
+    })
+    if (res.ok || res.status === 404) return { ok: true, error: null }
+    const body = await res.text().catch(() => '')
+    console.error('[didit:deleteSession]', res.status, body.slice(0, 500))
+    return { ok: false, error: 'Could not delete the verification data.' }
+  } catch (err) {
+    console.error('[didit:deleteSession]', err)
+    return { ok: false, error: 'Could not reach the verification service.' }
+  }
+}
+
+/**
  * Verifies a webhook came from Didit.
  *
  * Uses X-Signature — HMAC-SHA256 over the EXACT RAW BYTES. Didit also sends
@@ -305,4 +352,119 @@ export function summarizeDecision(decision: DiditDecision | null) {
     idName: id?.full_name ?? ([id?.first_name, id?.last_name].filter(Boolean).join(' ').trim() || null),
     warnings: warnings.length ? warnings : null,
   }
+}
+
+/**
+ * Didit's link to one of the photos the Program Head reviews, or null when the
+ * session has none (a passport has no back, for instance).
+ *
+ * Field names are from Didit's Retrieve Session reference
+ * (docs.didit.me/sessions-api/retrieve-session, checked 2026-09-25). They are
+ * short-lived presigned links — Didit: "fetch them promptly or re-request the
+ * decision to get fresh ones, and do not persist them as long-term
+ * references" — so they are read fresh on every view and never stored.
+ *
+ * The arrays are plural (see DiditDecision), so the first item that has the
+ * photo wins. Only https links are returned: the photo route fetches whatever
+ * this gives it, server-side.
+ */
+export function photoUrl(decision: DiditDecision | null, photo: VerificationPhoto): string | null {
+  const first = (links: Array<string | undefined>) =>
+    links.find((l) => typeof l === 'string' && l.startsWith('https://')) ?? null
+  const ids = decision?.id_verifications ?? []
+  switch (photo) {
+    case 'face_on_ID': return first(ids.map((i) => i.portrait_image))
+    case 'ID_front': return first(ids.map((i) => i.front_image))
+    case 'ID_back': return first(ids.map((i) => i.back_image))
+    case 'live_selfie': return first((decision?.liveness_checks ?? []).map((l) => l.reference_image))
+  }
+}
+
+// ── The student's own ID ─────────────────────────────────────────────────────
+//
+// Didit proves a real person with a real ID was present and that the selfie
+// matches that ID. It cannot know whose ID it should be, so the easy way round
+// it is for the student to verify with their own ID and face. EXAMFLOW refuses
+// an ID whose name is the student's. That stops this simple case only: a
+// student can edit their own name on the Account page, and another adult
+// standing in for the parent is not caught. Closing those needs the guardian's
+// name from school records, sent to Didit as expected_details.
+
+/** Joined to the word after them, so "De la Cruz", "Dela Cruz" and "Delacruz"
+ *  all compare as the same word. */
+const NAME_PARTICLES = new Set(['de', 'del', 'dela', 'della', 'delos', 'di', 'da', 'la', 'las', 'los', 'san', 'santa', 'santo', 'van', 'von'])
+/** Abbreviations, expanded so "Ma. Cristina" matches "MARIA CRISTINA". */
+const NAME_ABBREVIATIONS: Record<string, string> = { ma: 'maria', sta: 'santa', sto: 'santo' }
+/** Compared on their own: a father and son can share every other word. */
+const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv'])
+
+interface NameParts {
+  words: Set<string>
+  initials: Set<string>
+  suffix: string
+}
+
+function nameParts(name: string): NameParts {
+  const raw = name
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // Peña → Pena, José → Jose
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter(Boolean)
+    .map((w) => NAME_ABBREVIATIONS[w] ?? w)
+
+  const words = new Set<string>()
+  const initials = new Set<string>()
+  const suffixes: string[] = []
+  let particle = ''
+  for (const w of raw) {
+    if (NAME_SUFFIXES.has(w)) suffixes.push(w)
+    else if (w.length === 1) initials.add(w) // a middle initial: "Juan S. Dela Cruz"
+    else if (NAME_PARTICLES.has(w)) particle += w
+    else { words.add(particle + w); particle = '' }
+  }
+  if (particle) words.add(particle)
+  return { words, initials, suffix: suffixes.sort().join(' ') }
+}
+
+function sameName(a: NameParts, b: NameParts): boolean {
+  // A Jr. and his father differ only here. A suffix on one side and none on the
+  // other counts as different too: a father's ID rarely prints "Sr.".
+  if (a.suffix !== b.suffix) return false
+  const [short, long] = a.words.size <= b.words.size ? [a, b] : [b, a]
+  // A given name and a surname at least — sharing a surname is not a match.
+  if (short.words.size < 2) return false
+  for (const w of short.words) if (!long.words.has(w)) return false
+  // Words only the longer name has are usually a middle name the other wrote as
+  // an initial or left out. An initial that fits none of them is a different
+  // middle name, so a different person: "Juan S. Dela Cruz" is not
+  // "JUAN REYES DELA CRUZ".
+  const extra = [...long.words].filter((w) => !short.words.has(w))
+  if (extra.length > 0 && short.initials.size > 0) {
+    return extra.some((w) => short.initials.has(w[0]))
+  }
+  return true
+}
+
+/**
+ * True when the name read off the ID is the student's own, checked against each
+ * name given (the account name and the name typed on the request). Ignores case,
+ * accents, punctuation and word order, and tolerates a middle name written as an
+ * initial or left out. No name read off the ID is never a match.
+ *
+ * Known false positive: a parent whose name is the student's in every word
+ * compared (a father whose son's record omits "Jr.", a mother and daughter with
+ * the same given name) is refused too. OWN_ID_WARNING tells the student what to do.
+ */
+export function isStudentsOwnId(idName: string | null, studentNames: Array<string | null | undefined>): boolean {
+  if (!idName) return false
+  const id = nameParts(idName)
+  return studentNames.some((n) => !!n && sameName(id, nameParts(n)))
+}
+
+/** Stored in didit_warnings, in place of Didit's own, when the ID was the
+ *  student's — the declined card lists short_description to the student. */
+export const OWN_ID_WARNING = {
+  risk: 'EXAMFLOW_STUDENT_OWN_ID',
+  short_description: 'The name on this ID is the same as yours. Your parent or guardian must verify with their own ID. If they have the same name as you, ask your other parent or guardian to verify instead.',
+  feature: 'examflow',
 }

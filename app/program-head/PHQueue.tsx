@@ -4,11 +4,12 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DocumentViewer from '@/components/DocumentViewer'
 import type { RequestStatus } from '@/lib/supabase/types'
-import { acceptRequest, rejectPHRequest, confirmReceipt, rejectReceipt, acceptAll } from './actions'
+import { acceptRequest, rejectPHRequest, confirmReceipt, rejectReceipt, acceptAll, returnForReverification, getVerificationPhotos } from './actions'
 import { Icon } from '@/components/Icon'
 import { getSignedUrl } from '@/app/media-actions'
 import RejectReasonPicker from '@/components/RejectReasonPicker'
-import { PH_REJECT_EXCUSED, PH_REJECT_PAID, PH_RECEIPT_REJECT } from '@/lib/rejectReasons'
+import { PH_REJECT_EXCUSED, PH_REJECT_PAID, PH_RECEIPT_REJECT, PH_REVERIFY } from '@/lib/rejectReasons'
+import { verificationPhotoSrc, type VerificationPhoto } from '@/lib/verificationPhotos'
 import { ordinalYear } from '@/lib/ordinal'
 
 // Timeline dot color per actor role (mirrors the shared RequestReviewPanel).
@@ -37,6 +38,12 @@ interface RequestRow {
   status: RequestStatus
   submitted_at: string
   resubmitted?: boolean
+  /** Set when this request was returned for re-verification and has come back:
+   *  the reason the Program Head gave last time. */
+  reverifyReason?: string | null
+  /** Didit's result for the parent. Null for a request submitted before parent
+   *  verification existed — there are no photos to review. */
+  verification?: { faceMatchScore: number | null; livenessScore: number | null; idName: string | null } | null
   final_schedule: string | null
   student: { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null }
   subject: { subject_code: string; subject_name: string; teacher: { full_name: string } | null }
@@ -129,6 +136,7 @@ export default function PHQueue({
         <div className="space-y-2.5">
           {groups.map((g) => {
             const anyResub = g.forms.some((f) => f.resubmitted)
+            const anyReverified = g.forms.some((f) => f.reverifyReason)
             return (
               <button
                 key={g.key}
@@ -140,6 +148,7 @@ export default function PHQueue({
                     <p className="font-semibold truncate flex items-center gap-2" style={{ color: 'var(--card-foreground)' }}>
                       {g.name}
                       {anyResub && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
+                      {anyReverified && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-amber-100 text-amber-800">Re-verified</span>}
                     </p>
                     <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_code).join(', ')}</p>
                   </div>
@@ -190,7 +199,8 @@ export default function PHQueue({
 }
 
 function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => void }) {
-  const [rejectMode, setRejectMode] = useState<'request' | 'receipt' | null>(null)
+  // 'reverify' = return for re-verification: same reason picker, different action.
+  const [rejectMode, setRejectMode] = useState<'request' | 'receipt' | 'reverify' | null>(null)
   const [reason, setReason] = useState('')
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -198,7 +208,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
 
   const isExcused = r.exam_type === 'excused'
 
-  // Every document (receipt / parent IDs / signature) shows inline right away as
+  // Every uploaded document (certificate / receipt) shows inline right away as
   // a clickable thumbnail that zooms — no "View" click. The bucket is private,
   // so sign each file's URL on mount (short-lived signed URLs).
   useEffect(() => {
@@ -230,6 +240,15 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     if (!reason.trim()) { setError('Reason required'); return }
     startTransition(async () => {
       const res = await rejectPHRequest(r.id, reason)
+      if (res.error) setError(res.error)
+      else onDone()
+    })
+  }
+
+  function handleReturn() {
+    if (!reason.trim()) { setError('Reason required'); return }
+    startTransition(async () => {
+      const res = await returnForReverification(r.id, reason)
       if (res.error) setError(res.error)
       else onDone()
     })
@@ -283,6 +302,16 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">✓ Teacher approved</span>
       </div>
 
+      {/* Back after a return for re-verification — say what to look at again. */}
+      {r.status === 'approved_by_teacher' && r.reverifyReason && (
+        <div className="rounded-lg px-3 py-2.5 text-xs bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+          <strong>Re-verified.</strong> You returned this before: “{r.reverifyReason}”. The parent has verified again — check the new photos.
+        </div>
+      )}
+
+      {/* The parent's ID and selfie — the Program Head's manual check at first approval. */}
+      {r.status === 'approved_by_teacher' && <ParentPhotos requestId={r.id} verification={r.verification ?? null} />}
+
       {/* Documents */}
       <div>
         <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
@@ -319,7 +348,18 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
             style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
             {isPending ? 'Processing…' : (<><Icon name="check" className="w-4 h-4" /> {isExcused ? 'Mark scheduled' : 'Accept'}</>)}
           </button>
-          {!isExcused && <p className="text-2xs ef-muted text-center -mt-1">Student uploads the cashier receipt after this.</p>}
+          {(!isExcused || r.verification) && (
+            <p className="text-2xs ef-muted text-center -mt-1">
+              {!isExcused && 'Student uploads the cashier receipt after this. '}
+              {r.verification && 'The parent’s ID and selfie photos are deleted when you accept.'}
+            </p>
+          )}
+          {r.verification && (
+            <button onClick={() => setRejectMode('reverify')}
+              className="w-full py-2.5 rounded-lg font-semibold text-sm border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300 dark:hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-2">
+              <Icon name="user" className="w-4 h-4" /> Return for re-verification
+            </button>
+          )}
           <button onClick={() => setRejectMode('request')}
             className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
             <Icon name="x" className="w-4 h-4" /> Reject
@@ -347,22 +387,97 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
 
       {rejectMode && (
         <div className="space-y-3 border-t ef-border pt-3">
+          {rejectMode === 'reverify' && (
+            <p className="text-xs ef-muted">
+              The parent or guardian verifies again, and the request comes straight back to you — not to the Registrar
+              or the Teacher. These photos are deleted.
+            </p>
+          )}
           <RejectReasonPicker
-            presets={rejectMode === 'receipt' ? PH_RECEIPT_REJECT : isExcused ? PH_REJECT_EXCUSED : PH_REJECT_PAID}
+            presets={rejectMode === 'reverify' ? PH_REVERIFY : rejectMode === 'receipt' ? PH_RECEIPT_REJECT : isExcused ? PH_REJECT_EXCUSED : PH_REJECT_PAID}
             onChange={setReason}
+            label={rejectMode === 'reverify' ? 'Reason for returning' : undefined}
           />
           <div className="flex gap-2">
             <button
-              onClick={rejectMode === 'receipt' ? handleRejectReceipt : handleRejectRequest}
+              onClick={rejectMode === 'reverify' ? handleReturn : rejectMode === 'receipt' ? handleRejectReceipt : handleRejectRequest}
               disabled={isPending || !reason.trim()}
-              className="flex-1 py-2 rounded-lg font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              className={`flex-1 py-2 rounded-lg font-semibold text-sm text-white transition-colors disabled:opacity-50 ${rejectMode === 'reverify' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}
             >
-              {isPending ? 'Rejecting…' : 'Confirm Reject'}
+              {rejectMode === 'reverify'
+                ? (isPending ? 'Returning…' : 'Return to student')
+                : (isPending ? 'Rejecting…' : 'Confirm Reject')}
             </button>
             <button onClick={() => { setRejectMode(null); setReason('') }}
               className="px-4 py-2 rounded-lg border ef-border text-sm hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The parent's ID and live selfie, for the Program Head's manual check at first
+ * approval. EXAMFLOW stores none of these: getVerificationPhotos asks Didit
+ * which photos this verification has, and each image is streamed through
+ * /program-head/verification-photo, which re-checks access on every load.
+ */
+function ParentPhotos({ requestId, verification }: { requestId: string; verification: RequestRow['verification'] | null }) {
+  const [photos, setPhotos] = useState<VerificationPhoto[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const hasVerification = !!verification
+
+  useEffect(() => {
+    if (!hasVerification) return
+    let cancelled = false
+    getVerificationPhotos(requestId).then((res) => {
+      if (cancelled) return
+      if (res.error) setError(res.error)
+      else setPhotos(res.photos)
+    })
+    return () => { cancelled = true }
+  }, [requestId, hasVerification])
+
+  const scores = verification
+    ? [
+        verification.faceMatchScore != null ? `face match ${verification.faceMatchScore}` : null,
+        verification.livenessScore != null ? `liveness ${verification.livenessScore}` : null,
+      ].filter(Boolean).join(' · ')
+    : ''
+
+  return (
+    <div>
+      <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
+        <Icon name="user" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> Parent / guardian identity
+      </h4>
+      {!verification ? (
+        <p className="text-xs ef-muted">No photos — this request was submitted before parent verification existed.</p>
+      ) : (
+        <>
+          <p className="text-xs ef-muted mb-2.5">
+            Compare the face on the ID with the live selfie, and the name with the student&apos;s records.
+            {verification.idName && <> Name on the ID: <strong style={{ color: 'var(--card-foreground)' }}>{verification.idName}</strong>.</>}
+            {scores && <> Didit: {scores}.</>}
+          </p>
+          {error ? (
+            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+          ) : photos === null ? (
+            <p className="text-xs ef-muted">Loading photos…</p>
+          ) : photos.length === 0 ? (
+            <p className="text-xs ef-muted">Didit returned no photos for this verification.</p>
+          ) : (
+            <DocumentViewer
+              media={photos.map((p) => ({
+                id: p,
+                media_type: p,
+                file_name: `${p}.jpg`,
+                mime_type: 'image/jpeg',
+                signed_url: verificationPhotoSrc(requestId, p),
+              }))}
+            />
+          )}
+        </>
       )}
     </div>
   )

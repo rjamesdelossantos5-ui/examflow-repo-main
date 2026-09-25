@@ -11,9 +11,12 @@ import { OTHER } from '@/lib/rejectReasons'
 export default function RejectReasonPicker({
   presets,
   onChange,
+  label = 'Reason for rejection',
 }: {
   presets: string[]
   onChange: (reason: string) => void
+  /** Heading above the chips — the Program Head's return action is not a rejection. */
+  label?: string
 }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [other, setOther] = useState('')
@@ -29,7 +32,7 @@ export default function RejectReasonPicker({
 
   return (
     <div className="space-y-2.5">
-      <p className="text-xs font-medium ef-muted">Reason for rejection *</p>
+      <p className="text-xs font-medium ef-muted">{label} *</p>
       <div className="flex flex-wrap gap-2">
         {presets.map((p) => {
           const on = selected === p

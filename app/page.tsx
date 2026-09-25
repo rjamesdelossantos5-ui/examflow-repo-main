@@ -144,7 +144,7 @@ export default function LandingPage() {
             {[
               { icon: 'pencil', title: 'Submit online', body: 'Pick your subject, choose paid or excused, and attach your documents — all in one guided form.' },
               { icon: 'chart', title: 'Track in real time', body: 'A clear progress tracker shows exactly which stage you’re at and what happens next.' },
-              { icon: 'upload', title: 'Upload your documents', body: 'Add your ID, signature, and certificates. Reviewers verify each file right in their dashboard.' },
+              { icon: 'upload', title: 'Upload your documents', body: 'Add your ID and certificates. Reviewers verify each file right in their dashboard.' },
               { icon: 'list', title: 'Reviewed in order', body: 'Your request goes Registrar → Teacher → Program Head — nothing skipped, nothing lost.' },
               { icon: 'receipt', title: 'Receipts & schedule', body: 'For paid exams, upload your payment receipt and get your final exam schedule once approved.' },
               { icon: 'bell', title: 'Always know the status', body: 'See approvals, rejections, and the reason for each — no more chasing people for updates.' },

@@ -18,7 +18,7 @@ export default async function ProgramHeadLayout({ children }: { children: React.
   const [profile, notifications, firstCount, secondCount] = await Promise.all([
     getMyProfileMeta(),
     getNotifications(supabase, user.id, 'program_head'),
-    getMyDeptSubjectIds().then((ids) => countByStatus(supabase, 'approved_by_teacher', ids)),
+    getMyDeptSubjectIds().then((ids) => countByStatus(supabase, 'approved_by_teacher', ids, true)),
     getMyDeptSubjectIds().then((ids) => countByStatus(supabase, 'receipt_uploaded', ids)),
   ])
 

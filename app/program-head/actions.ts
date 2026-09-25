@@ -5,6 +5,18 @@ import { createClient } from '@/lib/supabase/server'
 import { getActivePeriod, TERM_LABEL, SEMESTER_LABEL } from '@/lib/examSettings'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import { withRegistrarGate } from '@/lib/registrarGate'
+import { deleteSession, getSessionDecision, photoUrl } from '@/lib/didit'
+import { reviewableSession } from '@/lib/verificationReview'
+import { VERIFICATION_PHOTOS, type VerificationPhoto } from '@/lib/verificationPhotos'
+import { REVERIFY_LOG_PREFIX } from '@/lib/rejectReasons'
+
+// Deletes Didit's copy of the parent's ID photos and selfie once the Program
+// Head is done with them (see deleteSession in lib/didit.ts). Best-effort: a
+// failure is logged there and never blocks the decision, which is already saved.
+async function deleteVerificationPhotos(sessionIds: (string | null | undefined)[]) {
+  const ids = [...new Set(sessionIds.filter((s): s is string => !!s))]
+  await Promise.all(ids.map((id) => deleteSession(id)))
+}
 
 async function requirePH() {
   const supabase = await createClient()
@@ -46,7 +58,7 @@ export async function overrideAccept(requestId: string, scheduleStr: string) {
   // requests have no receipt step that could ever move them on to 'scheduled'.
   const { data: existing, error: readErr } = await supabase
     .from('special_exam_requests')
-    .select('exam_type')
+    .select('exam_type, didit_session_id')
     .eq('id', requestId)
     .maybeSingle()
   if (readErr || !existing) {
@@ -82,6 +94,8 @@ export async function overrideAccept(requestId: string, scheduleStr: string) {
     actor_role: role,
     action: `${isExcused ? 'Accepted & scheduled' : 'Accepted'} by Program Head (override — earlier stages bypassed)${scheduleStr ? `. Schedule: ${new Date(scheduleStr).toLocaleString()}` : ''}`,
   })
+
+  await deleteVerificationPhotos([existing.didit_session_id])
 
   revalidatePath('/program-head')
   revalidatePath('/program-head/overview')
@@ -129,7 +143,7 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
   // wait for the student's cashier receipt.
   const { data: existing, error: readErr } = await supabase
     .from('special_exam_requests')
-    .select('exam_type')
+    .select('exam_type, didit_session_id')
     .eq('id', requestId)
     .maybeSingle()
 
@@ -145,15 +159,21 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
   const isExcused = existing.exam_type === 'excused'
   const nextStatus = isExcused ? 'scheduled' : 'accepted'
 
-  const { data: updated, error } = await supabase
-    .from('special_exam_requests')
-    .update({ status: nextStatus, final_schedule: finalSchedule })
-    .eq('id', requestId)
-    .eq('status', 'approved_by_teacher')
-    .select('id')
+  // Gated like the First Approval queue: a request returned for re-verification
+  // stays 'approved_by_teacher' while the parent verifies again, and must not
+  // be accepted from a panel that was open before it was returned.
+  const { data: updated, error } = await withRegistrarGate((gate) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .update({ status: nextStatus, final_schedule: finalSchedule })
+      .eq('id', requestId)
+      .eq('status', 'approved_by_teacher')
+    if (gate) q = q.or(gate)
+    return q.select('id')
+  })
 
   if (error) return { error: friendlyError('acceptRequest', error, `We couldn't accept this request. ${RETRY_HINT}`) }
-  if (!updated?.length) return { error: 'This request was already handled by someone else.' }
+  if (!updated?.length) return { error: 'This request was already handled, or is waiting for the parent to verify again.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,
@@ -163,6 +183,9 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
       ? 'Accepted & scheduled by Program Head (excused — no receipt needed)'
       : 'Accepted by Program Head — awaiting payment receipt',
   })
+
+  // The manual ID and selfie check is done — first approval is their only use.
+  await deleteVerificationPhotos([existing.didit_session_id])
 
   revalidatePath('/program-head')
   revalidatePath('/program-head/students')
@@ -180,26 +203,38 @@ export async function acceptAll(requestIds: string[]) {
   const ids = [...new Set(requestIds)].filter(Boolean)
   if (!ids.length) return { error: 'Nothing to accept.', count: 0 }
 
-  const { data: forms } = await supabase
-    .from('special_exam_requests')
-    .select('id, exam_type')
-    .in('id', ids)
-    .eq('status', 'approved_by_teacher')
-  const rows = (forms ?? []) as { id: string; exam_type: string }[]
+  // Gated like the First Approval queue — see acceptRequest.
+  const { data: forms } = await withRegistrarGate((gate) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .select('id, exam_type, didit_session_id')
+      .in('id', ids)
+      .eq('status', 'approved_by_teacher')
+    if (gate) q = q.or(gate)
+    return q
+  })
+  const rows = (forms ?? []) as { id: string; exam_type: string; didit_session_id: string | null }[]
   if (!rows.length) return { error: 'These requests were already handled.', count: 0 }
 
   const excusedIds = rows.filter((r) => r.exam_type === 'excused').map((r) => r.id)
   const paidIds = rows.filter((r) => r.exam_type !== 'excused').map((r) => r.id)
 
+  // .select('id') so the log lines and photo deletions below cover only the
+  // rows that actually changed — never a form someone else handled meanwhile.
+  const changed = new Set<string>()
   if (excusedIds.length) {
-    await supabase.from('special_exam_requests').update({ status: 'scheduled' }).in('id', excusedIds).eq('status', 'approved_by_teacher')
+    const { data } = await supabase.from('special_exam_requests').update({ status: 'scheduled' }).in('id', excusedIds).eq('status', 'approved_by_teacher').select('id')
+    for (const r of data ?? []) changed.add(r.id as string)
   }
   if (paidIds.length) {
-    await supabase.from('special_exam_requests').update({ status: 'accepted' }).in('id', paidIds).eq('status', 'approved_by_teacher')
+    const { data } = await supabase.from('special_exam_requests').update({ status: 'accepted' }).in('id', paidIds).eq('status', 'approved_by_teacher').select('id')
+    for (const r of data ?? []) changed.add(r.id as string)
   }
+  const accepted = rows.filter((r) => changed.has(r.id))
+  if (!accepted.length) return { error: 'These requests were already handled.', count: 0 }
 
   await supabase.from('progress_logs').insert(
-    rows.map((r) => ({
+    accepted.map((r) => ({
       request_id: r.id,
       actor_id: userId,
       actor_role: role,
@@ -209,9 +244,102 @@ export async function acceptAll(requestIds: string[]) {
     }))
   )
 
+  await deleteVerificationPhotos(accepted.map((r) => r.didit_session_id))
+
   revalidatePath('/program-head')
   revalidatePath('/program-head/students')
-  return { error: null, count: rows.length }
+  return { error: null, count: accepted.length }
+}
+
+/**
+ * The Program Head returns a request because of the parent's ID or selfie —
+ * the face does not match, or it is not the student's parent or guardian.
+ *
+ * Not a rejection: the request stays at first approval ('approved_by_teacher')
+ * and only the verification is cleared. The student sees the reason, their
+ * parent verifies again, the student presses Submit, and it comes straight back
+ * to this queue — never to the Registrar or the Teacher, who already approved
+ * it. Until then the First Approval gate (lib/registrarGate.ts) keeps it out of
+ * the queue, the badge and the bell.
+ *
+ * "Edit & Resubmit" cannot do this: it refuses a form with nothing changed, and
+ * it keeps the old "Verified", so the parent would never be asked again.
+ *
+ * The rejected verification's photos are deleted at Didit straight away (the
+ * user's decision, 2026-09-25) — the school keeps no copy of a failed one.
+ */
+export async function returnForReverification(requestId: string, reason: string) {
+  const ctx = await requirePH()
+  if (!ctx) return { error: 'Unauthorized' }
+  const { supabase, userId, role } = ctx
+
+  const sanitizedReason = String(reason).trim().slice(0, 1000)
+  if (!sanitizedReason) return { error: 'A reason is required' }
+
+  const { data: existing, error: readErr } = await supabase
+    .from('special_exam_requests')
+    .select('didit_session_id')
+    .eq('id', requestId)
+    .eq('status', 'approved_by_teacher')
+    .maybeSingle()
+  if (readErr) return { error: friendlyError('returnForReverification:read', readErr, `We couldn't read this request. ${RETRY_HINT}`) }
+  if (!existing) return { error: 'This request was already handled by someone else.' }
+
+  // The Program Head's own client may write these columns: the guard in
+  // migration_protect_verification_columns.sql applies to students only.
+  // 'Not Started' (not NULL) keeps it a verified-era request: NULL would read
+  // as a legacy row and walk straight through the gate.
+  const { data: updated, error } = await supabase
+    .from('special_exam_requests')
+    .update({
+      didit_session_id: null,
+      didit_status: 'Not Started',
+      didit_checked_at: null,
+      didit_event_id: null,
+      didit_liveness_score: null,
+      didit_face_match_score: null,
+      didit_document_type: null,
+      didit_id_name: null,
+      didit_warnings: null,
+      student_confirmed_at: null,
+    })
+    .eq('id', requestId)
+    .eq('status', 'approved_by_teacher')
+    .select('id')
+
+  if (error) return { error: friendlyError('returnForReverification', error, `We couldn't return this request. ${RETRY_HINT}`) }
+  if (!updated?.length) return { error: 'This request was already handled by someone else.' }
+
+  await supabase.from('progress_logs').insert({
+    request_id: requestId,
+    actor_id: userId,
+    actor_role: role,
+    action: `${REVERIFY_LOG_PREFIX}${sanitizedReason}`,
+  })
+
+  await deleteVerificationPhotos([existing.didit_session_id])
+
+  revalidatePath('/program-head')
+  return { error: null }
+}
+
+/**
+ * Which of the parent's verification photos exist for this request, so the
+ * panel shows only real ones (a passport has no back). The images themselves
+ * load through app/program-head/verification-photo/route.ts, one per photo.
+ */
+export async function getVerificationPhotos(requestId: string): Promise<{ photos: VerificationPhoto[]; error: string | null }> {
+  const access = await reviewableSession(requestId)
+  if (!access.ok) {
+    return { photos: [], error: access.reason === 'unauthorized' ? 'Unauthorized' : 'This request is no longer waiting for first approval.' }
+  }
+  if (!access.sessionId) return { photos: [], error: null }
+
+  const got = await getSessionDecision(access.sessionId)
+  if (got.error) {
+    return { photos: [], error: 'We couldn’t load the photos from Didit. If this keeps happening they may no longer exist there — return the request so the parent verifies again.' }
+  }
+  return { photos: VERIFICATION_PHOTOS.filter((p) => photoUrl(got.decision, p)), error: null }
 }
 
 export async function rejectPHRequest(requestId: string, reason: string) {

@@ -47,6 +47,11 @@ export default async function StudentPage() {
   // Serializable rows for the interactive (client) panel below.
   const panelRequests: StudentRequest[] = list.map((r) => {
     const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null
+    const unconfirmed = !!r.didit_status && !r.student_confirmed_at
+    // The Program Head returned it for re-verification: still at first
+    // approval, with the parent's verification cleared. Nothing else leaves an
+    // 'approved_by_teacher' request unconfirmed (see lib/registrarGate.ts).
+    const reverify = r.status === 'approved_by_teacher' && unconfirmed
     return {
       id: r.id as string,
       status: r.status as RequestStatus,
@@ -57,7 +62,8 @@ export default async function StudentPage() {
       // still has to pass verification and the student still has to press
       // Submit. The underlying status is 'submitted' from creation, so without
       // this the card would claim "Submitted" before it is true.
-      pending_submission: !!r.didit_status && !r.student_confirmed_at,
+      pending_submission: unconfirmed && !reverify,
+      reverify_requested: reverify,
       // Paid exams only: the Registrar has totalled this student's fees and
       // sent them to the Cashier. Read defensively — the column doesn't exist
       // until migration_payment_assessment.sql runs, and undefined there must

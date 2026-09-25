@@ -331,17 +331,17 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           )}
         </div>
 
-        {/* Parent documents.
-            The two "Valid ID" uploads used to live here. They were removed
-            because a file picker proves nothing — a student could upload any ID
-            photo from their gallery, with no parent involved. The ID is now
-            scanned live, together with a liveness-checked selfie, in the
-            verification step on the request page after submitting. The
-            signature stays: it is a separate consent artefact and is not
-            something the identity check captures. */}
+        {/* Parent / guardian.
+            Nothing is uploaded for the parent any more. The two "Valid ID"
+            uploads were removed because a file picker proves nothing — a
+            student could upload any ID photo from their gallery, with no parent
+            involved. The ID is now scanned live, together with a
+            liveness-checked selfie, in the verification step on the request
+            page after submitting. The signature upload was removed at the
+            school's request (2026-09-25): the live verification is the proof
+            that the parent took part. */}
         <div className="space-y-4 pt-2 border-t ef-border">
-          <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Parent / Guardian Documents</h2>
-          <FileField name="parent_signature" label="Parent/Guardian Signature" hint="Signed consent · JPG, PNG, or PDF · max 5 MB" inputClass={inputClass} kept={kept.has('parent_signature')} />
+          <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Parent / Guardian</h2>
           <div className="rounded-lg px-3 py-2.5 text-xs ef-muted border ef-border">
             <strong style={{ color: 'var(--card-foreground)' }}>Their valid ID is not uploaded here.</strong>{' '}
             After you submit, you will be asked to verify your parent or guardian&apos;s identity —
@@ -368,7 +368,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
         )}
 
         {/* Opens the confirmation dialog (does not submit directly) */}
-        {/* Data Privacy Act (RA 10173) consent. Parent IDs, signatures and medical
+        {/* Data Privacy Act (RA 10173) consent. Parent IDs and medical
             certificates are SENSITIVE personal information, which may only be
             processed with consent given BEFORE processing and specific to the
             purpose — so it lives here, at the point of collection, rather than as
@@ -387,7 +387,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             <span className="text-2xs sm:text-xs leading-relaxed" style={{ color: 'var(--card-foreground)' }}>
               I confirm that my parent or guardian has authorised this request, and consent to STI
               College Sta. Maria collecting and processing the details and documents above — including
-              the ID, signature and any medical document — for reviewing and scheduling this special
+              my parent or guardian&apos;s ID scan and selfie, and any medical document — for reviewing and scheduling this special
               exam. I understand these are deleted after the exam date, and that I may withdraw consent
               by removing this request.{' '}
               <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline font-medium" style={{ color: 'var(--status-info)' }}>

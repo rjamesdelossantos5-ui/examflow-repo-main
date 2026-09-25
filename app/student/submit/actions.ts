@@ -111,7 +111,7 @@ export async function submitRequest(formData: FormData) {
     fieldErrors.push('Enter a valid student number (digits only, e.g. 2024-00001).')
   }
   // Data Privacy Act (RA 10173) consent must exist BEFORE any sensitive personal
-  // information (parent ID, signature, medical certificate) is stored. The
+  // information (the parent's ID and selfie, a medical certificate) is stored. The
   // checkbox in the browser is a UX prompt, not the guard — a crafted POST omits
   // it — so refuse the whole submission here if it isn't present.
   if (String(formData.get('privacy_consent') ?? '') !== 'yes') {
@@ -123,12 +123,12 @@ export async function submitRequest(formData: FormData) {
     return redirect(`/student/submit?error=${encodeURIComponent(fieldErrors.join(' '))}${back}`)
   }
 
-  // parent_id / parent_id_back are deliberately absent: the parent's ID is no
-  // longer uploaded from the device. It is scanned live, with a liveness-checked
-  // selfie, in the verification step on the request page (see lib/didit.ts).
-  const parentSig = formData.get('parent_signature') as File | null
+  // Nothing is uploaded for the parent. Their ID is scanned live, with a
+  // liveness-checked selfie, in the verification step on the request page (see
+  // lib/didit.ts), and the signature upload was removed at the school's request
+  // (2026-09-25). So a paid request carries no files at all.
   const supportDoc = formData.get('supporting_document') as File | null
-  const files = { parentSig, supportDoc }
+  const files = { supportDoc }
 
   // Resubmit path: edit the existing rejected request in place so its uploaded
   // files are kept — the student only re-uploads what they want to replace.
@@ -160,8 +160,6 @@ export async function submitRequest(formData: FormData) {
   }
 
   const errors: string[] = []
-  const sigErr = validateFile(parentSig, 'Parent Signature')
-  if (sigErr) errors.push(sigErr)
 
   if (examType === 'excused') {
     if (!excusedReason) errors.push('Reason is required for Excused exam')
@@ -222,14 +220,11 @@ export async function submitRequest(formData: FormData) {
 }
 
 interface SubmissionFiles {
-  parentSig: File | null
   supportDoc: File | null
 }
 
 async function finishSubmission(supabase: DB, req: { id: string }, userId: string, examType: string, f: SubmissionFiles) {
-  const uploads: Promise<{ path: string; error: string | null }>[] = [
-    uploadFile(supabase, f.parentSig!, req.id, 'parent_signature'),
-  ]
+  const uploads: Promise<{ path: string; error: string | null }>[] = []
   if (examType === 'excused' && f.supportDoc) {
     uploads.push(uploadFile(supabase, f.supportDoc, req.id, 'supporting_document'))
   }
@@ -272,22 +267,26 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
     : { error: new Error('SUPABASE_SERVICE_ROLE_KEY is not configured') }
   if (stampErr) console.error('[finishSubmission] could not stamp didit_status', stampErr)
 
-  const mediaTypes = ['parent_signature', ...(examType === 'excused' && f.supportDoc ? ['supporting_document'] : [])]
-  const filesArr = [f.parentSig!, ...(examType === 'excused' && f.supportDoc ? [f.supportDoc] : [])]
+  // Same order as `uploads` above — index i of each describes the same file.
+  const mediaTypes = examType === 'excused' && f.supportDoc ? ['supporting_document'] : []
+  const filesArr = examType === 'excused' && f.supportDoc ? [f.supportDoc] : []
 
   // Upsert (not insert) so a retried submission can't leave two rows in the same
-  // document slot — same guard as the resubmit path below.
-  await supabase.from('application_media').upsert(
-    uploaded.map((u, i) => ({
-      request_id: req.id,
-      media_type: mediaTypes[i],
-      storage_path: u.path,
-      file_name: filesArr[i].name,
-      mime_type: filesArr[i].type,
-      size_bytes: filesArr[i].size,
-    })),
-    { onConflict: 'request_id,media_type' }
-  )
+  // document slot — same guard as the resubmit path below. A paid request
+  // uploads nothing, so there is nothing to record.
+  if (uploaded.length) {
+    await supabase.from('application_media').upsert(
+      uploaded.map((u, i) => ({
+        request_id: req.id,
+        media_type: mediaTypes[i],
+        storage_path: u.path,
+        file_name: filesArr[i].name,
+        mime_type: filesArr[i].type,
+        size_bytes: filesArr[i].size,
+      })),
+      { onConflict: 'request_id,media_type' }
+    )
+  }
 
   // Two rows: the submission itself, and a timestamped record that consent was
   // given. RA 10173 requires consent to be "evidenced by written, electronic or
@@ -395,7 +394,7 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     snap_year_level?: number | null; snap_section?: string | null; snap_contact_number?: string | null
   }
   const effectiveOther = fields.examType === 'excused' && fields.excusedReason === 'other' ? fields.otherReason : ''
-  const fileChanged = hasUpload(f.parentSig) || hasUpload(f.supportDoc)
+  const fileChanged = hasUpload(f.supportDoc)
   let fieldsChanged =
     fields.subjectId !== oldRow.subject_id ||
     fields.examType !== oldRow.exam_type ||
@@ -419,8 +418,6 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
 
   // Validate: a slot is required only if there's no file on record for it.
   const errors: string[] = []
-  const sigErr = validateFile(f.parentSig, 'Parent Signature', onRecord.has('parent_signature'))
-  if (sigErr) errors.push(sigErr)
   if (fields.examType === 'excused') {
     if (!fields.excusedReason) errors.push('Reason is required for Excused exam')
     const docErr = validateFile(f.supportDoc, 'Supporting document', onRecord.has('supporting_document'))
@@ -450,11 +447,10 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
   }
 
   // Replace only the slots that got a new upload.
-  // parent_id / parent_id_back are intentionally not listed. Rows submitted
-  // before the Didit change may still HAVE those media rows, and those are left
-  // alone — they just can't be replaced from this form any more.
+  // parent_id / parent_id_back / parent_signature are intentionally not listed.
+  // Rows submitted before those uploads were removed may still HAVE those media
+  // rows, and those are left alone — they just can't be replaced from this form.
   const slots: { file: File | null; type: string }[] = [
-    { file: f.parentSig, type: 'parent_signature' },
     { file: f.supportDoc, type: 'supporting_document' },
   ]
   for (const s of slots) {

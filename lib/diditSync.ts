@@ -1,6 +1,9 @@
 import 'server-only'
 import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
-import { getSessionDecision, summarizeDecision, isTerminal, isInReview, declineSession } from '@/lib/didit'
+import {
+  getSessionDecision, summarizeDecision, isTerminal, isInReview, isApproved, declineSession,
+  isStudentsOwnId, OWN_ID_WARNING,
+} from '@/lib/didit'
 
 
 /** The didit_* columns a sync writes, returned so a page can render the fresh
@@ -48,7 +51,17 @@ export async function syncDiditResult(
   sessionId: string,
 ): Promise<{ fields: DiditFields | null; error: string | null }> {
   const got = await getSessionDecision(sessionId)
-  if (got.error || !got.status) return { fields: null, error: got.error ?? 'Could not read the verification result.' }
+  if (got.error || !got.status) {
+    // A failed read does not always mean there is no answer. The session is
+    // deleted at Didit once the Program Head accepts or returns the request
+    // (deleteSession in lib/didit.ts), and the webhook may have saved the final
+    // result a moment after this page read the row. Either way the answer is
+    // in our own row — return it, or the page offers verification again and a
+    // new session overwrites a parent who already passed.
+    const stored = await storedFinalResult(requestId, studentId, sessionId)
+    if (stored) return { fields: stored, error: null }
+    return { fields: null, error: got.error ?? 'Could not read the verification result.' }
+  }
   const { decision } = got
   let status = got.status
 
@@ -62,6 +75,19 @@ export async function syncDiditResult(
   }
 
   const summary = summarizeDecision(decision)
+
+  // The student verifying with their own ID — see isStudentsOwnId in
+  // lib/didit.ts. Declined on our side only: Didit's answer (a real ID, a
+  // matching face) is right; it is EXAMFLOW's rule that refuses it.
+  if (isApproved(status)) {
+    const ownId = await presentedOwnId(requestId, summary.idName)
+    if (ownId === null) return { fields: null, error: 'Could not save the verification result.' }
+    if (ownId) {
+      status = 'Declined'
+      summary.warnings = [OWN_ID_WARNING]
+    }
+  }
+
   const fields: DiditFields = {
     didit_status: status,
     didit_liveness_score: summary.livenessScore,
@@ -98,5 +124,48 @@ export async function syncDiditResult(
     console.error('[diditSync] update matched no row', requestId)
     return { fields: null, error: 'Could not save the verification result.' }
   }
+
+  // Didit's copy of the photos is kept on purpose — the Program Head compares
+  // them by hand at first approval. See the webhook route for when they go.
   return { fields, error: null }
+}
+
+/** The final result already saved for this session, if there is one. */
+async function storedFinalResult(requestId: string, studentId: string, sessionId: string): Promise<DiditFields | null> {
+  const admin = createAdminClient()
+  if (!admin) return null
+  const { data } = await admin
+    .from('special_exam_requests')
+    .select('didit_status, didit_checked_at, didit_liveness_score, didit_face_match_score, didit_document_type, didit_id_name, didit_warnings')
+    .eq('id', requestId)
+    .eq('student_id', studentId)
+    .eq('didit_session_id', sessionId)
+    .maybeSingle()
+  return data && isTerminal(data.didit_status as string | null) ? (data as unknown as DiditFields) : null
+}
+
+/**
+ * Whether the ID Didit read is the student's own (isStudentsOwnId in
+ * lib/didit.ts), against both the account name and the name on the request.
+ * Null when the names could not be read: the caller must then store nothing
+ * rather than an Approved that was never checked.
+ *
+ * Service-role read — only call it for a request already tied to the caller:
+ * the webhook's session-id lookup, or syncDiditResult's caller contract.
+ */
+export async function presentedOwnId(requestId: string, idName: string | null): Promise<boolean | null> {
+  if (!idName) return false
+  const admin = createAdminClient()
+  if (!admin) return null
+  const { data, error } = await admin
+    .from('special_exam_requests')
+    .select('snap_name, student:profiles!student_id(full_name)')
+    .eq('id', requestId)
+    .maybeSingle()
+  if (error || !data) {
+    console.error('[diditSync] could not read the student names', error)
+    return null
+  }
+  const student = data.student as unknown as { full_name: string } | null
+  return isStudentsOwnId(idName, [data.snap_name as string | null, student?.full_name])
 }

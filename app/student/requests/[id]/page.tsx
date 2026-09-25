@@ -9,6 +9,7 @@ import ReceiptUpload from './ReceiptUpload'
 import VerifyParent from './VerifyParent'
 import DeleteRequestButton from './DeleteRequestButton'
 import { isApproved, isTerminal } from '@/lib/didit'
+import { REVERIFY_LOG_PREFIX } from '@/lib/rejectReasons'
 import { syncDiditResult } from '@/lib/diditSync'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
@@ -83,7 +84,13 @@ export default async function RequestDetailPage({
   // submitted: the parent still has to pass verification and the student still
   // has to press Submit. Requests predating parent verification have no
   // didit_status and were submitted the old way, so they are never "pending".
-  const pendingSubmission = !!req.didit_status && !req.student_confirmed_at
+  const unconfirmed = !!req.didit_status && !req.student_confirmed_at
+  // Returned by the Program Head for re-verification: already approved by the
+  // Registrar and the Teacher, so it is not "not submitted" — only the parent's
+  // verification was cleared. Nothing else leaves an 'approved_by_teacher'
+  // request unconfirmed (see lib/registrarGate.ts).
+  const reverifyRequested = req.status === 'approved_by_teacher' && unconfirmed
+  const pendingSubmission = unconfirmed && !reverifyRequested
 
   // Paid requests only: the Cashier bills for every accepted subject at once, so
   // the student needs the TOTAL, not this one request's fee. Counted here rather
@@ -109,6 +116,13 @@ export default async function RequestDetailPage({
   }
 
   const logs = (req.progress_logs as { id: string; action: string; created_at: string; actor_role: UserRole }[]) ?? []
+  // The Program Head's reason, from the log line returnForReverification writes.
+  const reverifyReason = reverifyRequested
+    ? [...logs]
+        .filter((l) => l.action.startsWith(REVERIFY_LOG_PREFIX))
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
+        ?.action.slice(REVERIFY_LOG_PREFIX.length) ?? null
+    : null
   const rawMedia = (req.application_media as { id: string; file_name: string; media_type: string; mime_type: string; storage_path: string }[]) ?? []
   const signed = await attachSignedUrls(supabase, rawMedia)
   const media = rawMedia.map((m, i) => ({ ...m, signed_url: signed[i]?.signed_url }))
@@ -132,6 +146,7 @@ export default async function RequestDetailPage({
           documentType={(req.didit_document_type as string | null) ?? null}
           warnings={req.didit_warnings}
           confirmed={!req.didit_status || !!req.student_confirmed_at}
+          sendsTo={reverifyRequested ? 'Program Head' : 'Registrar'}
           autoStart
         />
         <p className="mt-4 text-center text-xs ef-muted">
@@ -177,7 +192,11 @@ export default async function RequestDetailPage({
           </div>
           {/* The row's status is 'submitted' from the moment it is created, so
               StatusBadge would read "Submitted" before it actually is. */}
-          {pendingSubmission ? (
+          {reverifyRequested ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 whitespace-nowrap">
+              Verify parent again
+            </span>
+          ) : pendingSubmission ? (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 whitespace-nowrap">
               Not submitted yet
             </span>
@@ -212,6 +231,14 @@ export default async function RequestDetailPage({
         {isRejected && req.rejection_reason && (
           <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
             <strong>Rejected</strong> — {req.rejection_reason}
+          </div>
+        )}
+
+        {reverifyRequested && (
+          <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+            <strong>Your Program Head asked your parent or guardian to verify again</strong>
+            {reverifyReason ? <> — “{reverifyReason}”</> : null}. Nothing on the form needs changing. Once they
+            pass, press Submit below and it goes straight back to the Program Head.
           </div>
         )}
 
@@ -259,6 +286,8 @@ export default async function RequestDetailPage({
         // submitted the old way, so they count as confirmed — otherwise every
         // one of them would show an "unsubmitted" warning that isn't true.
         confirmed={!req.didit_status || !!req.student_confirmed_at}
+        // Returned by the Program Head: Submit sends it back to them, not the Registrar.
+        sendsTo={reverifyRequested ? 'Program Head' : 'Registrar'}
         // Arrived straight from the submit form, which promised "Continue to
         // Parent Verification" — so open Didit rather than making the student
         // hunt for a button. Ignored when there is already a usable

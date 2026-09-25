@@ -27,6 +27,9 @@ export interface StudentRequest {
    *  but the student hasn't pressed Submit. Optional so rows built before this
    *  existed still type-check. */
   pending_submission?: boolean
+  /** The Program Head returned it for re-verification: the parent must verify
+   *  again, then the student presses Submit and it goes back to the Program Head. */
+  reverify_requested?: boolean
   /** Paid exams only: the Registrar has totalled this student's special-exam
    *  fees and passed them to the Cashier. Optional — a database without
    *  migration_payment_assessment.sql simply never sets it. */
@@ -172,7 +175,9 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
               // A request awaiting verification or the final Submit is still
               // 'submitted' underneath, so the plain status pill would read
               // "Submitted" and the student would think they were done.
-              const pill = r.pending_submission
+              const pill = r.reverify_requested
+                ? { label: 'Verify parent again', tone: 'var(--status-warning)' }
+                : r.pending_submission
                 ? { label: 'Not submitted yet', tone: 'var(--status-warning)' }
                 : isPaid && status === 'accepted' && !r.payment_assessed
                   ? { label: 'Awaiting Fee Assessment', tone: 'var(--status-warning)' }
@@ -237,6 +242,28 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                         style={{ background: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                       >
                         <Icon name="upload" className="w-4 h-4" /> Upload receipt
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Returned by the Program Head: the parent verifies again. Links to
+                      the request page (not ?verify=1) so the student reads why
+                      first — the parent has to be there for it. */}
+                  {r.reverify_requested && (
+                    <div
+                      className="relative z-10 mt-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 rounded-xl px-4 py-3"
+                      style={{ background: 'color-mix(in srgb, var(--status-warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--status-warning) 35%, transparent)' }}
+                    >
+                      <p className="text-sm" style={{ color: 'var(--card-foreground)' }}>
+                        <strong>Your Program Head asked your parent or guardian to verify again.</strong>{' '}
+                        <span className="ef-muted">It goes straight back to them afterwards.</span>
+                      </p>
+                      <Link
+                        href={`/student/requests/${r.id}`}
+                        className="ef-press shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                        style={{ background: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                      >
+                        <Icon name="user" className="w-4 h-4" /> See why
                       </Link>
                     </div>
                   )}
