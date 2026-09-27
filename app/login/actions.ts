@@ -86,18 +86,18 @@ export async function signIn(formData: FormData): Promise<{ error: string } | vo
   redirect(ROLE_HOME[profile.role] ?? '/login')
 }
 
-// Starts the Microsoft OAuth flow. Redirects the browser to Microsoft's
-// sign-in page; the actual account creation/validation happens back in
-// app/auth/callback/route.ts once Microsoft redirects the user back.
+// Starts the Microsoft OAuth flow using Supabase's built-in Azure provider,
+// configured as multi-tenant + personal accounts on the Entra side. Redirects
+// the browser to Microsoft's sign-in page; account creation/domain validation
+// happens back in app/auth/callback/route.ts once Microsoft redirects here.
 export async function signInWithMicrosoft() {
   const supabase = await createClient()
 
   const { data, error } = await supabase.auth.signInWithOAuth({
-    // Cast needed: custom OIDC provider identifiers aren't in supabase-js's
-    // built-in Provider union type, but Supabase's auth server accepts them.
-    provider: 'custom:microsoft' as never,
+    provider: 'azure',
     options: {
       redirectTo: `${SITE_URL}/auth/callback`,
+      scopes: 'email', // required: without this, Azure won't return the user's email
     },
   })
 
