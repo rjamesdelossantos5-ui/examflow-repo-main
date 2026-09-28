@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     await supabase.auth.signOut()
     try {
       const admin = createAdminClient()
-      await admin.auth.admin.deleteUser(data.user.id)
+      await admin?.auth.admin.deleteUser(data.user.id)
     } catch {
       // Even if cleanup fails, still block them from proceeding below.
     }
