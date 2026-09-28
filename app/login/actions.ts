@@ -108,7 +108,10 @@ export async function signInWithMicrosoft() {
     provider: 'azure',
     options: {
       redirectTo: `${await siteOrigin()}/auth/callback`,
-      scopes: 'email', // required: without this, Azure won't return the user's email
+      // email: without it, Azure won't return the user's email.
+      // profile: without it, Azure sends no name, so the account's name was
+      // its email address (see the name swap in app/auth/callback/route.ts).
+      scopes: 'email profile',
     },
   })
 

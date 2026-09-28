@@ -76,13 +76,26 @@ export async function GET(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, is_active')
+    .select('role, is_active, full_name')
     .eq('id', data.user.id)
     .single()
 
   if (!profile || !profile.is_active) {
     await supabase.auth.signOut()
     return respond('/login?error=' + encodeURIComponent('This account is inactive. Please contact the registrar.'))
+  }
+
+  // Accounts created before the login asked Microsoft for `profile` got their
+  // email (or the part before the @) as their name. Swap in the name Microsoft
+  // sends — Supabase refreshes user_metadata on every sign-in — but never
+  // overwrite a name the person typed themselves. Best effort: a failed update
+  // must not block the sign-in.
+  const msName = String(data.user.user_metadata?.full_name ?? '').trim().slice(0, 200)
+  const current = String(profile.full_name ?? '').trim().toLowerCase()
+  const isPlaceholder = current === email || current === email.split('@')[0]
+  if (msName && isPlaceholder && msName.toLowerCase() !== current) {
+    const { error: nameError } = await supabase.from('profiles').update({ full_name: msName }).eq('id', data.user.id)
+    if (nameError) console.error('[auth/callback] name update failed', nameError)
   }
 
   return respond(ROLE_HOME[profile.role] ?? '/login')
