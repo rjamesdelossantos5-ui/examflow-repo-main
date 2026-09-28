@@ -1,8 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
+import { emailRequestEvent } from '@/lib/requestEmails'
 
 async function requireRegistrar() {
   const supabase = await createClient()
@@ -40,6 +42,9 @@ export async function verifyRequest(requestId: string) {
     action: 'Verified by Registrar — forwarded to Subject Teacher',
   })
 
+  // Sent after the response — see lib/requestEmails.ts.
+  after(() => emailRequestEvent('registrar_verified', [requestId]))
+
   revalidatePath('/registrar')
   return { error: null }
 }
@@ -75,6 +80,8 @@ export async function verifyAll(requestIds: string[]) {
     }))
   )
 
+  after(() => emailRequestEvent('registrar_verified', verified.map((u) => u.id as string)))
+
   revalidatePath('/registrar')
   return { error: null, count: verified.length }
 }
@@ -102,6 +109,8 @@ export async function rejectRequest(requestId: string, reason: string) {
     actor_role: role,
     action: `Rejected by Registrar: ${sanitizedReason}`,
   })
+
+  after(() => emailRequestEvent('rejected', [requestId], { reason: sanitizedReason }))
 
   revalidatePath('/registrar')
   return { error: null }

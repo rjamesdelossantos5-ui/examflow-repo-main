@@ -1,8 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
+import { emailRequestEvent } from '@/lib/requestEmails'
 
 async function requireTeacher() {
   const supabase = await createClient()
@@ -44,6 +46,9 @@ export async function approveRequest(requestId: string) {
     action: 'Approved by Subject Teacher — forwarded to Program Head',
   })
 
+  // Sent after the response — see lib/requestEmails.ts.
+  after(() => emailRequestEvent('teacher_approved', [requestId]))
+
   revalidatePath('/teacher')
   return { error: null }
 }
@@ -83,6 +88,8 @@ export async function approveAll(requestIds: string[]) {
     }))
   )
 
+  after(() => emailRequestEvent('teacher_approved', rows.map((r) => r.id as string)))
+
   revalidatePath('/teacher')
   return { error: null, count: rows.length }
 }
@@ -114,6 +121,8 @@ export async function rejectTeacherRequest(requestId: string, reason: string) {
     actor_role: role,
     action: `Rejected by Subject Teacher: ${sanitizedReason}`,
   })
+
+  after(() => emailRequestEvent('rejected', [requestId], { reason: sanitizedReason }))
 
   revalidatePath('/teacher')
   return { error: null }

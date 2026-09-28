@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
+import { after } from 'next/server'
+import { emailRequestEvent } from '@/lib/requestEmails'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
@@ -144,7 +146,12 @@ export async function uploadReceipt(requestId: string, formData: FormData) {
   }, { onConflict: 'request_id,media_type' })
 
   // Clear any prior receipt-rejection note now that a fresh receipt is in.
-  await supabase.from('special_exam_requests').update({ status: 'receipt_uploaded', rejection_reason: null }).eq('id', requestId)
+  // .select('id') only so the email below goes out when the status really moved.
+  const { data: moved } = await supabase
+    .from('special_exam_requests')
+    .update({ status: 'receipt_uploaded', rejection_reason: null })
+    .eq('id', requestId)
+    .select('id')
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,
@@ -152,6 +159,9 @@ export async function uploadReceipt(requestId: string, formData: FormData) {
     actor_role: 'student',
     action: 'Uploaded payment receipt',
   })
+
+  // Sent after the response — see lib/requestEmails.ts.
+  if (moved?.length) after(() => emailRequestEvent('receipt_uploaded', [requestId]))
 
   revalidatePath(`/student/requests/${requestId}`)
   return { error: null }
@@ -345,6 +355,9 @@ export async function confirmSubmission(requestId: string) {
       ? 'Parent verified again — sent back to the Program Head'
       : 'Submitted to the Registrar after parent verification',
   })
+
+  // Sent after the response — see lib/requestEmails.ts.
+  after(() => emailRequestEvent(returnedByPH ? 'reverified' : 'submitted', [requestId]))
 
   revalidatePath(`/student/requests/${requestId}`)
   revalidatePath('/student')

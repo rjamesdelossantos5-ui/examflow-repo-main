@@ -1,7 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { emailRequestEvent } from '@/lib/requestEmails'
 import { getActivePeriod, TERM_LABEL, SEMESTER_LABEL } from '@/lib/examSettings'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import { withRegistrarGate } from '@/lib/registrarGate'
@@ -97,6 +99,9 @@ export async function overrideAccept(requestId: string, scheduleStr: string) {
 
   await deleteVerificationPhotos([existing.didit_session_id])
 
+  // Sent after the response — see lib/requestEmails.ts.
+  after(() => emailRequestEvent(isExcused ? 'scheduled' : 'accepted_paid', [requestId]))
+
   revalidatePath('/program-head')
   revalidatePath('/program-head/overview')
   return { error: null }
@@ -187,6 +192,8 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
   // The manual ID and selfie check is done — first approval is their only use.
   await deleteVerificationPhotos([existing.didit_session_id])
 
+  after(() => emailRequestEvent(isExcused ? 'scheduled' : 'accepted_paid', [requestId]))
+
   revalidatePath('/program-head')
   revalidatePath('/program-head/students')
   return { error: null }
@@ -245,6 +252,11 @@ export async function acceptAll(requestIds: string[]) {
   )
 
   await deleteVerificationPhotos(accepted.map((r) => r.didit_session_id))
+
+  after(async () => {
+    await emailRequestEvent('scheduled', accepted.filter((r) => r.exam_type === 'excused').map((r) => r.id))
+    await emailRequestEvent('accepted_paid', accepted.filter((r) => r.exam_type !== 'excused').map((r) => r.id))
+  })
 
   revalidatePath('/program-head')
   revalidatePath('/program-head/students')
@@ -319,6 +331,8 @@ export async function returnForReverification(requestId: string, reason: string)
 
   await deleteVerificationPhotos([existing.didit_session_id])
 
+  after(() => emailRequestEvent('returned', [requestId], { reason: sanitizedReason }))
+
   revalidatePath('/program-head')
   return { error: null }
 }
@@ -366,6 +380,8 @@ export async function rejectPHRequest(requestId: string, reason: string) {
     action: `Rejected by Program Head: ${sanitizedReason}`,
   })
 
+  after(() => emailRequestEvent('rejected', [requestId], { reason: sanitizedReason }))
+
   revalidatePath('/program-head')
   return { error: null }
 }
@@ -391,6 +407,8 @@ export async function confirmReceipt(requestId: string) {
     actor_role: role,
     action: 'Payment receipt verified by Program Head — Scheduled',
   })
+
+  after(() => emailRequestEvent('scheduled', [requestId]))
 
   revalidatePath('/program-head')
   revalidatePath('/program-head/students')
@@ -422,6 +440,8 @@ export async function rejectReceipt(requestId: string, reason: string) {
     actor_role: role,
     action: `Receipt rejected by Program Head: ${sanitizedReason}. Student asked to re-upload.`,
   })
+
+  after(() => emailRequestEvent('receipt_rejected', [requestId], { reason: sanitizedReason }))
 
   revalidatePath('/program-head')
   return { error: null }

@@ -71,6 +71,13 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse
   }
 
+  // Microsoft sign-in lands here BEFORE there is a session — this route is what
+  // creates it (and runs the school-domain check). Treating it as protected
+  // bounced every Microsoft login to /login with the code thrown away.
+  if (pathname === '/auth/callback') {
+    return supabaseResponse
+  }
+
   // Public routes that don't need auth
   if (pathname === '/login' || pathname === '/') {
     if (user) {

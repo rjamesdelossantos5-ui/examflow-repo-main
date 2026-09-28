@@ -2,14 +2,25 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { ROLE_HOME } from '@/lib/role-home'
 
-// 🔧 Set NEXT_PUBLIC_SITE_URL in .env.local and in Vercel's env vars, e.g.
-// https://examflow-repo-main.vercel.app (no trailing slash). Needed so the
-// OAuth redirect always points at the right deployment.
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+// The address the person is actually on — localhost, a phone on the same Wi-Fi,
+// a Vercel preview or the live site — so Microsoft sends them back there. A fixed
+// fallback of localhost sent every phone and every live-site login to a machine
+// that isn't running EXAMFLOW. Server Actions already abort when the Origin
+// header doesn't match the Host, so Origin is the page's own address. Supabase
+// still only returns to addresses listed under Authentication → URL
+// Configuration → Redirect URLs.
+async function siteOrigin(): Promise<string> {
+  const h = await headers()
+  const origin = h.get('origin')
+  if (origin) return origin
+  const host = h.get('host') ?? ''
+  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+  return `${proto}://${host}`
+}
 
 export async function login(formData: FormData) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -96,7 +107,7 @@ export async function signInWithMicrosoft() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'azure',
     options: {
-      redirectTo: `${SITE_URL}/auth/callback`,
+      redirectTo: `${await siteOrigin()}/auth/callback`,
       scopes: 'email', // required: without this, Azure won't return the user's email
     },
   })
