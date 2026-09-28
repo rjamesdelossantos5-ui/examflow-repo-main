@@ -188,10 +188,10 @@ export async function getNotifications(
     }))
   }
 
-  // Students: one alert per update on their own requests (someone acted on it),
-  // newest change first. The bell badge clears once opened and stays cleared
-  // (even across a re-login) until something with a newer timestamp shows up —
-  // see notifications_seen_at, set by markNotificationsSeen().
+  // Students: the latest status of each of their recent requests, newest change
+  // first. Items stay in the list after the bell is opened; the ones that changed
+  // since it was last opened are marked unread and counted on the badge — see
+  // notifications_seen_at, set by markNotificationsSeen().
   if (role === 'student') {
     const { data: profileRow } = await supabase
       .from('profiles')
@@ -212,7 +212,8 @@ export async function getNotifications(
       .in('status', ['accepted', 'scheduled', 'rejected', 'submitted', 'verified_by_registrar', 'approved_by_teacher', 'receipt_uploaded'])
       .order('updated_at', { ascending: false })
       .limit(MAX_ITEMS)
-    const data = (allData ?? []).filter((r) => new Date(r.updated_at).getTime() > seenMs)
+    const data = allData ?? []
+    const isNew = (iso: string | null | undefined) => !!iso && new Date(iso).getTime() > seenMs
 
     const items: NotificationItem[] = []
 
@@ -226,8 +227,9 @@ export async function getNotifications(
       // configured rules out a term whose window has not been set yet: there
       // is no "it just opened" moment to compare against, and computeWindow
       // reports open:true for a null date (its no-period fallback).
-      if (win.configured && win.open && new Date(active.submissionStart + 'T00:00:00').getTime() > seenMs) {
+      if (win.configured && win.open) {
         items.push({
+          unread: new Date(active.submissionStart + 'T00:00:00').getTime() > seenMs,
           id: `open-${active.id}`,
           text: `${TERM_LABEL[active.term]} submissions are now open. You have ${win.daysRemaining} day${win.daysRemaining === 1 ? '' : 's'} to submit (closes ${win.end ? new Date(win.end).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '—'}).`,
           href: '/student/submit',
@@ -238,15 +240,16 @@ export async function getNotifications(
     }
 
     // The special-exam schedule was set for the term this student is taking
-    // part in (only while they still have a live request in it, and only
-    // while it's newer than the student's last-seen mark).
-    if (active?.examDay && active.scheduleUpdatedAt && new Date(active.scheduleUpdatedAt).getTime() > seenMs) {
+    // part in (only while they still have a live request in it; unread while
+    // it's newer than the student's last-seen mark).
+    if (active?.examDay && active.scheduleUpdatedAt) {
       const hasLiveRequest = (allData ?? []).some(
         (r) => r.status !== 'rejected' && (!r.period_id || r.period_id === active.id),
       )
       if (hasLiveRequest) {
         const when = new Date(active.examDay).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
         items.push({
+          unread: isNew(active.scheduleUpdatedAt),
           id: `sched-${active.id}`,
           text: `The special exam is scheduled for ${when}. Remember to get and fill out the form from the Registrar.`,
           href: '/student',
@@ -259,19 +262,20 @@ export async function getNotifications(
     for (const r of data) {
       const code = (r.subjects as unknown as { subject_code: string } | null)?.subject_code ?? 'your subject'
       const href = `/student/requests/${r.id}`
+      const unread = isNew(r.updated_at)
       if (r.status === 'accepted' && r.exam_type === 'paid')
-        items.push({ id: r.id, text: `Action needed: upload your payment receipt for ${code}.`, href, tone: 'warning', icon: 'receipt' })
+        items.push({ unread, id: r.id, text: `Action needed: upload your payment receipt for ${code}.`, href, tone: 'warning', icon: 'receipt' })
       else if (r.status === 'accepted')
-        items.push({ id: r.id, text: `Your request for ${code} was approved.`, href, tone: 'success', icon: 'check' })
+        items.push({ unread, id: r.id, text: `Your request for ${code} was approved.`, href, tone: 'success', icon: 'check' })
       else if (r.status === 'scheduled')
-        items.push({ id: r.id, text: `Your special exam for ${code} is scheduled.`, href, tone: 'success', icon: 'calendar' })
+        items.push({ unread, id: r.id, text: `Your special exam for ${code} is scheduled.`, href, tone: 'success', icon: 'calendar' })
       else if (r.status === 'rejected')
-        items.push({ id: r.id, text: `Your request for ${code} was rejected.`, href, tone: 'danger', icon: 'x-circle' })
+        items.push({ unread, id: r.id, text: `Your request for ${code} was rejected.`, href, tone: 'danger', icon: 'x-circle' })
       // Returned by the Program Head for re-verification: still at first
       // approval, but the parent's verification was cleared. Nothing else leaves
       // an 'approved_by_teacher' request unconfirmed (see lib/registrarGate.ts).
       else if (r.status === 'approved_by_teacher' && r.didit_status && !r.student_confirmed_at)
-        items.push({ id: r.id, text: `Action needed: your Program Head asked your parent or guardian to verify again for ${code}.`, href, tone: 'warning', icon: 'user' })
+        items.push({ unread, id: r.id, text: `Action needed: your Program Head asked your parent or guardian to verify again for ${code}.`, href, tone: 'warning', icon: 'user' })
     }
 
     return items
