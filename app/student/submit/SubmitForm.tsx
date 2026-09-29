@@ -375,27 +375,57 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             a blanket tick at sign-up. It also covers the parent, who is a data
             subject but never a user of this system. Enforced on the server too
             (a required checkbox in the browser is trivially bypassed). */}
-        <div className="rounded-xl border ef-border p-4" style={{ background: 'color-mix(in srgb, var(--sti-gold) 6%, transparent)' }}>
-          <label className="flex gap-3 items-start cursor-pointer">
-            <input
-              type="checkbox"
-              name="privacy_consent"
-              value="yes"
-              required
-              className="mt-0.5 w-4 h-4 shrink-0 accent-[var(--sti-gold)]"
-            />
-            <span className="text-2xs sm:text-xs leading-relaxed" style={{ color: 'var(--card-foreground)' }}>
+        {/* The whole card is the tap target. The real checkbox stays in the
+            layout (restyled, not hidden) so reportValidity() can still point
+            its "please tick this box" bubble at it. Ticking it fills the box
+            gold, draws the check, and lifts the card. */}
+        <label
+          className="group block cursor-pointer rounded-xl border p-4 sm:p-5 border-[var(--border)] bg-[color-mix(in_srgb,var(--sti-gold)_5%,transparent)] transition-[border-color,background-color,box-shadow] duration-300 ease-[var(--ease-out)] hover:border-[color-mix(in_srgb,var(--sti-gold)_45%,var(--border))] has-[:checked]:border-[var(--sti-gold)] has-[:checked]:bg-[color-mix(in_srgb,var(--sti-gold)_12%,transparent)] has-[:checked]:shadow-[0_10px_24px_-16px_rgb(253_185_19/0.7)] motion-reduce:transition-none"
+        >
+          <span className="flex items-center gap-2 mb-3">
+            <Icon name="shield-check" className="w-[18px] h-[18px] shrink-0" style={{ color: 'var(--sti-gold)' }} />
+            <span className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>Data privacy consent</span>
+          </span>
+          <span className="flex gap-3 items-start">
+            <span className="relative mt-0.5 w-6 h-6 shrink-0">
+              <input
+                type="checkbox"
+                name="privacy_consent"
+                value="yes"
+                required
+                className="peer block w-6 h-6 m-0 appearance-none cursor-pointer rounded-md border-2 bg-[var(--card)] border-[color-mix(in_srgb,var(--muted)_65%,transparent)] transition-[background-color,border-color,transform] duration-200 ease-[var(--ease-out)] active:scale-90 checked:bg-[var(--sti-gold)] checked:border-[var(--sti-gold)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sti-gold)] motion-reduce:transition-none"
+              />
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 m-auto w-4 h-4 [--check:1] peer-checked:[--check:0]"
+                fill="none"
+                stroke="var(--sti-navy)"
+                strokeWidth={3.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path
+                  d="M5 12.5 9.5 17 19 7.5"
+                  pathLength={1}
+                  // The svg is the checkbox's sibling, not this path, so the
+                  // checked state reaches the path through --check.
+                  className="[stroke-dasharray:1] [stroke-dashoffset:var(--check)] transition-[stroke-dashoffset] duration-300 delay-75 ease-[var(--ease-out)] motion-reduce:transition-none"
+                />
+              </svg>
+            </span>
+            <span className="text-xs sm:text-sm leading-relaxed" style={{ color: 'var(--card-foreground)' }}>
               I confirm that my parent or guardian has authorised this request, and consent to STI
               College Sta. Maria collecting and processing the details and documents above — including
               my parent or guardian&apos;s ID scan and selfie, and any medical document — for reviewing and scheduling this special
               exam. I understand these are deleted after the exam date, and that I may withdraw consent
               by removing this request.{' '}
-              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline font-medium" style={{ color: 'var(--status-info)' }}>
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 font-medium" style={{ color: 'var(--status-info)' }}>
                 Read the Privacy Notice
               </a>
             </span>
-          </label>
-        </div>
+          </span>
+        </label>
 
         <button
           type="button"

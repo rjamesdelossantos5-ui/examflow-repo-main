@@ -138,7 +138,7 @@ export default function VerifyParent({
           </p>
           {(livenessScore != null || faceMatchScore != null) && (
             <p className="mt-2 text-xs text-green-700/80 dark:text-green-300/80">
-              {livenessScore != null && <span>Liveness {livenessScore}</span>}
+              {livenessScore != null && <span>Live selfie check {livenessScore}</span>}
               {livenessScore != null && faceMatchScore != null && <span> · </span>}
               {faceMatchScore != null && <span>Face match {faceMatchScore}</span>}
             </p>

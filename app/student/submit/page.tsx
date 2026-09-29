@@ -4,6 +4,7 @@ import SubmitForm from './SubmitForm'
 import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
+import { studentNumberFromEmail } from '@/lib/studentNumber'
 
 export const metadata = { title: 'EXAMFLOW — Submit Request' }
 
@@ -111,7 +112,7 @@ export default async function SubmitPage({
       termLabel={termLabel}
       profile={{
         full_name: profile?.full_name ?? '',
-        student_number: profile?.student_number ?? '',
+        student_number: profile?.student_number || studentNumberFromEmail(user.email) || '',
         course: profile?.course ?? '',
         year_level: profile?.year_level ?? null,
         section: profile?.section ?? '',

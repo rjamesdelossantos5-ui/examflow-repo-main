@@ -442,7 +442,7 @@ function ParentPhotos({ requestId, verification }: { requestId: string; verifica
   const scores = verification
     ? [
         verification.faceMatchScore != null ? `face match ${verification.faceMatchScore}` : null,
-        verification.livenessScore != null ? `liveness ${verification.livenessScore}` : null,
+        verification.livenessScore != null ? `live selfie check ${verification.livenessScore}` : null,
       ].filter(Boolean).join(' · ')
     : ''
 

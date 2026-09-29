@@ -8,14 +8,34 @@ const TITLES = new Set([
 ])
 
 export function initials(name: string): string {
-  let parts = (name ?? '').trim().split(/\s+/).filter(Boolean)
-  // Drop any leading title words (handles a trailing period, e.g. "Ms.").
-  while (parts.length > 1 && TITLES.has(parts[0].replace(/[.,]/g, '').toLowerCase())) {
+  // School Microsoft accounts are named "Surname, Given (Student)", e.g.
+  // "Bejo, Gabriel (Student)" — which gave "B(". Drop anything in brackets,
+  // then read "Surname, Given" as given name + surname: "GB".
+  const clean = (name ?? '').replace(/\([^)]*\)/g, ' ').trim()
+  const comma = clean.indexOf(',')
+  if (comma > 0) {
+    const surname = letters(clean.slice(0, comma))
+    const given = letters(clean.slice(comma + 1))
+    const out = (given[0]?.[0] ?? '') + (surname[0]?.[0] ?? '')
+    if (out) return out.toUpperCase()
+  }
+
+  let parts = letters(clean)
+  // Drop any leading title words (e.g. "Ms." → "Ms").
+  while (parts.length > 1 && TITLES.has(parts[0].toLowerCase())) {
     parts = parts.slice(1)
   }
   const first = parts[0]?.[0] ?? ''
   const last = parts.length > 1 ? parts[parts.length - 1][0] : ''
   return (first + last).toUpperCase() || 'U'
+}
+
+/** The words of a name with punctuation removed ("R." → "R", "Bejo," → "Bejo"). */
+function letters(s: string): string[] {
+  return s
+    .split(/\s+/)
+    .map((w) => w.replace(/[^\p{L}'’-]/gu, ''))
+    .filter((w) => /\p{L}/u.test(w))
 }
 
 /**

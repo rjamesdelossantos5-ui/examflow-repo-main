@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/currentUser'
 import ProfileForm from './ProfileForm'
+import { studentNumberFromEmail } from '@/lib/studentNumber'
 import { ROLE_HOME } from '@/lib/nav'
 import type { Profile, UserRole } from '@/lib/supabase/types'
 
@@ -83,7 +84,14 @@ export default async function AccountPage() {
         </div>
       )}
 
-      <ProfileForm profile={profile as unknown as Profile} />
+      <ProfileForm
+        profile={{
+          ...(profile as unknown as Profile),
+          // Blank for school accounts until the student saves it — pre-fill it
+          // from their school email (lib/studentNumber.ts).
+          student_number: profile.student_number ?? (role === 'student' ? studentNumberFromEmail(profile.email) : null),
+        }}
+      />
     </div>
   )
 }

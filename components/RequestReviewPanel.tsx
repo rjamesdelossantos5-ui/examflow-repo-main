@@ -85,7 +85,7 @@ function VerificationBadge({ status, livenessScore, faceMatchScore, documentType
         <p className={`mt-1 text-xs ${tone.text} opacity-90`}>
           {documentType && <span>{documentType}</span>}
           {documentType && livenessScore != null && <span> · </span>}
-          {livenessScore != null && <span>Liveness {livenessScore}</span>}
+          {livenessScore != null && <span>Live selfie check {livenessScore}</span>}
           {livenessScore != null && faceMatchScore != null && <span> · </span>}
           {faceMatchScore != null && <span>Face match {faceMatchScore}</span>}
         </p>
