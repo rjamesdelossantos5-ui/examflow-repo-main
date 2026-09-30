@@ -19,8 +19,6 @@
 -- 2. Testing tools (/admin/testing, only when ENABLE_TEST_TOOLS=true)
 --    The school's enrollment data is confidential, so tests use made-up data:
 --    - test_enrollments: a mock enrollment list (school email → section).
---    - test_accounts: accounts the test-teacher tool created, so Clean up can
---      delete exactly those and nothing else.
 --
 -- Run once in the Supabase SQL editor. Safe to re-run.
 -- ─────────────────────────────────────────────────────────────
@@ -61,20 +59,10 @@ drop policy if exists "test_enrollments_read_own" on test_enrollments;
 create policy "test_enrollments_read_own" on test_enrollments
   for select using (lower(email) = lower(auth.jwt() ->> 'email'));
 
-create table if not exists test_accounts (
-  user_id    uuid primary key references auth.users(id) on delete cascade,
-  created_at timestamptz not null default now()
-);
-alter table test_accounts enable row level security;
-drop policy if exists "test_accounts_admin_all" on test_accounts;
-create policy "test_accounts_admin_all" on test_accounts
-  for all using (current_user_role() = 'admin') with check (current_user_role() = 'admin');
-
 -- Confirmation: every value should be true.
 select
   exists (select 1 from information_schema.columns where table_name = 'class_offerings' and column_name = 'instructor')   as offerings_instructor,
   exists (select 1 from information_schema.columns where table_name = 'class_offerings' and column_name = 'import_batch') as offerings_batch,
   to_regclass('public.instructor_aliases') is not null  as aliases_table,
   to_regclass('public.program_departments') is not null as programs_table,
-  to_regclass('public.test_enrollments') is not null    as test_enrollments_table,
-  to_regclass('public.test_accounts') is not null       as test_accounts_table;
+  to_regclass('public.test_enrollments') is not null    as test_enrollments_table;
