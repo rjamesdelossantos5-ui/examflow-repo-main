@@ -5,6 +5,7 @@ import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { studentNumberFromEmail } from '@/lib/studentNumber'
+import { testToolsEnabled } from '@/lib/testTools'
 
 export const metadata = { title: 'EXAMFLOW — Submit Request' }
 
@@ -92,6 +93,14 @@ export default async function SubmitPage({
     }))
   }
 
+  // Testing tools only: the student's section from the mock enrollment list
+  // (the real enrollment data is confidential). Ignored on a real deployment.
+  let enrolledSection: string | null = null
+  if (testToolsEnabled() && user.email) {
+    const { data: enr } = await supabase.from('test_enrollments').select('section').eq('email', user.email.toLowerCase()).maybeSingle()
+    enrolledSection = (enr?.section as string | undefined) ?? null
+  }
+
   const termLabel = activePeriod ? `${TERM_LABEL[activePeriod.term]}${activePeriod.schoolYear ? ` · ${activePeriod.schoolYear}` : ''}` : null
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
@@ -121,6 +130,7 @@ export default async function SubmitPage({
       submissionOpen={open}
       windowMessage={windowMessage}
       prefill={prefill as never}
+      enrolledSection={enrolledSection}
       existingDocs={existingDocs}
     />
   )

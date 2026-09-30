@@ -28,14 +28,16 @@ const REASONS = [
   { value: 'other', label: 'Other', desc: 'Another valid reason', doc: 'Supporting Document' },
 ] as const
 
-// Course catalog — trimmed to 2 for testing: one tertiary (BSIT, matches the
-// ICT offerings) and one senior-high strand (STEM, matches the SHS offerings).
-// Sections themselves come from class_offerings, not from a hardcoded list.
-const COURSES: { code: string; name: string }[] = [
-  { code: 'BSIT', name: 'BS Information Technology' },
-  { code: 'STEM', name: 'Science, Technology, Engineering & Mathematics' },
-]
+// Courses come from the class schedule itself (the letters a section starts
+// with: "BSIT 2-201" → BSIT, "STEM1101" → STEM), so a new program appears as
+// soon as its sections are imported. Full names are shown where known.
+const COURSE_NAMES: Record<string, string> = {
+  BSIT: 'BS Information Technology',
+  STEM: 'Science, Technology, Engineering & Mathematics',
+}
 const YEARS = [1, 2, 3, 4]
+const coursePrefix = (section: string) => (section.match(/^[A-Za-z]+/)?.[0] ?? '').toUpperCase()
+const normalizeCourse = (c: string) => c.toUpperCase().replace(/[^A-Z]/g, '')
 
 interface ProfileInfo {
   full_name: string
@@ -59,8 +61,13 @@ interface Prefill {
   contactNumber: string | null
 }
 
-export default function SubmitForm({ offerings, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [] }: { offerings: Offering[]; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[] }) {
+export default function SubmitForm({ offerings, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [], enrolledSection = null }: { offerings: Offering[]; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[]; enrolledSection?: string | null }) {
   const kept = new Set(existingDocs)
+  const courses = Array.from(new Set(offerings.map((o) => coursePrefix(o.section)).filter(Boolean))).sort()
+  // Mock enrollment (Testing tools): the student's section is known, so the
+  // course, year and section are filled in and only that section is offered.
+  const enrolled = enrolledSection && offerings.some((o) => o.section === enrolledSection) ? enrolledSection : null
+  const enrolledYear = enrolled?.match(/^[A-Za-z]+\s+(\d)-/)?.[1] ?? null
   // Effective values: a resubmit's saved snapshot overrides the profile defaults.
   const eff = {
     full_name: prefill?.fullName ?? profile.full_name,
@@ -72,22 +79,22 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
   const [examType, setExamType] = useState<'paid' | 'excused'>(prefill?.examType ?? 'paid')
   const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>(prefill?.excusedReason ?? '')
-  const [course, setCourse] = useState(COURSES.some((c) => c.code === eff.course) ? eff.course : '')
-  const [yearLevel, setYearLevel] = useState(eff.year_level ? String(eff.year_level) : '')
+  const [course, setCourse] = useState(enrolled ? coursePrefix(enrolled) : courses.includes(normalizeCourse(eff.course ?? '')) ? normalizeCourse(eff.course) : '')
+  const [yearLevel, setYearLevel] = useState(eff.year_level ? String(eff.year_level) : enrolledYear ?? '')
   const [subjectId, setSubjectId] = useState(prefill?.subjectId ?? '')
-  const [section, setSection] = useState(eff.section ?? '')
+  const [section, setSection] = useState(enrolled ?? eff.section ?? '')
   const [confirming, setConfirming] = useState(false)
 
-  // A section name like "BSIT 2-201" or "STEM 11-A" leads with the course /
+  // A section name like "BSIT 2-201" or "STEM1101" leads with the course /
   // strand code. Comparing that prefix to the chosen course is how "BSIT"
   // students only see BSIT sections (and never SHS ones, etc.) — the class
   // offering data doesn't need a separate department field for this to work.
-  const coursePrefix = (section: string) => (section.match(/^[A-Za-z]+/)?.[0] ?? '').toUpperCase()
-  const normalizeCourse = (c: string) => c.toUpperCase().replace(/[^A-Z]/g, '')
-
-  // Only offerings whose section matches the chosen course. Nothing shows until
-  // a course is picked, so a subject never leaks in from another program.
-  const courseOfferings = course ? offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course)) : []
+  // Only offerings whose section matches the chosen course (and, with a mock
+  // enrollment, only the student's own section). Nothing shows until a course
+  // is picked, so a subject never leaks in from another program.
+  const courseOfferings = course
+    ? offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course) && (!enrolled || o.section === enrolled))
+    : []
 
   const subjectOptions = Array.from(
     new Map(courseOfferings.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
@@ -102,7 +109,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
   const formRef = useRef<HTMLFormElement>(null)
   const [attachError, setAttachError] = useState<string | null>(null)
-  const closeConfirm = useCallback(() => setConfirming(false), [])
+  const closeConfirm = useCallback(() => setConfirming(false), [setConfirming])
   useEscapeKey(closeConfirm, confirming)
 
   function openConfirm() {
@@ -266,7 +273,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 value={course}
                 onChange={(v) => { setCourse(v); setSubjectId(''); setSection('') }}
                 placeholder="— Select course —"
-                options={COURSES.map((c) => ({ value: c.code, label: `${c.code} — ${c.name}` }))}
+                options={courses.map((c) => ({ value: c, label: COURSE_NAMES[c] ? `${c} — ${COURSE_NAMES[c]}` : c }))}
                 className={selectClass}
                 style={selectStyle}
               />
