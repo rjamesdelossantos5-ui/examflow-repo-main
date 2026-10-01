@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, useTransition } from 'react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
 import { toggleUserActive, deleteUser, createUser, toggleOverride } from './actions'
 import Select from '@/components/Select'
@@ -29,6 +29,17 @@ export default function UserTable({
 }) {
   const [showCreate, setShowCreate] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // After a School Data import this list runs to hundreds — find by name,
+  // email, student number or section, and narrow by role.
+  const [query, setQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return users.filter((u) =>
+      (!roleFilter || u.role === roleFilter) &&
+      (!q || [u.full_name, u.email, u.student_number, u.section].some((v) => (v ?? '').toLowerCase().includes(q))),
+    )
+  }, [users, query, roleFilter])
   const [isPending, startTransition] = useTransition()
   const closeCreate = useCallback(() => setShowCreate(false), [])
   useEscapeKey(closeCreate, showCreate)
@@ -158,6 +169,26 @@ export default function UserTable({
         </div>
       )}
 
+      <div className="flex flex-wrap items-center gap-3 mb-3">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search name, email, student no. or section…"
+          aria-label="Search users"
+          className="flex-1 min-w-[14rem] rounded-lg px-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
+          style={{ color: 'var(--card-foreground)' }}
+        />
+        <Select
+          value={roleFilter}
+          onChange={setRoleFilter}
+          options={[{ value: '', label: 'All roles' }, ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }))]}
+          className="w-44 rounded-lg px-3 py-2 text-sm border ef-border"
+          style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
+        />
+        <span className="text-xs ef-muted tabular-nums">{visible.length} of {users.length}</span>
+      </div>
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -171,7 +202,7 @@ export default function UserTable({
             </tr>
           </thead>
           <tbody className="divide-y">
-            {users.map((u) => (
+            {visible.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{u.full_name}</td>
                 <td className="px-4 py-3 text-gray-500">{u.email}</td>
@@ -217,8 +248,8 @@ export default function UserTable({
                 </td>
               </tr>
             ))}
-            {users.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No users found.</td></tr>
+            {visible.length === 0 && (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{users.length ? 'No user matches your search.' : 'No users found.'}</td></tr>
             )}
           </tbody>
         </table>

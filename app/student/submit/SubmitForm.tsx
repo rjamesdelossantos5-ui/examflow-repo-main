@@ -28,13 +28,9 @@ const REASONS = [
   { value: 'other', label: 'Other', desc: 'Another valid reason', doc: 'Supporting Document' },
 ] as const
 
-// Courses come from the class schedule itself (the letters a section starts
-// with: "BSIT 2-201" → BSIT, "STEM1101" → STEM), so a new program appears as
-// soon as its sections are imported. Full names are shown where known.
-const COURSE_NAMES: Record<string, string> = {
-  BSIT: 'BS Information Technology',
-  STEM: 'Science, Technology, Engineering & Mathematics',
-}
+// Courses come from the classes themselves (the letters a section starts
+// with: "BSIT 2-201" → BSIT), so a new program appears as soon as its classes
+// are imported. Full names come from the School Data Programs sheet.
 const YEARS = [1, 2, 3, 4]
 const coursePrefix = (section: string) => (section.match(/^[A-Za-z]+/)?.[0] ?? '').toUpperCase()
 const normalizeCourse = (c: string) => c.toUpperCase().replace(/[^A-Z]/g, '')
@@ -61,11 +57,11 @@ interface Prefill {
   contactNumber: string | null
 }
 
-export default function SubmitForm({ offerings, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [], enrolledSection = null }: { offerings: Offering[]; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[]; enrolledSection?: string | null }) {
+export default function SubmitForm({ offerings, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [], enrolledSection = null, courseNames = {} }: { offerings: Offering[]; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[]; enrolledSection?: string | null; courseNames?: Record<string, string> }) {
   const kept = new Set(existingDocs)
   const courses = Array.from(new Set(offerings.map((o) => coursePrefix(o.section)).filter(Boolean))).sort()
-  // Mock enrollment (Testing tools): the student's section is known, so the
-  // course, year and section are filled in and only that section is offered.
+  // The student's section from the School Data import: course, year and
+  // section are filled in and only that section's classes are offered.
   const enrolled = enrolledSection && offerings.some((o) => o.section === enrolledSection) ? enrolledSection : null
   const enrolledYear = enrolled?.match(/^[A-Za-z]+\s+(\d)-/)?.[1] ?? null
   // Effective values: a resubmit's saved snapshot overrides the profile defaults.
@@ -273,7 +269,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 value={course}
                 onChange={(v) => { setCourse(v); setSubjectId(''); setSection('') }}
                 placeholder="— Select course —"
-                options={courses.map((c) => ({ value: c, label: COURSE_NAMES[c] ? `${c} — ${COURSE_NAMES[c]}` : c }))}
+                options={courses.map((c) => ({ value: c, label: courseNames[c] ? `${c} — ${courseNames[c]}` : c }))}
                 className={selectClass}
                 style={selectStyle}
               />

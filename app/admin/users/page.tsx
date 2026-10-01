@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import UserTable from './UserTable'
-import UserUpload from './UserUpload'
 
 export const metadata = { title: 'EXAMFLOW Admin — Users' }
 
@@ -14,9 +13,8 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Bulk import first: creating accounts one at a time doesn't scale past a
-          handful, so the Excel path is the primary route for a new term. */}
-      <UserUpload />
+      {/* Accounts arrive in bulk from the School Data import; this page is for
+          finding, adding one-off, deactivating and deleting accounts. */}
       <UserTable users={users ?? []} departments={departments ?? []} />
     </div>
   )

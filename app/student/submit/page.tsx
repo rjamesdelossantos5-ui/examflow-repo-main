@@ -5,7 +5,6 @@ import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { studentNumberFromEmail } from '@/lib/studentNumber'
-import { testToolsEnabled } from '@/lib/testTools'
 
 export const metadata = { title: 'EXAMFLOW — Submit Request' }
 
@@ -93,13 +92,12 @@ export default async function SubmitPage({
     }))
   }
 
-  // Testing tools only: the student's section from the mock enrollment list
-  // (the real enrollment data is confidential). Ignored on a real deployment.
-  let enrolledSection: string | null = null
-  if (testToolsEnabled() && user.email) {
-    const { data: enr } = await supabase.from('test_enrollments').select('section').eq('email', user.email.toLowerCase()).maybeSingle()
-    enrolledSection = (enr?.section as string | undefined) ?? null
-  }
+  // The student's section comes from the School Data import. When it has
+  // classes, the form fills in course, year and section and lists only that
+  // section's subjects — the student just picks one.
+  const enrolledSection = profile?.section ? String(profile.section).toUpperCase() : null
+  const { data: programRows } = await supabase.from('program_departments').select('program, name')
+  const courseNames = Object.fromEntries((programRows ?? []).filter((p) => p.name).map((p) => [p.program as string, p.name as string]))
 
   const termLabel = activePeriod ? `${TERM_LABEL[activePeriod.term]}${activePeriod.schoolYear ? ` · ${activePeriod.schoolYear}` : ''}` : null
 
@@ -131,6 +129,7 @@ export default async function SubmitPage({
       windowMessage={windowMessage}
       prefill={prefill as never}
       enrolledSection={enrolledSection}
+      courseNames={courseNames}
       existingDocs={existingDocs}
     />
   )

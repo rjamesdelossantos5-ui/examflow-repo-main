@@ -4,7 +4,6 @@ import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getNotifications, countPendingOverrides } from '@/lib/notifications'
-import { testToolsEnabled } from '@/lib/testTools'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -24,9 +23,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { label: 'Analytics', href: '/admin/analytics', icon: 'chart' as const },
     { label: 'Users', href: '/admin/users', icon: 'users' as const },
     { label: 'Subjects', href: '/admin/subjects', icon: 'book' as const },
-    // The registrar's class schedule, uploaded once a term: section → subject
-    // → teacher, which is what routes a student's request to a teacher.
-    { label: 'Class Schedule', href: '/admin/schedule', icon: 'calendar' as const },
+    // One workbook (departments, programs, staff, students, classes) that sets
+    // up everyone's accounts and routes each request to its teacher.
+    { label: 'School Data', href: '/admin/school-data', icon: 'upload' as const },
     // Departments is deliberately not listed. It's set up once and then never
     // touched, so it only added noise to a nav used every day. The page still
     // works at /admin/departments — reachable by URL when a department has to
@@ -37,8 +36,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // Testing tool, not a school workflow: wipes every request so a demo run
     // can start clean. Kept on Admin, away from the daily queues.
     { label: 'Reset Test Data', href: '/admin/reset', icon: 'x' as const },
-    // Mock enrollment, test teachers and clean-up — only when ENABLE_TEST_TOOLS=true.
-    ...(testToolsEnabled() ? [{ label: 'Testing Tools', href: '/admin/testing', icon: 'settings' as const }] : []),
   ]
 
   return (
