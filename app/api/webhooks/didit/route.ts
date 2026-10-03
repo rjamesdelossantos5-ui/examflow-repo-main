@@ -5,12 +5,9 @@ import {
   statusLabel,
   isTerminal,
   isInReview,
-  isApproved,
   declineSession,
-  OWN_ID_WARNING,
   type DiditDecision,
 } from '@/lib/didit'
-import { presentedOwnId } from '@/lib/diditSync'
 
 /**
  * Didit webhook receiver — the ONLY trustworthy source of a verification result.
@@ -133,7 +130,7 @@ export async function POST(request: Request) {
   // ── Already final ──────────────────────────────────────────────────────────
   // A final result is saved once. A later event for it has nothing to add and
   // could do harm: one arriving without the decision would blank the saved
-  // scores, and a late "Approved" would undo an own-ID decline. The only later changes Didit documents are a
+  // scores. The only later changes Didit documents are a
   // reviewer's resubmission request and KYC expiry of an old approval — neither
   // should reopen a result EXAMFLOW has already acted on.
   if (isTerminal(req.didit_status)) {
@@ -148,23 +145,10 @@ export async function POST(request: Request) {
     if (d.ok) status = 'Declined'
   }
 
+  // A student who verified with their own ID is no longer declined here: the
+  // Registrar sees "Same name as the student" next to the request and decides
+  // (checkParentName in lib/didit.ts, shown on app/registrar).
   const summary = summarizeDecision(payload.decision ?? null)
-
-  // The student verifying with their own ID — see isStudentsOwnId in
-  // lib/didit.ts. Declined on our side only; Didit's own answer is right.
-  let ownId = false
-  if (isApproved(status)) {
-    const check = await presentedOwnId(req.id, summary.idName)
-    if (check === null) {
-      // 500 so Didit retries, rather than saving an Approved that was never checked.
-      return new Response('name check failed', { status: 500 })
-    }
-    ownId = check
-    if (ownId) {
-      status = 'Declined'
-      summary.warnings = [OWN_ID_WARNING]
-    }
-  }
 
   const { error: updErr } = await supabase
     .from('special_exam_requests')
@@ -196,7 +180,7 @@ export async function POST(request: Request) {
       summary.livenessScore != null ? `liveness ${summary.livenessScore}` : null,
       summary.faceMatchScore != null ? `face match ${summary.faceMatchScore}` : null,
     ].filter(Boolean).join(', ')
-    const detail = ownId ? "the ID presented was the student's own" : scores
+    const detail = scores
     const { error: logErr } = await supabase.from('progress_logs').insert({
       request_id: req.id,
       // progress_logs.actor_id is NOT NULL and references profiles, so it cannot

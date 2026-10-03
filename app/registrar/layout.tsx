@@ -31,6 +31,9 @@ export default async function RegistrarLayout({ children }: { children: React.Re
     // the Cashier. See app/registrar/assessment/page.tsx.
     { label: 'Payment Assessment', href: '/registrar/assessment', icon: 'receipt' as const },
     { label: 'Verified History', href: '/registrar/history', icon: 'history' as const },
+    // Each student's father, mother and/or guardian — compared with the name
+    // on the parent's ID on the queue (lib/parentList.ts).
+    { label: 'Parent List', href: '/registrar/parents', icon: 'users' as const },
   ]
 
   return (

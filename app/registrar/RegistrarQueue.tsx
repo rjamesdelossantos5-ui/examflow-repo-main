@@ -7,6 +7,7 @@ import { Icon } from '@/components/Icon'
 import { verifyRequest, rejectRequest, verifyAll } from './actions'
 import { REGISTRAR_REJECT } from '@/lib/rejectReasons'
 import type { RequestStatus } from '@/lib/supabase/types'
+import type { ParentCheck } from '@/lib/didit'
 
 interface RequestRow {
   id: string
@@ -27,6 +28,8 @@ interface RequestRow {
   didit_liveness_score?: number | null
   didit_face_match_score?: number | null
   didit_document_type?: string | null
+  /** The name on the parent's ID against the Registrar's parent list. */
+  parentCheck?: ParentCheck | null
 }
 
 interface Group {
@@ -172,6 +175,7 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
                         faceMatchScore: f.didit_face_match_score ?? null,
                         documentType: f.didit_document_type ?? null,
                       }}
+                      parentCheck={f.parentCheck ?? null}
                       onVerify={verifyRequest}
                       onReject={rejectRequest}
                       onDone={() => dropForm(f.id)}

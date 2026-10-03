@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DocumentViewer from '@/components/DocumentViewer'
 import type { RequestStatus } from '@/lib/supabase/types'
+import type { ParentCheck } from '@/lib/didit'
+import ParentNameCheck from '@/components/ParentNameCheck'
 import { acceptRequest, rejectPHRequest, confirmReceipt, rejectReceipt, acceptAll, returnForReverification, getVerificationPhotos } from './actions'
 import { Icon } from '@/components/Icon'
 import { getSignedUrl } from '@/app/media-actions'
@@ -43,7 +45,13 @@ interface RequestRow {
   reverifyReason?: string | null
   /** Didit's result for the parent. Null for a request submitted before parent
    *  verification existed — there are no photos to review. */
-  verification?: { faceMatchScore: number | null; livenessScore: number | null; idName: string | null } | null
+  verification?: {
+    faceMatchScore: number | null
+    livenessScore: number | null
+    idName: string | null
+    /** The name on the ID against the Registrar's parent list. */
+    parentCheck?: ParentCheck | null
+  } | null
   final_schedule: string | null
   student: { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null }
   subject: { subject_code: string; subject_name: string; teacher: { full_name: string } | null }
@@ -457,9 +465,14 @@ function ParentPhotos({ requestId, verification }: { requestId: string; verifica
         <>
           <p className="text-xs ef-muted mb-2.5">
             Compare the face on the ID with the live selfie, and the name with the student&apos;s records.
-            {verification.idName && <> Name on the ID: <strong style={{ color: 'var(--card-foreground)' }}>{verification.idName}</strong>.</>}
+            {!verification.parentCheck && verification.idName && <> Name on the ID: <strong style={{ color: 'var(--card-foreground)' }}>{verification.idName}</strong>.</>}
             {scores && <> Didit: {scores}.</>}
           </p>
+          {verification.parentCheck && (
+            <div className="mb-2.5">
+              <ParentNameCheck check={verification.parentCheck} />
+            </div>
+          )}
           {error ? (
             <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
           ) : photos === null ? (

@@ -4,6 +4,7 @@ import { keepActive } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { withRegistrarGate } from '@/lib/registrarGate'
+import { parentChecks } from '@/lib/parentList'
 import RegistrarQueue from './RegistrarQueue'
 
 export const metadata = { title: 'EXAMFLOW — Registrar Queue' }
@@ -39,7 +40,20 @@ export default async function RegistrarPage() {
   // term is activated in Settings.
   const activePeriod = await getActivePeriodCached()
   const activeId = activePeriod?.id ?? null
-  const requests = keepActive(raw ?? [], activeId).map((r) => {
+  const active = keepActive(raw ?? [], activeId)
+
+  // The name on the parent's ID against the Registrar's parent list.
+  const checks = await parentChecks(supabase, active.map((r) => {
+    const prof = r.profiles as unknown as { full_name: string; student_number: string | null } | null
+    return {
+      id: r.id as string,
+      idName: (r.didit_id_name as string | null) ?? null,
+      studentNumber: prof?.student_number ?? (r.snap_student_number as string | null) ?? null,
+      studentNames: [r.snap_name as string | null, prof?.full_name],
+    }
+  }))
+
+  const requests = active.map((r) => {
     const prof = r.profiles as unknown as { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null } | null
     const routedTeacher = r.routed_teacher as unknown as { full_name: string } | null
     const subj = r.subjects as unknown as { subject_code: string; subject_name: string; profiles: { full_name: string } | null } | null
@@ -64,6 +78,7 @@ export default async function RegistrarPage() {
       media: ((r.application_media ?? []) as { id: string; media_type: string; storage_path: string; file_name: string; mime_type: string }[])
         .filter((m) => ['parent_id', 'parent_id_back', 'parent_signature'].includes(m.media_type)),
       logs: r.progress_logs ?? [],
+      parentCheck: checks[r.id as string] ?? null,
       resubmitted: ((r.progress_logs ?? []) as { action?: string }[]).some((l) => typeof l.action === 'string' && l.action.startsWith('Resubmitted')),
     }
   })

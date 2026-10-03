@@ -406,6 +406,9 @@ interface NameParts {
 
 function nameParts(name: string): NameParts {
   const raw = name
+    // School Microsoft names end in a tag — "Delos Santos, R. James (Student)" —
+    // that is not part of the name; read as a word it looked like a middle name.
+    .replace(/\([^)]*\)/g, ' ')
     .normalize('NFD').replace(/[̀-ͯ]/g, '') // Peña → Pena, José → Jose
     .toLowerCase()
     .split(/[^a-z]+/)
@@ -453,7 +456,8 @@ function sameName(a: NameParts, b: NameParts): boolean {
  *
  * Known false positive: a parent whose name is the student's in every word
  * compared (a father whose son's record omits "Jr.", a mother and daughter with
- * the same given name) is refused too. OWN_ID_WARNING tells the student what to do.
+ * the same given name) matches too — which is why it is only a warning for the
+ * Registrar (checkParentName), never an automatic decline.
  */
 export function isStudentsOwnId(idName: string | null, studentNames: Array<string | null | undefined>): boolean {
   if (!idName) return false
@@ -461,10 +465,45 @@ export function isStudentsOwnId(idName: string | null, studentNames: Array<strin
   return studentNames.some((n) => !!n && sameName(id, nameParts(n)))
 }
 
-/** Stored in didit_warnings, in place of Didit's own, when the ID was the
- *  student's — the declined card lists short_description to the student. */
-export const OWN_ID_WARNING = {
-  risk: 'EXAMFLOW_STUDENT_OWN_ID',
-  short_description: 'The name on this ID is the same as yours. Your parent or guardian must verify with their own ID. If they have the same name as you, ask your other parent or guardian to verify instead.',
-  feature: 'examflow',
+/** A parent or guardian on the Registrar's list. */
+export interface ParentOnFile {
+  name: string
+  /** 'Father', 'Mother', or the guardian's relationship ('Grandmother', 'Guardian', …). */
+  relationship: string
+}
+
+/**
+ * What the Registrar and the Program Head are told about the name on the
+ * parent's ID, with the names on file beside it for their own comparison.
+ *  - no_name:    Didit gave no name (not verified yet, or it read none)
+ *  - own:        the ID is in the student's own name — they likely verified themselves
+ *  - match:      the ID matches someone on the list (`matched`)
+ *  - not_listed: the student has people on the list, and the ID matches none
+ *  - no_list:    the student has nobody on the list to compare with
+ */
+export interface ParentCheck {
+  result: 'no_name' | 'own' | 'match' | 'not_listed' | 'no_list'
+  idName: string | null
+  matched: ParentOnFile | null
+  onFile: ParentOnFile[]
+}
+
+/**
+ * Compares the name Didit read off the parent's ID with the student's own names
+ * and with the people on the Registrar's list (same rules as isStudentsOwnId).
+ * Advice only: names read off an ID often differ in format from a typed list,
+ * so the student is never blocked — the reviewer decides.
+ */
+export function checkParentName(
+  idName: string | null,
+  studentNames: Array<string | null | undefined>,
+  onFile: ParentOnFile[],
+): ParentCheck {
+  const base = { idName, matched: null, onFile }
+  if (!idName) return { ...base, result: 'no_name' }
+  if (isStudentsOwnId(idName, studentNames)) return { ...base, result: 'own' }
+  if (!onFile.length) return { ...base, result: 'no_list' }
+  const id = nameParts(idName)
+  const matched = onFile.find((p) => sameName(id, nameParts(p.name))) ?? null
+  return { ...base, matched, result: matched ? 'match' : 'not_listed' }
 }

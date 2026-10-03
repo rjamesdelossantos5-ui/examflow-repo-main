@@ -7,6 +7,8 @@ import RejectReasonPicker from '@/components/RejectReasonPicker'
 import { Icon, type IconName } from '@/components/Icon'
 import { ordinalYear } from '@/lib/ordinal'
 import type { RequestStatus } from '@/lib/supabase/types'
+import type { ParentCheck } from '@/lib/didit'
+import ParentNameCheck from '@/components/ParentNameCheck'
 
 interface MediaItem {
   id: string
@@ -53,6 +55,8 @@ interface Props {
   /** Didit parent identity result. Omit to hide the section entirely — a request
    *  submitted before this feature existed simply has nothing to show. */
   verification?: VerificationProps
+  /** The name on the parent's ID against the Registrar's parent list (Registrar only). */
+  parentCheck?: ParentCheck | null
 }
 
 interface VerificationProps {
@@ -139,6 +143,7 @@ export default function RequestReviewPanel({
   rejectPresets,
   onDone,
   verification,
+  parentCheck,
 }: Props) {
   const isActionable = status === actionableStatus
   const [rejectMode, setRejectMode] = useState(false)
@@ -242,15 +247,16 @@ export default function RequestReviewPanel({
         )}
 
         {/* Parent identity verification.
-            This replaces reading the parent's ID by eye. Only the outcome and
-            the scores are shown: the ID image and selfie are never stored (see
-            supabase/migration_didit.sql), and the name read off the ID is
-            deliberately not surfaced here — a reviewer does not need it to
-            decide, and it is the most sensitive field we hold. */}
+            This replaces reading the parent's ID by eye. The outcome and scores
+            are shown; the ID image and selfie are never stored here (see
+            supabase/migration_didit.sql). The name read off the ID is shown
+            only beside the Registrar's parent list (parentCheck), because
+            comparing the two is the Registrar's check. */}
         {verification && (
-          <div>
+          <div className="space-y-2">
             <SectionLabel icon="file">Parent Identity Check</SectionLabel>
             <VerificationBadge {...verification} />
+            {parentCheck && <ParentNameCheck check={parentCheck} />}
           </div>
         )}
 

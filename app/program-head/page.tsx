@@ -8,6 +8,7 @@ import { getMyProfileMeta } from '@/lib/myProfile'
 import { keepMyDepartment } from '@/lib/deptFilter'
 import { withRegistrarGate } from '@/lib/registrarGate'
 import { REVERIFY_LOG_PREFIX } from '@/lib/rejectReasons'
+import { parentChecks } from '@/lib/parentList'
 import PHQueue from './PHQueue'
 
 export const metadata = { title: 'EXAMFLOW — Program Head Queue' }
@@ -55,7 +56,20 @@ export default async function ProgramHeadPage() {
   // A Program Head only approves their own department's subjects.
   const [activePeriod, meta] = await Promise.all([getActivePeriodCached(), getMyProfileMeta()])
   const activeId = activePeriod?.id ?? null
-  const requests = keepMyDepartment(keepActive(raw ?? [], activeId), meta?.department_id ?? null).map((r) => {
+  const mine = keepMyDepartment(keepActive(raw ?? [], activeId), meta?.department_id ?? null)
+
+  // The name on the parent's ID against the Registrar's parent list.
+  const checks = await parentChecks(supabase, mine.map((r) => {
+    const p = r.student as unknown as { full_name: string; student_number: string | null } | null
+    return {
+      id: r.id as string,
+      idName: (r.didit_id_name as string | null) ?? null,
+      studentNumber: p?.student_number ?? (r.snap_student_number as string | null) ?? null,
+      studentNames: [r.snap_name as string | null, p?.full_name],
+    }
+  }))
+
+  const requests = mine.map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string
       subject_name: string
@@ -93,6 +107,7 @@ export default async function ProgramHeadPage() {
             faceMatchScore: (r.didit_face_match_score as number | null) ?? null,
             livenessScore: (r.didit_liveness_score as number | null) ?? null,
             idName: (r.didit_id_name as string | null) ?? null,
+            parentCheck: checks[r.id as string] ?? null,
           }
         : null,
     }

@@ -1,9 +1,6 @@
 import 'server-only'
 import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
-import {
-  getSessionDecision, summarizeDecision, isTerminal, isInReview, isApproved, declineSession,
-  isStudentsOwnId, OWN_ID_WARNING,
-} from '@/lib/didit'
+import { getSessionDecision, summarizeDecision, isTerminal, isInReview, declineSession } from '@/lib/didit'
 
 
 /** The didit_* columns a sync writes, returned so a page can render the fresh
@@ -74,19 +71,10 @@ export async function syncDiditResult(
     if (d.ok) status = 'Declined'
   }
 
+  // A student who verified with their own ID is no longer declined here: the
+  // Registrar sees "Same name as the student" next to the request and decides
+  // (checkParentName in lib/didit.ts, shown on app/registrar).
   const summary = summarizeDecision(decision)
-
-  // The student verifying with their own ID — see isStudentsOwnId in
-  // lib/didit.ts. Declined on our side only: Didit's answer (a real ID, a
-  // matching face) is right; it is EXAMFLOW's rule that refuses it.
-  if (isApproved(status)) {
-    const ownId = await presentedOwnId(requestId, summary.idName)
-    if (ownId === null) return { fields: null, error: 'Could not save the verification result.' }
-    if (ownId) {
-      status = 'Declined'
-      summary.warnings = [OWN_ID_WARNING]
-    }
-  }
 
   const fields: DiditFields = {
     didit_status: status,
@@ -142,30 +130,4 @@ async function storedFinalResult(requestId: string, studentId: string, sessionId
     .eq('didit_session_id', sessionId)
     .maybeSingle()
   return data && isTerminal(data.didit_status as string | null) ? (data as unknown as DiditFields) : null
-}
-
-/**
- * Whether the ID Didit read is the student's own (isStudentsOwnId in
- * lib/didit.ts), against both the account name and the name on the request.
- * Null when the names could not be read: the caller must then store nothing
- * rather than an Approved that was never checked.
- *
- * Service-role read — only call it for a request already tied to the caller:
- * the webhook's session-id lookup, or syncDiditResult's caller contract.
- */
-export async function presentedOwnId(requestId: string, idName: string | null): Promise<boolean | null> {
-  if (!idName) return false
-  const admin = createAdminClient()
-  if (!admin) return null
-  const { data, error } = await admin
-    .from('special_exam_requests')
-    .select('snap_name, student:profiles!student_id(full_name)')
-    .eq('id', requestId)
-    .maybeSingle()
-  if (error || !data) {
-    console.error('[diditSync] could not read the student names', error)
-    return null
-  }
-  const student = data.student as unknown as { full_name: string } | null
-  return isStudentsOwnId(idName, [data.snap_name as string | null, student?.full_name])
 }
