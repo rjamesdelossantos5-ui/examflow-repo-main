@@ -3,14 +3,18 @@
 import { useState, useTransition } from 'react'
 import * as XLSX from 'xlsx'
 import { readSchoolData, PEOPLE_CHUNK_SIZE, type SchoolData, type Issue } from '@/lib/schoolData'
-import { importStructure, importPeopleChunk, importClasses, type PersonInput } from './actions'
+import { importStructure, importPeopleChunk, importClasses, stageImport, discardStagedImport, type PersonInput } from './actions'
+import type { ImportReview, ReviewItem } from './review'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const card = 'ef-card rounded-xl shadow-sm p-5 sm:p-6 space-y-4'
 
 interface Props {
   current: { departments: number; programs: number; staff: number; students: number; classes: number; subjects: number }
-  migrationMissing: boolean
+  /** The migration file still to run, or null when the database is ready. */
+  migrationMissing: string | null
+  /** The file waiting for review, compared with the live data. */
+  review: ImportReview | null
 }
 
 interface Result { created: number; updated: number; classes: number; subjects: number; withoutTeacher: number; failures: { email: string; reason: string }[] }
@@ -19,11 +23,18 @@ interface Result { created: number; updated: number; classes: number; subjects: 
  * One workbook, one import: departments, programs, staff and student accounts,
  * subjects and classes. Students then sign in to find their section and
  * subjects already set; nothing else is configured in the app.
+ *
+ * Two steps: the checked file is uploaded for review (nothing changes yet),
+ * the page shows what it would change, and Accept applies it — or Cancel
+ * throws it away.
  */
-export default function SchoolDataImport({ current, migrationMissing }: Props) {
+export default function SchoolDataImport({ current, migrationMissing, review }: Props) {
   const [data, setData] = useState<SchoolData | null>(null)
+  const [grids, setGrids] = useState<Record<string, unknown[][]> | null>(null)
   const [fileName, setFileName] = useState('')
   const [fileError, setFileError] = useState<string | null>(null)
+  // Bumped to clear the file picker once the file has been uploaded.
+  const [inputKey, setInputKey] = useState(0)
   const [progress, setProgress] = useState<{ step: string; done: number; total: number } | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [runError, setRunError] = useState<string | null>(null)
@@ -34,6 +45,7 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
     if (!file) return
     setFileError(null)
     setData(null)
+    setGrids(null)
     setResult(null)
     setRunError(null)
     if (!file.name.toLowerCase().endsWith('.xlsx')) return setFileError('Only .xlsx files are accepted.')
@@ -43,8 +55,9 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
     reader.onload = (ev) => {
       try {
         const wb = XLSX.read(ev.target?.result, { type: 'array' })
-        const grids = Object.fromEntries(wb.SheetNames.map((n) => [n, XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '' }) as unknown[][]]))
-        setData(readSchoolData(grids))
+        const sheets = Object.fromEntries(wb.SheetNames.map((n) => [n, XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '' }) as unknown[][]]))
+        setGrids(sheets)
+        setData(readSchoolData(sheets))
       } catch {
         setFileError('Could not read this file. Make sure it is a valid .xlsx file.')
       }
@@ -52,17 +65,42 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
     reader.readAsArrayBuffer(file)
   }
 
-  function runImport() {
-    if (!data) return
+  function uploadForReview() {
+    if (!grids) return
     setRunError(null)
     startTransition(async () => {
+      const res = await stageImport({ fileName, grids })
+      if (res.error) return setRunError(res.error)
+      // The review card comes back from the server with the page.
+      setData(null)
+      setGrids(null)
+      setInputKey((k) => k + 1)
+    })
+  }
+
+  function cancelReview() {
+    if (!review) return
+    const id = review.id
+    setRunError(null)
+    startTransition(async () => {
+      const res = await discardStagedImport(id)
+      if (res.error) setRunError(res.error)
+    })
+  }
+
+  function acceptReview() {
+    if (!review) return
+    const { id, data: file } = review
+    setRunError(null)
+    setResult(null)
+    startTransition(async () => {
       const people: PersonInput[] = [
-        ...data.staff.map((s) => ({ fullName: s.fullName, email: s.email, role: s.role, department: s.department })),
-        ...data.students.map((s) => ({ fullName: s.fullName, email: s.email, role: 'student' as const, studentNumber: s.studentNumber, program: s.program, yearLevel: s.yearLevel, section: s.section })),
+        ...file.staff.map((s) => ({ fullName: s.fullName, email: s.email, role: s.role, department: s.department })),
+        ...file.students.map((s) => ({ fullName: s.fullName, email: s.email, role: 'student' as const, studentNumber: s.studentNumber, program: s.program, yearLevel: s.yearLevel, section: s.section })),
       ]
 
       setProgress({ step: 'Departments and programs', done: 0, total: 1 })
-      const structure = await importStructure({ departments: data.departments, programs: data.programs })
+      const structure = await importStructure({ departments: file.departments, programs: file.programs })
       if (structure.error) { setProgress(null); return setRunError(structure.error) }
 
       let created = 0, updated = 0
@@ -77,11 +115,14 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
       }
 
       setProgress({ step: 'Subjects and classes', done: 0, total: 1 })
-      const cls = await importClasses({ classes: data.classes, subjectNames: data.subjectNames })
+      const cls = await importClasses({ classes: file.classes, subjectNames: file.subjectNames })
       setProgress(null)
+      // On a failure the file stays waiting, so Accept can simply be pressed
+      // again: every step updates what is already there instead of duplicating.
       if (cls.error) return setRunError(cls.error)
+
+      await discardStagedImport(id)
       setResult({ created, updated, classes: cls.classes ?? 0, subjects: cls.subjects ?? 0, withoutTeacher: cls.withoutTeacher ?? 0, failures })
-      setData(null)
     })
   }
 
@@ -93,7 +134,7 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
     ['Subjects', current.subjects],
     ['Classes', current.classes],
   ] as const
-  const canImport = !!data && !data.errors.length && !isPending && !migrationMissing
+  const canUpload = !!data && !!grids && !data.errors.length && !isPending && !migrationMissing
   const pct = progress ? Math.round((progress.done / Math.max(progress.total, 1)) * 100) : 0
 
   return (
@@ -109,7 +150,7 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
 
       {migrationMissing && (
         <div role="alert" className="rounded-lg border px-4 py-3 text-sm" style={{ borderColor: 'var(--status-danger)', color: 'var(--status-danger)' }}>
-          Run <code>supabase/migration_school_data.sql</code> in the Supabase SQL editor first.
+          Run <code>{migrationMissing}</code> in the Supabase SQL editor first.
         </div>
       )}
 
@@ -126,10 +167,12 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
           <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Upload the school data file</h3>
           <p className="text-2xs sm:text-xs ef-muted mt-1">
             Five sheets: <code>Departments</code>, <code>Programs</code>, <code>Staff</code>, <code>Students</code>,{' '}
-            <code>Classes</code>. Every sheet is checked against the others before anything is saved.
+            <code>Classes</code>. Every sheet is checked against the others, then you review what would change before
+            anything is saved.
           </p>
         </div>
         <input
+          key={inputKey}
           type="file"
           accept=".xlsx"
           onChange={handleFile}
@@ -152,21 +195,25 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
           {!data.errors.length && (
             <>
               <p className="text-xs ef-muted">
-                Accounts that already exist are updated, not duplicated. New accounts have no password — people sign in
-                with their Microsoft school account. The class list is replaced; submitted requests keep their teacher.
+                Nothing is saved yet. Upload it to see what it would change — you then accept or cancel.
+                {review && ' It replaces the file already waiting for review.'}
               </p>
               <button
                 type="button"
-                onClick={runImport}
-                disabled={!canImport}
+                onClick={uploadForReview}
+                disabled={!canUpload}
                 className="px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
               >
-                {isPending ? 'Importing…' : 'Import school data'}
+                {isPending ? 'Uploading…' : 'Upload for review'}
               </button>
             </>
           )}
         </section>
+      )}
+
+      {review && !result && (
+        <ReviewPanel review={review} busy={isPending} onAccept={acceptReview} onCancel={cancelReview} />
       )}
 
       {progress && (
@@ -203,6 +250,103 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
         </section>
       )}
     </div>
+  )
+}
+
+/** What the waiting file would change, with Accept and Cancel. */
+function ReviewPanel({ review, busy, onAccept, onCancel }: { review: ImportReview; busy: boolean; onAccept: () => void; onCancel: () => void }) {
+  const d = review.data
+  const tiles = [
+    ['New accounts', review.newAccounts.length],
+    ['Changed accounts', review.changedAccounts.length],
+    ['Classes added', review.addedClasses.length],
+    ['Classes removed', review.removedClasses.length],
+    ['Teacher changes', review.teacherChanges.length],
+    ['New subjects', review.newSubjects.length],
+  ] as const
+
+  return (
+    <section className={`${card} border-2`} style={{ borderColor: 'var(--sti-gold)' }} aria-labelledby="review-title">
+      <div>
+        <h3 id="review-title" className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Review before importing</h3>
+        <p className="text-xs ef-muted mt-0.5">
+          {review.fileName} · uploaded {review.uploadedAt} · {d.staff.length} staff, {d.students.length} students,{' '}
+          {d.classes.length} classes
+        </p>
+        <p className="text-sm mt-2" style={{ color: 'var(--card-foreground)' }}>
+          <strong>Nothing has changed yet.</strong> Accept applies this file; Cancel throws it away.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center">
+        {tiles.map(([label, n]) => (
+          <div key={label} className="rounded-lg border ef-border px-2 py-2.5">
+            <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--card-foreground)' }}>{n}</p>
+            <p className="text-2xs ef-muted">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        <Changes title="new accounts" items={review.newAccounts} />
+        <Changes title="accounts that change" items={review.changedAccounts} />
+        <Changes title="teacher changes" items={review.teacherChanges} />
+        <Changes title="classes added" items={review.addedClasses} />
+        <Changes title="classes removed" items={review.removedClasses} />
+        <Changes title="new subjects" items={review.newSubjects} />
+        <Changes title="new departments" items={review.newDepartments} />
+        <Changes title="new programs" items={review.newPrograms} />
+        <Changes title="accounts not in this file — they stay as they are" items={review.keptAccounts} />
+        <IssueList title="worth checking" issues={d.warnings} tone="var(--status-warning)" />
+      </div>
+
+      <ul className="text-xs ef-muted space-y-1 list-disc pl-5">
+        <li>{review.unchangedAccounts} account{review.unchangedAccounts === 1 ? '' : 's'} and {review.unchangedClasses} class{review.unchangedClasses === 1 ? '' : 'es'} stay the same.</li>
+        {review.keptAccounts.length > 0 && <li>Accounts not in this file are not deleted — remove them on the Users page if they should go.</li>}
+        {review.leftoverSubjects > 0 && <li>{review.leftoverSubjects} subject{review.leftoverSubjects === 1 ? '' : 's'} in the system {review.leftoverSubjects === 1 ? 'is' : 'are'} not in this file — kept, with no classes.</li>}
+        {review.skippedAdmins.length > 0 && <li>Admin accounts are never changed by an import: {review.skippedAdmins.join(', ')}.</li>}
+        <li>New accounts have no password — people sign in with their Microsoft school account. Submitted requests keep their teacher.</li>
+      </ul>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onAccept}
+          disabled={busy}
+          className="px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+        >
+          {busy ? 'Working…' : 'Accept and import'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}
+          className="px-4 py-2.5 rounded-lg text-sm font-semibold border ef-border disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ color: 'var(--card-foreground)' }}
+        >
+          Cancel
+        </button>
+      </div>
+    </section>
+  )
+}
+
+function Changes({ title, items }: { title: string; items: (ReviewItem | string)[] }) {
+  if (!items.length) return null
+  return (
+    <details>
+      <summary className="text-sm font-medium cursor-pointer" style={{ color: 'var(--card-foreground)' }}>
+        {items.length} {title}
+      </summary>
+      <ul className="mt-2 space-y-1 text-xs ef-muted list-disc pl-5 max-h-64 overflow-y-auto">
+        {items.map((item, n) => (
+          <li key={n}>
+            {typeof item === 'string' ? item : <><strong style={{ color: 'var(--card-foreground)' }}>{item.label}</strong> — {item.detail}</>}
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }
 

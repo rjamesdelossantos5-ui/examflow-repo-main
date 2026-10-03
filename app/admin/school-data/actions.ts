@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
-import { PEOPLE_CHUNK_SIZE, type ClassRow, type Program, type StaffRole } from '@/lib/schoolData'
+import { PEOPLE_CHUNK_SIZE, readSchoolData, type ClassRow, type Program, type StaffRole } from '@/lib/schoolData'
 
 /**
  * Writes the school data workbook (lib/schoolData.ts) in three steps the
@@ -24,6 +24,50 @@ async function requireAdmin() {
 }
 
 const clip = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n)
+
+// ── 0. Review before import ─────────────────────────────────────────────────
+// Uploading only stores the checked file in school_data_imports; the page then
+// shows what it would change, and Accept runs steps 1–3 below with it.
+
+/** Upper bound on rows across all sheets, far above a real campus. */
+const MAX_ROWS = 50000
+
+/**
+ * Checks the workbook again on the server (the same reader the browser used,
+ * so what is stored is exactly what was checked) and keeps it for review,
+ * replacing any file already waiting. Nothing else changes.
+ */
+export async function stageImport(input: { fileName: string; grids: Record<string, unknown[][]> }) {
+  const supabase = await requireAdmin()
+  if (!supabase) return { error: 'Unauthorized' }
+
+  const grids = input.grids ?? {}
+  const rows = Object.values(grids).reduce((n, g) => n + (Array.isArray(g) ? g.length : 0), 0)
+  if (rows > MAX_ROWS) return { error: 'This file is too large.' }
+
+  const data = readSchoolData(grids)
+  if (data.errors.length) return { error: `The file still has ${data.errors.length} problem${data.errors.length === 1 ? '' : 's'} to fix.` }
+
+  // One file waits at a time. 'not id is null' = every row.
+  const { error: clearErr } = await supabase.from('school_data_imports').delete().not('id', 'is', null)
+  if (clearErr) return { error: friendlyError('stageImport.clear', clearErr, `We couldn't replace the file waiting for review. ${RETRY_HINT}`) }
+
+  const { error } = await supabase.from('school_data_imports').insert({ file_name: clip(input.fileName, 200) || 'school-data.xlsx', data })
+  if (error) return { error: friendlyError('stageImport', error, `We couldn't save the file for review. ${RETRY_HINT}`) }
+
+  revalidatePath('/admin/school-data')
+  return { error: null }
+}
+
+/** Throws away the file waiting for review — on Cancel, and after Accept. */
+export async function discardStagedImport(id: string) {
+  const supabase = await requireAdmin()
+  if (!supabase) return { error: 'Unauthorized' }
+  const { error } = await supabase.from('school_data_imports').delete().eq('id', id)
+  if (error) return { error: friendlyError('discardStagedImport', error, `We couldn't remove the file waiting for review. ${RETRY_HINT}`) }
+  revalidatePath('/admin/school-data')
+  return { error: null }
+}
 
 // ── 1. Departments and programs ─────────────────────────────────────────────
 
