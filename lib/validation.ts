@@ -19,11 +19,12 @@ export function isValidStudentNumber(v: string): boolean {
   return digits.length >= 4 && digits.length <= 15
 }
 
-// A person's name: letters (incl. accents), spaces and . ' - only. Must contain
-// a letter and no digits — lenient enough for real names, strict enough to
-// reject "asdf123" / "!@#$".
+// A person's name: letters (incl. accents), spaces and . ' - , ( ) only. Must
+// contain a letter and no digits — lenient enough for real names, strict
+// enough to reject "asdf123" / "!@#$". The comma and brackets are for school
+// account names: "Delos Santos, R. James (Student)".
 export function isValidName(v: string): boolean {
-  return v.length >= 2 && /\p{L}/u.test(v) && /^[\p{L}\s.'-]+$/u.test(v)
+  return v.length >= 2 && /\p{L}/u.test(v) && /^[\p{L}\s.'\-,()]+$/u.test(v)
 }
 
 // Course / section codes: letters, digits, spaces, & and - (e.g. "BSIT",

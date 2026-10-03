@@ -13,6 +13,32 @@ function sanitize(v: unknown): string {
   return String(v ?? '').trim().slice(0, 500)
 }
 
+/**
+ * The profile fields shared by Create and Edit. Only the fields the role uses
+ * are kept (the form shows just those): a department for teachers and Program
+ * Heads, student details for students, nothing extra for registrars and admins.
+ */
+function readProfileFields(formData: FormData) {
+  const fullName = sanitize(formData.get('full_name'))
+  const role = sanitize(formData.get('role')) as UserRole
+  const isStudent = role === 'student'
+  const departmentId = role === 'subject_teacher' || role === 'program_head' ? sanitize(formData.get('department_id')) || null : null
+  const studentNumber = isStudent ? sanitize(formData.get('student_number')) || null : null
+  const course = isStudent ? sanitize(formData.get('course')) || null : null
+  const yearLevel = isStudent && formData.get('year_level') ? Number(formData.get('year_level')) : null
+  const section = isStudent ? sanitize(formData.get('section')) || null : null
+
+  const fail = (error: string) => ({ error, fullName, role, departmentId, studentNumber, course, yearLevel, section })
+  if (!fullName || !ALLOWED_ROLES.includes(role)) return fail('Missing or invalid fields')
+  if (role === 'program_head' && !departmentId) return fail('A Program Head needs a department — it decides which requests they review.')
+  if (!isValidName(fullName)) return fail('Enter a valid full name (letters only).')
+  if (studentNumber && !isValidStudentNumber(studentNumber)) return fail('Enter a valid student number (digits only, e.g. 2024-00001).')
+  if (course && !isValidCode(course)) return fail('Enter a valid course (letters and numbers only).')
+  if (section && !isValidCode(section)) return fail('Enter a valid section (letters and numbers only).')
+  if (yearLevel !== null && !(Number.isInteger(yearLevel) && yearLevel >= 1 && yearLevel <= 6)) return fail('Year level must be 1 to 6.')
+  return { error: null, fullName, role, departmentId, studentNumber, course, yearLevel, section }
+}
+
 export async function createUser(formData: FormData) {
   const supabase = await createClient()
 
@@ -22,29 +48,15 @@ export async function createUser(formData: FormData) {
   const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
   if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
 
-  const fullName = sanitize(formData.get('full_name'))
   const email = sanitize(formData.get('email')).toLowerCase()
   const password = sanitize(formData.get('password'))
-  const role = sanitize(formData.get('role')) as UserRole
-  // Only the fields the role uses are kept (the form shows just those): a
-  // department for teachers and Program Heads, student details for students.
-  const isStudent = role === 'student'
-  const departmentId = role === 'subject_teacher' || role === 'program_head' ? sanitize(formData.get('department_id')) || null : null
-  const studentNumber = isStudent ? sanitize(formData.get('student_number')) || null : null
-  const course = isStudent ? sanitize(formData.get('course')) || null : null
-  const yearLevel = isStudent && formData.get('year_level') ? Number(formData.get('year_level')) : null
-  const section = isStudent ? sanitize(formData.get('section')) || null : null
+  const fields = readProfileFields(formData)
+  if (fields.error !== null) return { error: fields.error }
+  const { fullName, role, departmentId, studentNumber, course, yearLevel, section } = fields
 
-  if (!fullName || !email || !password || !ALLOWED_ROLES.includes(role)) {
-    return { error: 'Missing or invalid fields' }
-  }
-  if (role === 'program_head' && !departmentId) return { error: 'A Program Head needs a department — it decides which requests they review.' }
-  if (!isValidName(fullName)) return { error: 'Enter a valid full name (letters only).' }
+  if (!email || !password) return { error: 'Missing or invalid fields' }
   if (!isValidEmail(email)) return { error: 'Enter a valid email address.' }
   if (password.length < 6) return { error: 'Password must be at least 6 characters.' }
-  if (studentNumber && !isValidStudentNumber(studentNumber)) return { error: 'Enter a valid student number (digits only, e.g. 2024-00001).' }
-  if (course && !isValidCode(course)) return { error: 'Enter a valid course (letters and numbers only).' }
-  if (section && !isValidCode(section)) return { error: 'Enter a valid section (letters and numbers only).' }
 
   // auth.admin.* requires the SERVICE ROLE key — the anon key gets 403 "User
   // not allowed". This used to call it on the anon client, so account creation
@@ -86,6 +98,40 @@ export async function createUser(formData: FormData) {
   if (profileError) return { error: friendlyError('createUser.profile', profileError, `The account was created but we couldn't save its profile details. ${RETRY_HINT}`) }
 
   revalidatePath('/admin/users')
+  return { error: null }
+}
+
+/**
+ * Edits an existing account's name, role and the details that role uses. The
+ * email is not editable: it is also the login, and changing only the profile
+ * copy is how the login and profile emails drifted apart before.
+ */
+export async function updateUser(userId: string, formData: FormData) {
+  const supabase = await createClient()
+
+  const { data: { user: me } } = await supabase.auth.getUser()
+  if (!me) return { error: 'Unauthorized' }
+
+  const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
+  if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
+
+  const fields = readProfileFields(formData)
+  if (fields.error !== null) return { error: fields.error }
+  const { fullName, role, departmentId, studentNumber, course, yearLevel, section } = fields
+  // Changing your own role would lock you out of this page.
+  if (userId === me.id && role !== 'admin') return { error: "You can't remove your own admin role." }
+
+  const { data: updated, error } = await supabase
+    .from('profiles')
+    .update({ full_name: fullName, role, department_id: departmentId, student_number: studentNumber, course, year_level: yearLevel, section })
+    .eq('id', userId)
+    .select('id')
+
+  if (error) return { error: friendlyError('updateUser', error, `We couldn't save these changes. ${RETRY_HINT}`) }
+  if (!updated?.length) return { error: 'This account no longer exists.' }
+
+  revalidatePath('/admin/users')
+  revalidatePath('/admin/subjects')
   return { error: null }
 }
 

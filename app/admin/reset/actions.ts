@@ -8,10 +8,12 @@ import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 // DESTRUCTIVE test-data reset. This exists so a demo or test run can start
 // clean without waiting for real dates to pass — it is not a school workflow.
 //
-// It deletes every special exam request, its progress logs, its media rows and
-// the actual files those rows point at. It deliberately does NOT touch user
-// accounts, subjects, departments, class offerings or exam periods, so the next
-// test run can submit immediately with nothing to re-import.
+// resetRequests() deletes every special exam request, its progress logs, its
+// media rows and the actual files those rows point at. It deliberately does NOT
+// touch user accounts, subjects, departments, class offerings or exam periods,
+// so the next test run can submit immediately with nothing to re-import.
+// "Clear school data" (further down) is the separate, bigger reset that also
+// removes what the School Data import made.
 //
 // This replaces supabase/reset_forms.sql, which had to be pasted into the SQL
 // editor by hand — and which cannot delete the uploaded files at all, because
@@ -140,4 +142,124 @@ export async function resetRequests() {
     filesRemoved,
     fileWarning,
   }
+}
+
+// ── Clear school data ───────────────────────────────────────────────────────
+// Removes what the School Data import made, so a different file can be
+// imported from nothing (the import itself only adds and updates). The client
+// runs it in order: resetRequests() (requests point at subjects with "on delete
+// restrict"), then clearUnusedAccounts() until none remain, then
+// clearSchoolStructure().
+//
+// Accounts: only ones that have NEVER signed in and are not admins — the
+// made-up people from the import. Anyone who has signed in (the team, with
+// Microsoft) keeps their account; the next import gives them their role again.
+
+type AdminClient = NonNullable<ReturnType<typeof createAdminClient>>
+
+// Each account is one Auth API call, so they go in small batches per action
+// call instead of one long-running request.
+const ACCOUNT_BATCH = 20
+
+async function unusedAccountIds(admin: AdminClient, me: string) {
+  const ids: string[] = []
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) return { error, ids: [] as string[] }
+    for (const u of data.users) if (!u.last_sign_in_at && u.id !== me) ids.push(u.id)
+    if (data.users.length < 1000) break
+  }
+  if (!ids.length) return { error: null, ids }
+  const { data: admins, error } = await admin.from('profiles').select('id').eq('role', 'admin')
+  if (error) return { error, ids: [] as string[] }
+  const keep = new Set((admins ?? []).map((a) => a.id as string))
+  return { error: null, ids: ids.filter((id) => !keep.has(id)) }
+}
+
+/** What "Clear school data" would remove right now, for its confirmation. */
+export async function getSchoolDataPreview() {
+  const me = await requireAdmin()
+  if (!me) return { error: 'Unauthorized', preview: null }
+  const admin = createAdminClient()
+  if (!admin) return { error: SERVICE_KEY_MISSING, preview: null }
+
+  const count = (table: string) => admin.from(table).select('*', { count: 'exact', head: true })
+  const [reqs, media, subjects, classes, departments, programs, accounts] = await Promise.all([
+    count('special_exam_requests'), count('application_media'), count('subjects'), count('class_offerings'),
+    count('departments'), count('program_departments'), unusedAccountIds(admin, me.userId),
+  ])
+  const failed = [reqs, subjects, classes, departments, programs].find((r) => r.error)?.error ?? accounts.error
+  if (failed) return { error: friendlyError('getSchoolDataPreview', failed, `We couldn't check the data. ${RETRY_HINT}`), preview: null }
+
+  return {
+    error: null,
+    preview: {
+      requests: reqs.count ?? 0,
+      files: media.error ? null : (media.count ?? 0),
+      accounts: accounts.ids.length,
+      subjects: subjects.count ?? 0,
+      classes: classes.count ?? 0,
+      departments: departments.count ?? 0,
+      programs: programs.count ?? 0,
+    },
+  }
+}
+
+/** Deletes up to ACCOUNT_BATCH never-signed-in, non-admin accounts. Call again
+ *  until `remaining` is 0. */
+export async function clearUnusedAccounts() {
+  const me = await requireAdmin()
+  if (!me) return { error: 'Unauthorized', deleted: 0, remaining: 0 }
+  const admin = createAdminClient()
+  if (!admin) return { error: SERVICE_KEY_MISSING, deleted: 0, remaining: 0 }
+
+  const { error, ids } = await unusedAccountIds(admin, me.userId)
+  if (error) return { error: friendlyError('clearUnusedAccounts:list', error, `We couldn't list the accounts. ${RETRY_HINT}`), deleted: 0, remaining: 0 }
+
+  let deleted = 0
+  let lastError: unknown = null
+  for (const id of ids.slice(0, ACCOUNT_BATCH)) {
+    // Deleting the login cascades to the profile.
+    const { error: e } = await admin.auth.admin.deleteUser(id)
+    if (e) lastError = e
+    else deleted++
+  }
+  revalidatePath('/admin/users')
+
+  // A batch where nothing could be deleted stops the loop instead of retrying
+  // the same accounts forever.
+  if (!deleted && lastError) {
+    return { error: friendlyError('clearUnusedAccounts', lastError, `We couldn't delete the accounts. ${RETRY_HINT}`), deleted, remaining: ids.length }
+  }
+  return { error: null, deleted, remaining: ids.length - deleted }
+}
+
+/** Deletes every class, subject, program and department, and the analytics
+ *  rows that point at them. Run after resetRequests(). */
+export async function clearSchoolStructure() {
+  if (!(await requireAdmin())) return { error: 'Unauthorized' }
+  const admin = createAdminClient()
+  if (!admin) return { error: SERVICE_KEY_MISSING }
+
+  // Order matters: each table is cleared before the one it points at.
+  // 'not id is null' = every row (PostgREST rejects an unfiltered delete).
+  for (const [table, column] of [
+    ['exam_history', 'id'],
+    ['class_offerings', 'id'],
+    ['subjects', 'id'],
+    ['program_departments', 'program'],
+    ['departments', 'id'],
+  ] as const) {
+    const { error } = await admin.from(table).delete().not(column, 'is', null)
+    if (error) {
+      return {
+        error: table === 'subjects'
+          ? friendlyError('clearSchoolStructure:subjects', error, `Some requests still point at the subjects — run Clear school data again. ${RETRY_HINT}`)
+          : friendlyError(`clearSchoolStructure:${table}`, error, `We couldn't clear ${table.replace('_', ' ')}. ${RETRY_HINT}`),
+      }
+    }
+  }
+
+  for (const p of ['/admin', '/admin/analytics', '/admin/users', '/admin/subjects', '/admin/school-data', '/student/submit']) revalidatePath(p)
+  return { error: null }
 }
