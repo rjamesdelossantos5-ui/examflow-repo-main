@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
+import AdminActingBanner from '@/components/AdminActingBanner'
 import { getNotifications, countRegistrarPending } from '@/lib/notifications'
 
 export default async function RegistrarLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +21,10 @@ export default async function RegistrarLayout({ children }: { children: React.Re
   ])
 
   if (!profile || !['registrar', 'admin'].includes(profile.role)) redirect('/login')
+  // The admin may work this page too (Admin → Requests links here).
+  const isAdmin = profile.role === 'admin'
   const nav = [
+    ...(isAdmin ? [{ label: 'All Requests', href: '/admin/requests', icon: 'layers' as const }] : []),
     { label: 'Pending Queue', href: '/registrar', icon: 'inbox' as const, badge: pending },
     // The Registrar's SECOND touch of a paid request: after the Program Head
     // accepts, total the student's special-exam subjects and pass the amount to
@@ -30,7 +34,8 @@ export default async function RegistrarLayout({ children }: { children: React.Re
   ]
 
   return (
-    <DashboardLayout role="registrar" userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
+    <DashboardLayout role={isAdmin ? 'admin' : 'registrar'} userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
+      {isAdmin && <AdminActingBanner asRole="Registrar" />}
       {children}
     </DashboardLayout>
   )

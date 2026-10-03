@@ -60,13 +60,17 @@ export async function countRegistrarPending(supabase: SupabaseServer): Promise<n
   return count ?? 0
 }
 
-// Pending admin-override requests — used for the admin nav-tab badge.
-export async function countPendingOverrides(supabase: SupabaseServer): Promise<number> {
-  const { count } = await supabase
-    .from('override_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending')
-  return count ?? 0
+// Forms waiting on someone at any step (Registrar, Teacher, Program Head first
+// and second approval) — the admin's Requests nav-tab badge. Each count goes
+// through the same gate as its queue, so the badge matches what is listed.
+export async function countWaitingForAnyone(supabase: SupabaseServer): Promise<number> {
+  const counts = await Promise.all([
+    countRegistrarPending(supabase),
+    countByStatus(supabase, 'verified_by_registrar'),
+    countByStatus(supabase, 'approved_by_teacher', null, true),
+    countByStatus(supabase, 'receipt_uploaded'),
+  ])
+  return counts.reduce((a, b) => a + b, 0)
 }
 
 // Upper bound per query so the payload can't grow without limit (safety for
@@ -147,45 +151,20 @@ export async function getNotifications(
       queueItems('receipt_uploaded', '/program-head/receipts', (name, code) => `${name} uploaded a payment receipt for ${code}.`, 'warning', 'receipt', deptIds),
     ])
 
-    // "Your override request was approved" — only while the request is still
-    // overridable (drops off once the PH has accepted it).
-    type OvRow = { id: string; request: { status: string; snap_name: string | null; student: { full_name: string } | null } | null }
-    const { data: appr } = await supabase
-      .from('override_requests')
-      .select('id, request:special_exam_requests!request_id(status, snap_name, student:profiles!student_id(full_name))')
-      .eq('requested_by', userId)
-      .eq('status', 'approved')
-      .order('decided_at', { ascending: false })
-      .limit(MAX_ITEMS)
-    const approved: NotificationItem[] = ((appr ?? []) as unknown as OvRow[])
-      .filter((r) => ['submitted', 'verified_by_registrar', 'approved_by_teacher'].includes(r.request?.status ?? ''))
-      .map((r) => ({
-        id: `ov-${r.id}`,
-        text: `Your override request for ${r.request?.snap_name ?? r.request?.student?.full_name ?? 'a student'} was approved — you can accept it now.`,
-        href: '/program-head/overview',
-        tone: 'success',
-        icon: 'check',
-      }))
-
-    return [...first, ...second, ...approved]
+    return [...first, ...second]
   }
 
-  // Admin: Program Heads asking to fast-track a stuck request.
+  // Admin: every form waiting on someone, at every step and in every
+  // department — each links to the page where that step is done, which the
+  // admin may use as that role.
   if (role === 'admin') {
-    type OvAdminRow = { id: string; requester: { full_name: string } | null; request: { snap_name: string | null; student: { full_name: string } | null } | null }
-    const { data } = await supabase
-      .from('override_requests')
-      .select('id, requester:profiles!requested_by(full_name), request:special_exam_requests!request_id(snap_name, student:profiles!student_id(full_name))')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(MAX_ITEMS)
-    return ((data ?? []) as unknown as OvAdminRow[]).map((r) => ({
-      id: r.id,
-      text: `${r.requester?.full_name ?? 'A Program Head'} requested an override for ${r.request?.snap_name ?? r.request?.student?.full_name ?? 'a student'}.`,
-      href: '/admin/overrides',
-      tone: 'warning' as const,
-      icon: 'inbox' as const,
-    }))
+    const [registrar, teacher, first, second] = await Promise.all([
+      queueItems('submitted', '/registrar', (name, code) => `${name} — ${code} is waiting for the Registrar.`, 'info', 'inbox', null, true),
+      queueItems('verified_by_registrar', '/teacher', (name, code) => `${name} — ${code} is waiting for the Teacher.`, 'info', 'inbox'),
+      queueItems('approved_by_teacher', '/program-head', (name, code) => `${name} — ${code} is waiting for the Program Head's first approval.`, 'info', 'inbox', null, true),
+      queueItems('receipt_uploaded', '/program-head/receipts', (name, code) => `${name} uploaded a payment receipt for ${code}.`, 'warning', 'receipt'),
+    ])
+    return [...registrar, ...teacher, ...first, ...second]
   }
 
   // Students: the latest status of each of their recent requests, newest change

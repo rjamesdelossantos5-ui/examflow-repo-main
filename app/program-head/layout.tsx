@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta, getMyDeptSubjectIds } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
+import AdminActingBanner from '@/components/AdminActingBanner'
 import { getNotifications, countByStatus } from '@/lib/notifications'
 
 export default async function ProgramHeadLayout({ children }: { children: React.ReactNode }) {
@@ -23,7 +24,11 @@ export default async function ProgramHeadLayout({ children }: { children: React.
   ])
 
   if (!profile || !['program_head', 'admin'].includes(profile.role)) redirect('/login')
+  // The admin may work these pages too (Admin → Requests links here), across
+  // every department (an admin has none, so nothing is filtered).
+  const isAdmin = profile.role === 'admin'
   const nav = [
+    ...(isAdmin ? [{ label: 'All Requests', href: '/admin/requests', icon: 'layers' as const }] : []),
     { label: 'First Approval', href: '/program-head', icon: 'inbox' as const, badge: firstCount },
     { label: 'Second Approval', href: '/program-head/receipts', icon: 'receipt' as const, badge: secondCount },
     { label: 'Overview', href: '/program-head/overview', icon: 'chart' as const },
@@ -32,7 +37,8 @@ export default async function ProgramHeadLayout({ children }: { children: React.
   ]
 
   return (
-    <DashboardLayout role="program_head" userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
+    <DashboardLayout role={isAdmin ? 'admin' : 'program_head'} userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
+      {isAdmin && <AdminActingBanner asRole="Program Head" />}
       {children}
     </DashboardLayout>
   )

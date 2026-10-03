@@ -1,13 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { keepActive } from '@/lib/examSettings'
-import { activePeriodIdCached } from '@/lib/activePeriod'
-import { keepMyDepartment } from '@/lib/deptFilter'
-import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
-import { withRegistrarGate } from '@/lib/registrarGate'
-import OverviewClient, { type OverviewRow } from './OverviewClient'
+import OverviewClient from './OverviewClient'
+import { loadOverviewRows } from './loadOverview'
 
 export const metadata = { title: 'EXAMFLOW — Overview' }
 
@@ -18,60 +14,8 @@ export default async function OverviewPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  // Drop forms whose exam date has already passed before listing (see helper).
-  await purgeExpiredExams(supabase)
-
   const me = await getMyProfileMeta()
-  const canOverride = me?.role === 'admin' || !!me?.can_override
+  const rows = await loadOverviewRows(supabase, me?.department_id ?? null)
 
-  // Same gate as the Registrar's queue (lib/registrarGate.ts). Without it this
-  // listed forms the parent had not verified and the student had not submitted
-  // as "Waiting for Registrar" — false, they are waiting on the student — and
-  // offered the override button on them.
-  const { data } = await withRegistrarGate((gate) => {
-    let q = supabase
-      .from('special_exam_requests')
-      .select(`
-        *,
-        profiles!student_id(full_name, section),
-        subjects(subject_code, subject_name, department_id)
-      `)
-      // Once scheduled, a request is done — it drops off the overview.
-      .neq('status', 'scheduled')
-    if (gate) q = q.or(gate)
-    return q.order('submitted_at', { ascending: false })
-  })
-
-  // This PH's own override requests, keyed by request (latest per request wins).
-  const { data: overrides } = await supabase
-    .from('override_requests')
-    .select('request_id, status, created_at')
-    .eq('requested_by', user.id)
-    .order('created_at', { ascending: false })
-  const ovByReq = new Map<string, string>()
-  for (const o of (overrides ?? []) as { request_id: string; status: string }[]) {
-    if (!ovByReq.has(o.request_id)) ovByReq.set(o.request_id, o.status)
-  }
-
-  const activeId = await activePeriodIdCached()
-  const rows: OverviewRow[] = keepMyDepartment(keepActive(data ?? [], activeId), me?.department_id ?? null).map((r) => {
-    const prof = r.profiles as unknown as { full_name: string; section: string | null } | null
-    const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null
-    const s = r as { snap_name?: string | null; snap_section?: string | null }
-    return {
-      id: r.id as string,
-      status: r.status,
-      exam_type: r.exam_type as string,
-      submitted_at: r.submitted_at as string,
-      name: s.snap_name ?? prof?.full_name ?? '—',
-      section: s.snap_section ?? prof?.section ?? null,
-      subject_code: subj?.subject_code ?? '',
-      subject_name: subj?.subject_name ?? '',
-      rejected_by_role: (r.rejected_by_role as string | null) ?? null,
-      rejection_reason: (r.rejection_reason as string | null) ?? null,
-      overrideStatus: (ovByReq.get(r.id as string) as OverviewRow['overrideStatus']) ?? 'none',
-    }
-  })
-
-  return <OverviewClient rows={rows} canOverride={canOverride} />
+  return <OverviewClient rows={rows} viewer={me?.role === 'admin' ? 'admin' : 'program_head'} />
 }

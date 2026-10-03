@@ -270,7 +270,9 @@ export default function RequestReviewPanel({
               <li key={l.id} className="flex gap-2.5 text-xs">
                 <span className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ background: ROLE_DOT[l.actor_role] ?? '#64748b' }} />
                 <div className="min-w-0">
-                  <p style={{ color: 'var(--card-foreground)' }}>{l.action}</p>
+                  {/* The admin can take any role's step; the log text names the
+                      role's step, so say who actually did it. */}
+                  <p style={{ color: 'var(--card-foreground)' }}>{l.action}{l.actor_role === 'admin' && ' (by Admin)'}</p>
                   <p className="ef-muted mt-0.5">{new Date(l.created_at).toLocaleString()}</p>
                 </div>
               </li>

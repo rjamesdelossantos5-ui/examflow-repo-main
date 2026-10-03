@@ -325,7 +325,7 @@ export default async function RequestDetailPage({
                 className="absolute left-0 top-1.5 w-3 h-3 rounded-full ring-2"
                 style={{ background: ROLE_DOT[log.actor_role] ?? '#64748b', boxShadow: '0 0 0 2px var(--card)' }}
               />
-              <p className="text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>{log.action}</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>{log.action}{log.actor_role === 'admin' && ' (by Admin)'}</p>
               <p className="text-xs ef-muted mt-0.5">
                 <span className="capitalize">{log.actor_role.replace(/_/g, ' ')}</span> · {timeAgo(log.created_at)}
               </p>

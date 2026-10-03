@@ -1,12 +1,9 @@
 'use client'
 
-import { useCallback, useState, useTransition } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import StatusBadge from '@/components/StatusBadge'
-import { useEscapeKey } from '@/lib/useEscapeKey'
-import { overrideAccept, requestOverride } from '../actions'
 import type { RequestStatus } from '@/lib/supabase/types'
-
-export type OverrideStatus = 'none' | 'pending' | 'approved' | 'denied'
 
 export interface OverviewRow {
   id: string
@@ -19,7 +16,6 @@ export interface OverviewRow {
   subject_name: string
   rejected_by_role: string | null
   rejection_reason: string | null
-  overrideStatus: OverrideStatus
 }
 
 // 'scheduled' is intentionally omitted — scheduled requests drop off the overview.
@@ -39,25 +35,25 @@ const ROLE_LABEL: Record<string, string> = {
   admin: 'Admin',
 }
 
-// Stages that can be fast-tracked straight to "accepted"
-const OVERRIDABLE: RequestStatus[] = ['submitted', 'verified_by_registrar', 'approved_by_teacher']
+// Where each waiting form is acted on — the same page that role uses. ?req=
+// opens that request's panel straight away (Registrar, Teacher and Program
+// Head queues read it). The admin may open every step; a Program Head only
+// their own two.
+const OPEN: Partial<Record<RequestStatus, { href: (id: string) => string; label: string; admin: boolean }>> = {
+  submitted: { href: (id) => `/registrar?req=${id}`, label: 'Open as Registrar', admin: true },
+  verified_by_registrar: { href: (id) => `/teacher?req=${id}`, label: 'Open as Teacher', admin: true },
+  approved_by_teacher: { href: (id) => `/program-head?req=${id}`, label: 'Open', admin: false },
+  accepted: { href: () => '/registrar/assessment', label: 'Payment assessment', admin: true },
+  receipt_uploaded: { href: (id) => `/program-head/receipts?req=${id}`, label: 'Open', admin: false },
+}
 
-const REASONS = [
-  { value: 'absent', label: 'Absent' },
-  { value: 'on_leave', label: 'On leave' },
-  { value: 'other', label: 'Other' },
-] as const
-
-export default function OverviewClient({ rows, canOverride }: { rows: OverviewRow[]; canOverride: boolean }) {
+/**
+ * Every form and the step it is at. Program Heads see their department; the
+ * admin (as /admin/requests, the same component) sees every department and can
+ * open any waiting form on the page where that step is done.
+ */
+export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; viewer: 'admin' | 'program_head' }) {
   const [filter, setFilter] = useState<RequestStatus | 'all'>('all')
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
-  // Row currently being requested (opens the reason modal)
-  const [requestFor, setRequestFor] = useState<OverviewRow | null>(null)
-  const [reasonType, setReasonType] = useState<'absent' | 'on_leave' | 'other'>('absent')
-  const [reasonNote, setReasonNote] = useState('')
-  const closeRequestModal = useCallback(() => setRequestFor(null), [])
-  useEscapeKey(closeRequestModal, requestFor !== null)
 
   const counts = rows.reduce<Record<string, number>>((acc, r) => {
     acc[r.status] = (acc[r.status] ?? 0) + 1
@@ -65,24 +61,9 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
   }, {})
 
   const visible = filter === 'all' ? rows : rows.filter((r) => r.status === filter)
-
-  function handleAccept(id: string) {
-    if (!confirm('Accept this request now, bypassing the earlier steps?')) return
-    startTransition(async () => {
-      const res = await overrideAccept(id, '')
-      if (res.error) setError(res.error)
-    })
-  }
-
-  function submitRequest() {
-    if (!requestFor) return
-    if (reasonType === 'other' && !reasonNote.trim()) { setError('Please describe the reason.'); return }
-    const id = requestFor.id
-    startTransition(async () => {
-      const res = await requestOverride(id, reasonType, reasonNote)
-      if (res.error) setError(res.error)
-      else { setRequestFor(null); setReasonNote(''); setReasonType('absent') }
-    })
+  const openFor = (status: RequestStatus) => {
+    const o = OPEN[status]
+    return o && (viewer === 'admin' || !o.admin) ? o : null
   }
 
   return (
@@ -90,16 +71,11 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
       <div>
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>All Requests Overview</h2>
         <p className="text-sm ef-muted">
-          Click a stage to filter.{' '}
-          {canOverride ? 'You can fast-track pending requests directly.' : 'Ask the admin to fast-track a stuck request.'}
+          {viewer === 'admin'
+            ? 'Every form in every department, at the step it is waiting on. Open one to act on it exactly as the Registrar, Teacher or Program Head would — it is recorded as done by Admin.'
+            : 'Click a stage to filter.'}
         </p>
       </div>
-
-      {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
-          {error} <button className="underline ml-1" onClick={() => setError(null)}>Dismiss</button>
-        </div>
-      )}
 
       {/* Clickable stage cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -138,125 +114,48 @@ export default function OverviewClient({ rows, canOverride }: { rows: OverviewRo
           </thead>
           <tbody className="divide-y">
             {visible.map((r) => {
-              // The whole row is a shortcut for accepting when this PH is allowed
-              // to (globally authorized, or the admin approved this exact request).
-              const canAcceptHere = OVERRIDABLE.includes(r.status) && (canOverride || r.overrideStatus === 'approved')
+              const open = openFor(r.status)
               return (
-              <tr
-                key={r.id}
-                onClick={canAcceptHere ? () => handleAccept(r.id) : undefined}
-                title={canAcceptHere ? 'Click to accept this request now' : undefined}
-                className={`hover:bg-black/5 dark:hover:bg-white/5 ${canAcceptHere ? 'cursor-pointer' : ''}`}
-              >
-                <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.name}</td>
-                <td className="px-4 py-3 ef-muted">{r.section ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <div style={{ color: 'var(--card-foreground)' }}>{r.subject_name}</div>
-                  <div className="text-xs ef-muted">{r.subject_code}</div>
-                </td>
-                <td className="px-4 py-3 capitalize ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={r.status} />
-                  {r.status === 'rejected' && (
-                    <div className="mt-1 text-xs">
-                      <span className="font-medium text-red-600 dark:text-red-400">
-                        Rejected by {ROLE_LABEL[r.rejected_by_role ?? ''] ?? 'a reviewer'}
-                      </span>
-                      {r.rejection_reason && <div className="ef-muted mt-0.5 max-w-xs">{r.rejection_reason}</div>}
-                    </div>
-                  )}
-                </td>
-                <td className="px-4 py-3 ef-muted">{new Date(r.submitted_at).toLocaleDateString()}</td>
-                <td className="px-4 py-3 text-right">
-                  {OVERRIDABLE.includes(r.status) && (
-                    canOverride || r.overrideStatus === 'approved' ? (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleAccept(r.id) }}
-                        disabled={isPending}
-                        className="text-xs px-2.5 py-1 rounded-lg font-semibold disabled:opacity-50"
+                <tr key={r.id} className="hover:bg-black/5 dark:hover:bg-white/5">
+                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.name}</td>
+                  <td className="px-4 py-3 ef-muted">{r.section ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    <div style={{ color: 'var(--card-foreground)' }}>{r.subject_name}</div>
+                    <div className="text-xs ef-muted">{r.subject_code}</div>
+                  </td>
+                  <td className="px-4 py-3 capitalize ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={r.status} />
+                    {r.status === 'rejected' && (
+                      <div className="mt-1 text-xs">
+                        <span className="font-medium text-red-600 dark:text-red-400">
+                          Rejected by {ROLE_LABEL[r.rejected_by_role ?? ''] ?? 'a reviewer'}
+                        </span>
+                        {r.rejection_reason && <div className="ef-muted mt-0.5 max-w-xs">{r.rejection_reason}</div>}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 ef-muted">{new Date(r.submitted_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    {open && (
+                      <Link
+                        href={open.href(r.id)}
+                        className="inline-block text-xs px-2.5 py-1 rounded-lg font-semibold"
                         style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                       >
-                        {canOverride ? 'Accept now' : 'Accept as Program Head'}
-                      </button>
-                    ) : r.overrideStatus === 'pending' ? (
-                      <span className="text-xs ef-muted">Awaiting admin…</span>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setRequestFor(r) }}
-                        className="text-xs px-2.5 py-1 rounded-lg font-semibold border ef-border hover:bg-black/5 dark:hover:bg-white/10"
-                        style={{ color: 'var(--card-foreground)' }}
-                      >
-                        {r.overrideStatus === 'denied' ? 'Request again' : 'Request approval'}
-                      </button>
-                    )
-                  )}
-                </td>
-              </tr>
-            )})}
+                        {open.label}
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
             {visible.length === 0 && (
               <tr><td colSpan={7} className="px-4 py-8 text-center ef-muted">No requests in this stage.</td></tr>
             )}
           </tbody>
         </table>
       </div>
-
-      {/* Reason modal — request admin override */}
-      {requestFor && (
-        <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={() => setRequestFor(null)}>
-          <div className="ef-dialog ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Request admin approval</h3>
-            <p className="text-sm ef-muted mt-0.5 mb-4">
-              For <strong style={{ color: 'var(--card-foreground)' }}>{requestFor.name}</strong> — {requestFor.subject_code}
-            </p>
-
-            <label className="block text-xs font-semibold uppercase tracking-wide ef-muted mb-2">Reason</label>
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {REASONS.map((rr) => (
-                <button
-                  key={rr.value}
-                  type="button"
-                  onClick={() => setReasonType(rr.value)}
-                  className="py-2 rounded-lg text-sm font-semibold border transition-colors"
-                  style={reasonType === rr.value
-                    ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)', borderColor: 'var(--sti-gold)' }
-                    : { borderColor: 'var(--border)', color: 'var(--card-foreground)' }}
-                >
-                  {rr.label}
-                </button>
-              ))}
-            </div>
-
-            {reasonType === 'other' && (
-              <textarea
-                value={reasonNote}
-                onChange={(e) => setReasonNote(e.target.value)}
-                rows={3}
-                maxLength={500}
-                placeholder="Describe the reason…"
-                className="w-full rounded-lg px-3 py-2 text-sm bg-transparent border ef-border resize-none mb-3 focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
-              />
-            )}
-
-            <div className="flex gap-3 mt-2">
-              <button
-                onClick={() => setRequestFor(null)}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border"
-                style={{ color: 'var(--card-foreground)' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitRequest}
-                disabled={isPending}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
-                style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-              >
-                {isPending ? 'Sending…' : 'Send request'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -5,9 +5,8 @@ import { getCurrentUser } from '@/lib/currentUser'
 // Current user's role + department (deduped per request).
 //
 // A few extra columns ride along so pages can reuse this ONE cached row instead
-// of each issuing its own profiles query: `can_override` for the Program Head
-// Overview, and `schedule_ack`/`window_ack` for the student dashboard's
-// one-time popups. Every layout already awaits this, so by the time a page
+// of each issuing its own profiles query: `schedule_ack`/`window_ack` for the
+// student dashboard's one-time popups. Every layout already awaits this, so by the time a page
 // calls it the promise is settled — the page pays no round-trip at all.
 export const getMyProfileMeta = cache(async () => {
   const user = await getCurrentUser()
@@ -15,7 +14,7 @@ export const getMyProfileMeta = cache(async () => {
   const supabase = await createClient()
   const { data } = await supabase
     .from('profiles')
-    .select('role, department_id, full_name, email, can_override, schedule_ack, window_ack')
+    .select('role, department_id, full_name, email, schedule_ack, window_ack')
     .eq('id', user.id)
     .single()
   return (data as {
@@ -23,7 +22,6 @@ export const getMyProfileMeta = cache(async () => {
     department_id: string | null
     full_name: string
     email: string
-    can_override: boolean | null
     schedule_ack: string | null
     window_ack: string | null
   } | null) ?? null

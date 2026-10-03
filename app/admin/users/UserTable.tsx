@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
-import { toggleUserActive, deleteUser, createUser, updateUser, toggleOverride } from './actions'
+import { toggleUserActive, deleteUser, createUser, updateUser } from './actions'
 import Select from '@/components/Select'
 import SearchInput from '@/components/SearchInput'
 import { useEscapeKey } from '@/lib/useEscapeKey'
@@ -107,10 +107,9 @@ function RoleFields({
 
 /**
  * Admin user management: create accounts (any role), edit a person's role and
- * details, activate/deactivate, delete, see what a teacher teaches, and grant
- * Program Heads the "override" power (accept a request that the
- * registrar/teacher haven't acted on yet). All mutations go through the server
- * actions in ./actions, which re-check the admin role server-side.
+ * details, activate/deactivate, delete, and see what a teacher teaches. All
+ * mutations go through the server actions in ./actions, which re-check the
+ * admin role server-side.
  */
 export default function UserTable({
   users,
@@ -172,13 +171,6 @@ export default function UserTable({
       const res = await deleteUser(userId)
       if (res.error) setDeleteError(res.error)
       else setToDelete(null)
-    })
-  }
-
-  function handleOverride(userId: string, current: boolean) {
-    startTransition(async () => {
-      const res = await toggleOverride(userId, !current)
-      if (res.error) setError(res.error)
     })
   }
 
@@ -488,20 +480,6 @@ export default function UserTable({
                     >
                       Edit
                     </button>
-                    {u.role === 'program_head' && (
-                      <button
-                        onClick={() => handleOverride(u.id, !!u.can_override)}
-                        disabled={isPending}
-                        title="Allow this Program Head to accept requests even if the registrar/teacher haven't acted"
-                        className={`text-xs px-2 py-1 rounded border disabled:opacity-50 ${
-                          u.can_override
-                            ? 'bg-amber-100 border-amber-300 text-amber-800'
-                            : 'hover:bg-gray-100'
-                        }`}
-                      >
-                        {u.can_override ? '⚡ Override ON' : 'Grant override'}
-                      </button>
-                    )}
                     <button
                       onClick={() => handleToggle(u.id, u.is_active)}
                       disabled={isPending}

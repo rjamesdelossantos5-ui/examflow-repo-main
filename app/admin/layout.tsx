@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
-import { getNotifications, countPendingOverrides } from '@/lib/notifications'
+import { getNotifications, countWaitingForAnyone } from '@/lib/notifications'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -12,10 +12,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   // One parallel wave — nothing below depends on the profile row, so it must
   // not wait behind it (the header can't paint until this layout resolves).
-  const [profile, notifications, overrides] = await Promise.all([
+  const [profile, notifications, waiting] = await Promise.all([
     getMyProfileMeta(),
     getNotifications(supabase, user.id, 'admin'),
-    countPendingOverrides(supabase),
+    countWaitingForAnyone(supabase),
   ])
 
   if (!profile || profile.role !== 'admin') redirect('/login')
@@ -32,7 +32,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // be added, which the subject and user Excel imports both require (they
     // match departments by name and reject unknown ones). Department data also
     // still drives what a Program Head sees, via lib/deptFilter.ts.
-    { label: 'Override Requests', href: '/admin/overrides', icon: 'inbox' as const, badge: overrides },
+    // Every form at every step; each opens on the Registrar, Teacher or Program
+    // Head page where that step is done, which the admin may act on directly.
+    { label: 'Requests', href: '/admin/requests', icon: 'inbox' as const, badge: waiting },
     // Testing tool, not a school workflow: wipes every request so a demo run
     // can start clean. Kept on Admin, away from the daily queues.
     { label: 'Reset Test Data', href: '/admin/reset', icon: 'x' as const },
