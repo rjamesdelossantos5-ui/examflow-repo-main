@@ -41,7 +41,11 @@ export default function UserTable({
     )
   }, [users, query, roleFilter])
   const [isPending, startTransition] = useTransition()
-  const closeCreate = useCallback(() => setShowCreate(false), [])
+  // The Create form shows only what the chosen role uses: student details for
+  // students, a department for teachers and Program Heads, nothing extra for
+  // registrars and admins.
+  const [newRole, setNewRole] = useState('')
+  const closeCreate = useCallback(() => { setShowCreate(false); setNewRole('') }, [])
   useEscapeKey(closeCreate, showCreate)
   // The account waiting for a Delete confirmation (null = dialog closed).
   const [toDelete, setToDelete] = useState<Profile | null>(null)
@@ -82,7 +86,7 @@ export default function UserTable({
       if (res.error) {
         setError(res.error)
       } else {
-        setShowCreate(false)
+        closeCreate()
         form.reset()
         setError(null)
       }
@@ -119,51 +123,78 @@ export default function UserTable({
                 <label className="block text-xs font-medium text-gray-600 mb-1">Full Name *</label>
                 <input name="full_name" required className="w-full border rounded px-3 py-2 text-sm" />
               </div>
+              {/* autoComplete stops the browser filling in the admin's own
+                  saved login here — this form creates someone else's. */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
-                <input name="email" type="email" required className="w-full border rounded px-3 py-2 text-sm" />
+                <input name="email" type="email" required autoComplete="off" className="w-full border rounded px-3 py-2 text-sm" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Password *</label>
-                <input name="password" type="password" required minLength={8} className="w-full border rounded px-3 py-2 text-sm" />
+                <input name="password" type="password" required minLength={8} autoComplete="new-password" className="w-full border rounded px-3 py-2 text-sm" />
               </div>
-              <div>
+              <div className={newRole === 'subject_teacher' || newRole === 'program_head' ? '' : 'col-span-2'}>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Role *</label>
                 <Select
                   name="role"
                   required
+                  value={newRole}
+                  onChange={setNewRole}
                   placeholder="— Select role —"
                   options={Object.entries(ROLE_LABELS).map(([v, l]) => ({ value: v, label: l }))}
                   className="w-full border rounded px-3 py-2 text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Department</label>
-                <Select
-                  name="department_id"
-                  placeholder="— none —"
-                  options={departments.map((d) => ({ value: d.id, label: d.name }))}
-                  className="w-full border rounded px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Student Number</label>
-                <input name="student_number" className="w-full border rounded px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Course</label>
-                <input name="course" className="w-full border rounded px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Year Level</label>
-                <input name="year_level" type="number" min={1} max={6} className="w-full border rounded px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Section</label>
-                <input name="section" className="w-full border rounded px-3 py-2 text-sm" />
-              </div>
+              {(newRole === 'subject_teacher' || newRole === 'program_head') && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Department{newRole === 'program_head' ? ' *' : ''}
+                  </label>
+                  <Select
+                    // Remounts when the role changes, so a choice made for one
+                    // role doesn't silently carry over to the other.
+                    key={newRole}
+                    name="department_id"
+                    required={newRole === 'program_head'}
+                    placeholder={newRole === 'program_head' ? '— Select department —' : '— none —'}
+                    options={departments.map((d) => ({ value: d.id, label: d.name }))}
+                    className="w-full border rounded px-3 py-2 text-sm"
+                  />
+                </div>
+              )}
+              {newRole === 'program_head' && (
+                <p className="col-span-2 text-xs text-gray-500">
+                  They review the requests for subjects in this department.
+                </p>
+              )}
+              {newRole === 'subject_teacher' && (
+                <p className="col-span-2 text-xs text-gray-500">
+                  Their sections and subjects come from the Classes sheet of the School Data file — one row per class with
+                  this email as the Teacher Email, as many sections as they teach.
+                </p>
+              )}
+              {newRole === 'student' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Student Number</label>
+                    <input name="student_number" placeholder="02000123456" className="w-full border rounded px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Course</label>
+                    <input name="course" placeholder="BSIT" className="w-full border rounded px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Year Level</label>
+                    <input name="year_level" type="number" min={1} max={6} placeholder="2" className="w-full border rounded px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Section</label>
+                    <input name="section" placeholder="BSIT 2-201" className="w-full border rounded px-3 py-2 text-sm" />
+                  </div>
+                </>
+              )}
               <div className="col-span-2 flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => { setShowCreate(false); setError(null) }}
+                <button type="button" onClick={() => { closeCreate(); setError(null) }}
                   className="px-4 py-2 text-sm rounded border">Cancel</button>
                 <button type="submit" disabled={isPending}
                   className="px-4 py-2 text-sm rounded font-semibold disabled:opacity-50"

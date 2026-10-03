@@ -26,15 +26,19 @@ export async function createUser(formData: FormData) {
   const email = sanitize(formData.get('email')).toLowerCase()
   const password = sanitize(formData.get('password'))
   const role = sanitize(formData.get('role')) as UserRole
-  const departmentId = sanitize(formData.get('department_id')) || null
-  const studentNumber = sanitize(formData.get('student_number')) || null
-  const course = sanitize(formData.get('course')) || null
-  const yearLevel = formData.get('year_level') ? Number(formData.get('year_level')) : null
-  const section = sanitize(formData.get('section')) || null
+  // Only the fields the role uses are kept (the form shows just those): a
+  // department for teachers and Program Heads, student details for students.
+  const isStudent = role === 'student'
+  const departmentId = role === 'subject_teacher' || role === 'program_head' ? sanitize(formData.get('department_id')) || null : null
+  const studentNumber = isStudent ? sanitize(formData.get('student_number')) || null : null
+  const course = isStudent ? sanitize(formData.get('course')) || null : null
+  const yearLevel = isStudent && formData.get('year_level') ? Number(formData.get('year_level')) : null
+  const section = isStudent ? sanitize(formData.get('section')) || null : null
 
   if (!fullName || !email || !password || !ALLOWED_ROLES.includes(role)) {
     return { error: 'Missing or invalid fields' }
   }
+  if (role === 'program_head' && !departmentId) return { error: 'A Program Head needs a department — it decides which requests they review.' }
   if (!isValidName(fullName)) return { error: 'Enter a valid full name (letters only).' }
   if (!isValidEmail(email)) return { error: 'Enter a valid email address.' }
   if (password.length < 6) return { error: 'Password must be at least 6 characters.' }
