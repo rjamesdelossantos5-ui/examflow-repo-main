@@ -68,11 +68,13 @@ export interface PersonInput {
 /**
  * Creates each person's account, or updates it if the email already has one
  * (for example a teammate who already signed in with Microsoft — they keep
- * that sign-in and get their role and details from the file). New accounts get
- * the admin's default password, so made-up people can be signed into with
- * email + password for testing. An admin account is never changed.
+ * that sign-in and get their role and details from the file). New accounts are
+ * created without a password: Supabase then sets a random one nobody knows
+ * (adminUserCreate in supabase/auth), so made-up people can't be signed into,
+ * and a real person signs in with Microsoft, which Supabase attaches to the
+ * account with the same verified email. An admin account is never changed.
  */
-export async function importPeopleChunk(people: PersonInput[], password: string) {
+export async function importPeopleChunk(people: PersonInput[]) {
   const supabase = await requireAdmin()
   if (!supabase) return { error: 'Unauthorized', created: 0, updated: 0, failures: [] as { email: string; reason: string }[] }
   const admin = createAdminClient()
@@ -115,9 +117,8 @@ export async function importPeopleChunk(people: PersonInput[], password: string)
       continue
     }
 
-    if (!password || password.length < 8) { failures.push({ email, reason: 'no default password' }); continue }
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
-      email, password, email_confirm: true, user_metadata: { full_name: details.full_name },
+      email, email_confirm: true, user_metadata: { full_name: details.full_name },
     })
     if (authError || !authData.user) { failures.push({ email, reason: authError?.message ?? 'account creation failed' }); continue }
     // handle_new_user() made a bare student profile; fill in the rest.

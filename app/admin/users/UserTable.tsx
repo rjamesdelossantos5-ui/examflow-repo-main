@@ -43,6 +43,11 @@ export default function UserTable({
   const [isPending, startTransition] = useTransition()
   const closeCreate = useCallback(() => setShowCreate(false), [])
   useEscapeKey(closeCreate, showCreate)
+  // The account waiting for a Delete confirmation (null = dialog closed).
+  const [toDelete, setToDelete] = useState<Profile | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const closeDelete = useCallback(() => { setToDelete(null); setDeleteError(null) }, [])
+  useEscapeKey(closeDelete, !!toDelete && !isPending)
 
   function handleToggle(userId: string, current: boolean) {
     startTransition(async () => {
@@ -51,11 +56,13 @@ export default function UserTable({
     })
   }
 
-  function handleDelete(userId: string, name: string) {
-    if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return
+  function confirmDelete() {
+    if (!toDelete) return
+    const userId = toDelete.id
     startTransition(async () => {
       const res = await deleteUser(userId)
-      if (res.error) setError(res.error)
+      if (res.error) setDeleteError(res.error)
+      else setToDelete(null)
     })
   }
 
@@ -169,6 +176,58 @@ export default function UserTable({
         </div>
       )}
 
+      {/* Delete confirmation */}
+      {toDelete && (
+        <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={isPending ? undefined : closeDelete}>
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-user-title"
+            aria-describedby="delete-user-desc"
+            className="ef-dialog ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="delete-user-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Delete this account?</h3>
+
+            <div className="mt-3 rounded-lg border ef-border px-3 py-2.5">
+              <p className="text-sm font-semibold break-all" style={{ color: 'var(--card-foreground)' }}>{toDelete.full_name}</p>
+              {toDelete.email !== toDelete.full_name && <p className="text-xs ef-muted break-all">{toDelete.email}</p>}
+              <p className="text-xs ef-muted mt-0.5">{ROLE_LABELS[toDelete.role] ?? toDelete.role}</p>
+            </div>
+
+            <p id="delete-user-desc" className="mt-3 text-sm ef-muted">
+              Their login and profile are removed for good. If they are in the School Data file, importing it again creates a new account for them.
+            </p>
+
+            {deleteError && (
+              <p className="mt-3 rounded-md px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">{deleteError}</p>
+            )}
+
+            <div className="flex gap-3 mt-5">
+              <button
+                type="button"
+                onClick={closeDelete}
+                disabled={isPending}
+                autoFocus
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border disabled:opacity-50"
+                style={{ color: 'var(--card-foreground)' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isPending}
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-white disabled:opacity-60"
+                style={{ backgroundColor: 'var(--status-danger)' }}
+              >
+                {isPending ? 'Deleting…' : 'Delete account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <input
           type="search"
@@ -239,7 +298,7 @@ export default function UserTable({
                     {u.is_active ? 'Deactivate' : 'Activate'}
                   </button>
                   <button
-                    onClick={() => handleDelete(u.id, u.full_name)}
+                    onClick={() => { setDeleteError(null); setToDelete(u) }}
                     disabled={isPending}
                     className="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
                   >

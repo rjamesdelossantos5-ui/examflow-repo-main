@@ -39,6 +39,18 @@ function letters(s: string): string[] {
 }
 
 /**
+ * The surname from a school account name. Microsoft and the School Data file
+ * write names "Surname, Given (Student)", so it's everything before the comma:
+ * "Delos Santos, R. James (Student)" → "Delos Santos". A name without a comma
+ * is returned whole, since its surname can't be told apart from a given name.
+ */
+export function surname(name: string | null | undefined): string {
+  const clean = (name ?? '').replace(/\([^)]*\)/g, ' ').trim()
+  const comma = clean.indexOf(',')
+  return (comma > 0 ? clean.slice(0, comma) : clean).trim()
+}
+
+/**
  * Tidies a name for display. Accounts get created with names typed all in
  * lowercase ("james") or all caps ("JAMES"), which reads like a database glitch
  * in a greeting.

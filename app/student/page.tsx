@@ -6,7 +6,7 @@ import { computeWindow, keepActive, TERM_LABEL, SEMESTER_LABEL } from '@/lib/exa
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
-import { displayName } from '@/lib/initials'
+import { displayName, surname } from '@/lib/initials'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
 import StudentAnnouncements from './StudentAnnouncements'
 import RequestsPanel, { type StudentRequest } from './RequestsPanel'
@@ -152,7 +152,7 @@ export default async function StudentPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>
-            Welcome, {displayName(profile?.full_name?.split(' ')[0])}
+            Welcome, {displayName(surname(profile?.full_name))}
           </h1>
           <p className="text-sm ef-muted">Here&apos;s an overview of your special exam requests.</p>
         </div>

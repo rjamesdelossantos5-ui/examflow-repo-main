@@ -28,11 +28,20 @@ DECLARE
   old_subjects uuid[];
   old_depts    uuid[];
 BEGIN
-  SELECT coalesce(array_agg(id), '{}') INTO old_users
-  FROM auth.users
+  -- Matched on the login email OR the profile email: the casano.340503+…
+  -- stand-ins only had their profile email changed (to receive test emails),
+  -- so their login email is still the old galamiton@examflow.com etc.
+  SELECT coalesce(array_agg(DISTINCT id), '{}') INTO old_users
+  FROM (
+    SELECT id, email FROM auth.users
+    UNION ALL
+    SELECT id, email FROM profiles
+  ) AS accounts
   WHERE lower(email) IN (
     'santos@examflow.com', 'registrar@examflow.com',
     'rizal@examflow.com', 'penduko@examflow.com',
+    'galamiton@examflow.com', 'valles@examflow.com', 'clara@examflow.com',
+    'go@examflow.com', 'vergara@examflow.com', 'pangalinan@examflow.com',
     'casano.340503+galamiton@stamaria.sti.edu.ph', 'casano.340503+valles@stamaria.sti.edu.ph',
     'casano.340503+clara@stamaria.sti.edu.ph', 'casano.340503+go@stamaria.sti.edu.ph',
     'casano.340503+vergara@stamaria.sti.edu.ph', 'casano.340503+pangalinan@stamaria.sti.edu.ph'
@@ -75,8 +84,10 @@ END $$;
 -- Confirmation: every value should be true.
 select
   not exists (select 1 from auth.users where lower(email) in (
-    'santos@examflow.com', 'registrar@examflow.com', 'rizal@examflow.com', 'penduko@examflow.com'))
-  and not exists (select 1 from auth.users where lower(email) like 'casano.340503+%')       as old_accounts_removed,
+    'santos@examflow.com', 'registrar@examflow.com', 'rizal@examflow.com', 'penduko@examflow.com',
+    'galamiton@examflow.com', 'valles@examflow.com', 'clara@examflow.com',
+    'go@examflow.com', 'vergara@examflow.com', 'pangalinan@examflow.com'))
+  and not exists (select 1 from profiles where lower(email) like 'casano.340503+%')         as old_accounts_removed,
   not exists (select 1 from subjects where subject_code in ('CP101', 'GD101', 'ELS01', 'PHY01')) as old_subjects_removed,
   not exists (select 1 from departments where name in ('College of Computer Studies', 'Senior High School', 'Something')) as old_departments_removed,
   not exists (select 1 from class_offerings where section like 'STEM%')                       as shs_classes_removed,

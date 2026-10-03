@@ -24,7 +24,6 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
   const [data, setData] = useState<SchoolData | null>(null)
   const [fileName, setFileName] = useState('')
   const [fileError, setFileError] = useState<string | null>(null)
-  const [password, setPassword] = useState('')
   const [progress, setProgress] = useState<{ step: string; done: number; total: number } | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [runError, setRunError] = useState<string | null>(null)
@@ -70,7 +69,7 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
       const failures: Result['failures'] = []
       for (let i = 0; i < people.length; i += PEOPLE_CHUNK_SIZE) {
         setProgress({ step: 'Accounts', done: i, total: people.length })
-        const res = await importPeopleChunk(people.slice(i, i + PEOPLE_CHUNK_SIZE), password)
+        const res = await importPeopleChunk(people.slice(i, i + PEOPLE_CHUNK_SIZE))
         if (res.error) { setProgress(null); return setRunError(res.error) }
         created += res.created
         updated += res.updated
@@ -94,7 +93,7 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
     ['Subjects', current.subjects],
     ['Classes', current.classes],
   ] as const
-  const canImport = !!data && !data.errors.length && password.length >= 8 && !isPending && !migrationMissing
+  const canImport = !!data && !data.errors.length && !isPending && !migrationMissing
   const pct = progress ? Math.round((progress.done / Math.max(progress.total, 1)) * 100) : 0
 
   return (
@@ -152,19 +151,9 @@ export default function SchoolDataImport({ current, migrationMissing }: Props) {
           <IssueList title="worth checking" issues={data.warnings} tone="var(--status-warning)" />
           {!data.errors.length && (
             <>
-              <label className="block text-xs ef-muted space-y-1 max-w-sm">
-                <span>Password for new accounts (8+ characters). Made-up people sign in with their email and this password; your team signs in with Microsoft as usual.</span>
-                <input
-                  type="text"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="off"
-                  className="w-full rounded-lg px-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
-                  style={{ color: 'var(--card-foreground)' }}
-                />
-              </label>
               <p className="text-xs ef-muted">
-                Accounts that already exist are updated, not duplicated. The class list is replaced; submitted requests keep their teacher.
+                Accounts that already exist are updated, not duplicated. New accounts have no password — people sign in
+                with their Microsoft school account. The class list is replaced; submitted requests keep their teacher.
               </p>
               <button
                 type="button"
