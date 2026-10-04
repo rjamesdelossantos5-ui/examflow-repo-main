@@ -35,6 +35,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // Every form at every step; each opens on the Registrar, Teacher or Program
     // Head page where that step is done, which the admin may act on directly.
     { label: 'Requests', href: '/admin/requests', icon: 'inbox' as const, badge: waiting },
+    // The same Exam Periods form as the Program Head's: term, submission
+    // window and exam date.
+    { label: 'Exam Periods', href: '/admin/exam-periods', icon: 'calendar' as const },
     // Testing tool, not a school workflow: wipes every request so a demo run
     // can start clean. Kept on Admin, away from the daily queues.
     { label: 'Reset Test Data', href: '/admin/reset', icon: 'x' as const },

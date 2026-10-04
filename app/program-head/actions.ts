@@ -438,6 +438,7 @@ export async function savePeriod(input: PeriodInput) {
   await supabase.from('exam_periods').update({ is_active: false }).neq('id', saved!.id)
 
   revalidatePath('/program-head/settings')
+  revalidatePath('/admin/exam-periods')
   revalidatePath('/student')
   revalidatePath('/student/submit')
   return { error: null }
@@ -492,6 +493,7 @@ export async function saveExamSchedule(input: ScheduleInput) {
   if (error) return { error: friendlyError('saveExamSchedule', error, `We couldn't save the exam schedule. ${RETRY_HINT}`) }
 
   revalidatePath('/program-head/settings')
+  revalidatePath('/admin/exam-periods')
   revalidatePath('/student')
   return { error: null }
 }
@@ -506,6 +508,7 @@ export async function setActivePeriod(id: string) {
   await supabase.from('exam_periods').update({ is_active: false }).neq('id', id)
 
   revalidatePath('/program-head/settings')
+  revalidatePath('/admin/exam-periods')
   revalidatePath('/student')
   return { error: null }
 }
@@ -534,5 +537,6 @@ export async function deletePeriod(id: string) {
   if (error) return { error: friendlyError('deletePeriod', error, `We couldn't delete this term. ${RETRY_HINT}`) }
 
   revalidatePath('/program-head/settings')
+  revalidatePath('/admin/exam-periods')
   return { error: null }
 }
