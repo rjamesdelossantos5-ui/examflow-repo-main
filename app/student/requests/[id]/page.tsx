@@ -306,11 +306,15 @@ export default async function RequestDetailPage({
         />
       )}
 
-      {/* Documents */}
-      <div className="ef-card rounded-xl shadow-sm p-6">
-        <h2 className="font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>Uploaded Documents</h2>
-        <DocumentViewer media={media} />
-      </div>
+      {/* Documents — only an excused request's certificate and a paid
+          request's receipt are uploaded now (the parent's ID moved to Didit),
+          so most requests have none; an empty card just said so. */}
+      {media.length > 0 && (
+        <div className="ef-card rounded-xl shadow-sm p-6">
+          <h2 className="font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>Uploaded Documents</h2>
+          <DocumentViewer media={media} />
+        </div>
+      )}
 
       {/* Timeline history */}
       <div className="ef-card rounded-xl shadow-sm p-6">
