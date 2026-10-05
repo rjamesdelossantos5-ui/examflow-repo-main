@@ -247,10 +247,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               />
             </div>
             <div>
-              {/* Explicitly marked optional — with every other field carrying a
-                  required "*", an unmarked field is ambiguous. */}
+              {/* No "(optional)" hint: the number is pre-filled from the
+                  student's account (School Data import). */}
               <label className="block text-sm font-medium ef-muted mb-1">
-                Student number <span className="font-normal text-2xs"></span>
+                Student number
               </label>
               <input
                 name="student_number"
