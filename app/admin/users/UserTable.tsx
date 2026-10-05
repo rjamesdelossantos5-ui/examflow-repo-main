@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useMemo, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
 import { toggleUserActive, deleteUser, createUser, updateUser } from './actions'
 import Select from '@/components/Select'
 import SearchInput from '@/components/SearchInput'
+import { Icon } from '@/components/Icon'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -15,11 +16,81 @@ const ROLE_LABELS: Record<string, string> = {
   student: 'Student',
 }
 
+/** The order the per-role tables appear in on the Users page. */
+const ROLE_ORDER: string[] = ['admin', 'registrar', 'program_head', 'subject_teacher', 'student']
+
 /** One class a teacher teaches: a subject in a section. */
 export interface TeacherClass {
   section: string
   code: string
   name: string
+}
+
+/**
+ * The Users page's role filter. Opens on hover for a mouse, and on click/tap
+ * too, since touch screens have no hover. Kept here rather than changing the
+ * shared Select, which every other dropdown uses.
+ */
+function RoleFilterMenu({ value, onChange }: { value: string; onChange: (role: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const close = useCallback(() => setOpen(false), [])
+  useEscapeKey(close, open)
+
+  // A tap outside closes it (a mouse closes it on leave).
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+
+  const options = [{ value: '', label: 'All roles' }, ...ROLE_ORDER.map((r) => ({ value: r, label: ROLE_LABELS[r] }))]
+  const selected = options.find((o) => o.value === value) ?? options[0]
+
+  return (
+    <div className="relative" ref={ref} onMouseEnter={() => setOpen(true)} onMouseLeave={close}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Filter by role"
+        className="w-44 rounded-lg px-3 py-2 text-sm border ef-border flex items-center justify-between text-left"
+        style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
+      >
+        <span>{selected.label}</span>
+        <Icon name="chevron-down" className={`w-4 h-4 shrink-0 ml-2 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        // pt-1 (not mt-1) so the gap under the button is still part of this
+        // element — moving the mouse down to the list doesn't close it.
+        <div className="absolute z-30 top-full left-0 w-44 pt-1">
+          <ul role="listbox" className="rounded-lg shadow-lg ef-card overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+            {options.map((o) => (
+              <li key={o.value}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={o.value === value}
+                  onClick={() => { onChange(o.value); setOpen(false) }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                  style={
+                    o.value === value
+                      ? { backgroundColor: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: 'var(--card-foreground)' }
+                      : { color: 'var(--card-foreground)' }
+                  }
+                >
+                  {o.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const labelClass = 'block text-xs font-medium text-gray-600 mb-1'
@@ -133,6 +204,14 @@ export default function UserTable({
       (!q || [u.full_name, u.email, u.student_number, u.section].some((v) => (v ?? '').toLowerCase().includes(q))),
     )
   }, [users, query, roleFilter])
+  // The visible users split into one table per role. A role not in ROLE_ORDER
+  // still gets its own table at the end, so no account is ever hidden.
+  const groups = useMemo(() => {
+    const roles = [...ROLE_ORDER, ...new Set(visible.map((u) => u.role).filter((r) => !ROLE_ORDER.includes(r)))]
+    return roles
+      .map((role) => ({ role, label: ROLE_LABELS[role] ?? role, rows: visible.filter((u) => u.role === role) }))
+      .filter((g) => g.rows.length > 0)
+  }, [visible])
   const [isPending, startTransition] = useTransition()
 
   const [newRole, setNewRole] = useState('')
@@ -417,30 +496,34 @@ export default function UserTable({
 
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <SearchInput value={query} onChange={setQuery} placeholder="Search name, email, student no. or section…" label="Search users" />
-        <Select
-          value={roleFilter}
-          onChange={setRoleFilter}
-          options={[{ value: '', label: 'All roles' }, ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }))]}
-          className="w-44 rounded-lg px-3 py-2 text-sm border ef-border"
-          style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
-        />
+        <RoleFilterMenu value={roleFilter} onChange={setRoleFilter} />
         <span className="text-xs ef-muted tabular-nums">{visible.length} of {users.length}</span>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow overflow-x-auto">
+      {/* One table per role, in ROLE_ORDER; a role with no matching user is left out. */}
+      {visible.length === 0 && (
+        <div className="bg-white rounded-xl shadow px-4 py-8 text-center text-sm text-gray-400">
+          {users.length ? 'No user matches your search.' : 'No users found.'}
+        </div>
+      )}
+      <div className="space-y-6">
+        {groups.map(({ role, label, rows }) => (
+          <section key={role} aria-labelledby={`role-${role}`}>
+            <h3 id={`role-${role}`} className="text-sm font-semibold text-gray-700 mb-2">
+              {label} <span className="font-normal text-gray-500 tabular-nums">({rows.length})</span>
+            </h3>
+            <div className="bg-white rounded-xl shadow overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Role</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {visible.map((u) => {
+            {rows.map((u) => {
               const teaches = classesByTeacher[u.id]?.length ?? 0
               return (
                 <tr key={u.id} className="hover:bg-gray-50">
@@ -462,11 +545,6 @@ export default function UserTable({
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-500">{u.email}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
-                      {ROLE_LABELS[u.role] ?? u.role}
-                    </span>
-                  </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {u.is_active ? 'Active' : 'Inactive'}
@@ -498,11 +576,11 @@ export default function UserTable({
                 </tr>
               )
             })}
-            {visible.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{users.length ? 'No user matches your search.' : 'No users found.'}</td></tr>
-            )}
           </tbody>
         </table>
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   )
