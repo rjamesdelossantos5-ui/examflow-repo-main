@@ -248,7 +248,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               {/* Explicitly marked optional — with every other field carrying a
                   required "*", an unmarked field is ambiguous. */}
               <label className="block text-sm font-medium ef-muted mb-1">
-                Student number <span className="font-normal text-2xs">(optional)</span>
+                Student number <span className="font-normal text-2xs"></span>
               </label>
               <input
                 name="student_number"
