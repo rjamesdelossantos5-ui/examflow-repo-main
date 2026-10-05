@@ -29,9 +29,11 @@ export default async function ProgramHeadLayout({ children }: { children: React.
   const isAdmin = profile.role === 'admin'
   const nav = [
     ...(isAdmin ? [{ label: 'All Requests', href: '/admin/requests', icon: 'layers' as const }] : []),
+    // First, like the admin's menu. Own department only (see the page).
+    { label: 'Analytics', href: '/program-head/analytics', icon: 'chart' as const },
     { label: 'First Approval', href: '/program-head', icon: 'inbox' as const, badge: firstCount },
     { label: 'Second Approval', href: '/program-head/receipts', icon: 'receipt' as const, badge: secondCount },
-    { label: 'Overview', href: '/program-head/overview', icon: 'chart' as const },
+    { label: 'Overview', href: '/program-head/overview', icon: 'list' as const },
     { label: 'Accepted Students', href: '/program-head/students', icon: 'cap' as const },
     { label: 'Exam Periods', href: '/program-head/settings', icon: 'calendar' as const },
   ]
