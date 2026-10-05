@@ -51,6 +51,14 @@ export function surname(name: string | null | undefined): string {
 }
 
 /**
+ * A school account name without its bracketed tag:
+ * "Belarmino, Nhel Adrian (Student)" → "Belarmino, Nhel Adrian".
+ */
+export function withoutAccountTag(name: string | null | undefined): string {
+  return (name ?? '').replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+/**
  * Tidies a name for display. Accounts get created with names typed all in
  * lowercase ("james") or all caps ("JAMES"), which reads like a database glitch
  * in a greeting.
