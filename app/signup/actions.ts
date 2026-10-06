@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { recordLogin } from '@/lib/loginHistory'
 
 // 🔧 Set this to your school's actual email domain.
 const ALLOWED_DOMAIN = process.env.SCHOOL_EMAIL_DOMAIN ?? '@yourschool.edu.ph'
@@ -89,6 +90,8 @@ export async function signup(formData: FormData) {
   if (!data.user) return redirect(`/signup?error=${encodeURIComponent('Something went wrong. Please try again.')}`)
 
   if (!data.session) redirect('/signup/check-email')
+  // Signed straight in (email confirmation off), so it's a sign-in too.
+  await recordLogin(supabase, 'password')
   redirect('/student')
 }
 
@@ -131,5 +134,6 @@ export async function signUpInline(
   }
 
   // Already confirmed/logged in (email confirmation disabled): send them in.
+  await recordLogin(supabase, 'password')
   redirect('/student')
 }

@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ROLE_HOME } from '@/lib/role-home'
+import { recordLogin } from '@/lib/loginHistory'
 
 // 🔧 Same domain used everywhere else in the app.
 const ALLOWED_DOMAIN = process.env.SCHOOL_EMAIL_DOMAIN ?? '@yourschool.edu.ph'
@@ -97,6 +98,8 @@ export async function GET(request: Request) {
     const { error: nameError } = await supabase.from('profiles').update({ full_name: msName }).eq('id', data.user.id)
     if (nameError) console.error('[auth/callback] name update failed', nameError)
   }
+
+  await recordLogin(supabase, 'microsoft')
 
   return respond(ROLE_HOME[profile.role] ?? '/login')
 }

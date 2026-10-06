@@ -24,6 +24,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const nav = [
     { label: 'Analytics', href: '/admin/analytics', icon: 'chart' as const },
     { label: 'Users', href: '/admin/users', icon: 'users' as const },
+    // Who signed in and when, last 90 days (supabase/migration_login_history.sql).
+    { label: 'Login History', href: '/admin/login-history', icon: 'history' as const },
     { label: 'Subjects', href: '/admin/subjects', icon: 'book' as const },
     // One workbook (departments, programs, staff, students, classes) that sets
     // up everyone's accounts and routes each request to its teacher.
