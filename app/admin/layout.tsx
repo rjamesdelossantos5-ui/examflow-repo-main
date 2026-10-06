@@ -38,6 +38,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // The same Exam Periods form as the Program Head's: term, submission
     // window and exam date.
     { label: 'Exam Periods', href: '/admin/exam-periods', icon: 'calendar' as const },
+    // School-wide settings, starting with the special-exam fee.
+    { label: 'Settings', href: '/admin/settings', icon: 'settings' as const },
     // Testing tool, not a school workflow: wipes every request so a demo run
     // can start clean. Kept on Admin, away from the daily queues.
     { label: 'Reset Test Data', href: '/admin/reset', icon: 'x' as const },

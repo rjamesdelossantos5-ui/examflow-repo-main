@@ -4,6 +4,7 @@ import { keepActive } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import AssessmentList, { type StudentAssessment } from './AssessmentList'
+import { getSpecialExamFee } from '@/lib/fees'
 
 export const metadata = { title: 'EXAMFLOW — Payment Assessment' }
 
@@ -25,17 +26,27 @@ export default async function PaymentAssessmentPage() {
 
   const SELECT = `
     id, student_id, status, exam_type, submitted_at, period_id,
-    payment_assessed_at,
+    payment_assessed_at, assessed_fee,
     profiles!student_id(full_name, student_number, course, year_level, section),
     subjects(subject_code, subject_name)
   `
-
-  const res = await supabase
+  const load = (select: string) => supabase
     .from('special_exam_requests')
-    .select(SELECT)
+    .select(select)
     .eq('status', 'accepted')
     .eq('exam_type', 'paid')
     .order('submitted_at', { ascending: true })
+
+  // The admin-set fee per subject (lib/fees.ts), for students not yet assessed.
+  const [res0, fee] = await Promise.all([load(SELECT), getSpecialExamFee(supabase)])
+  let res = res0
+
+  // migration_fee_setting.sql not applied yet — no assessed_fee column. Retry
+  // without it; assessed students then show the current fee.
+  if (res.error) {
+    console.error('[registrar/assessment] assessed_fee unavailable — is migration_fee_setting.sql applied?', res.error)
+    res = await load(SELECT.replace(' assessed_fee,', ''))
+  }
 
   // migration_payment_assessment.sql not applied yet — payment_assessed_at does
   // not exist, so the select errors. Retry without it rather than showing the
@@ -46,12 +57,7 @@ export default async function PaymentAssessmentPage() {
   if (res.error) {
     console.error('[registrar/assessment] payment_assessed_at unavailable — is migration_payment_assessment.sql applied?', res.error)
     migrated = false
-    const fallback = await supabase
-      .from('special_exam_requests')
-      .select(SELECT.replace('payment_assessed_at,', ''))
-      .eq('status', 'accepted')
-      .eq('exam_type', 'paid')
-      .order('submitted_at', { ascending: true })
+    const fallback = await load(SELECT.replace('payment_assessed_at, assessed_fee,', ''))
     rows = fallback.data as Record<string, unknown>[] | null
   }
 
@@ -88,6 +94,7 @@ export default async function PaymentAssessmentPage() {
       id: r.id as string,
       code: subj?.subject_code ?? '—',
       name: subj?.subject_name ?? '—',
+      assessedFee: (r.assessed_fee as number | null | undefined) ?? null,
     })
     // A student is "assessed" once any of their rows carries the stamp — the
     // action stamps them all together, so they never disagree.
@@ -97,5 +104,5 @@ export default async function PaymentAssessmentPage() {
 
   const students = [...byStudent.values()].sort((a, b) => a.name.localeCompare(b.name))
 
-  return <AssessmentList students={students} migrated={migrated} />
+  return <AssessmentList students={students} migrated={migrated} fee={fee} />
 }
