@@ -186,11 +186,22 @@ export default function UserTable({
   users,
   departments,
   classesByTeacher,
+  currentUserId,
+  adminRemovalOn,
 }: {
   users: Profile[]
   departments: Department[]
   classesByTeacher: Record<string, TeacherClass[]>
+  /** The signed-in admin — their own row gets no Deactivate/Delete. */
+  currentUserId: string | null
+  /** "Allow removing admin accounts" in Admin → Settings. */
+  adminRemovalOn: boolean
 }) {
+  // Mirrors blockedAccountRemoval in ./actions, which is the real check.
+  const removalBlocked = (u: Profile) =>
+    u.role === 'admin' && !adminRemovalOn
+      ? 'Admin account — turn on "Allow removing admin accounts" in Settings to change this.'
+      : null
   const [showCreate, setShowCreate] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // After a School Data import this list runs to hundreds — find by name,
@@ -558,20 +569,29 @@ export default function UserTable({
                     >
                       Edit
                     </button>
-                    <button
-                      onClick={() => handleToggle(u.id, u.is_active)}
-                      disabled={isPending}
-                      className="text-xs px-2 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
-                    >
-                      {u.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => { setDeleteError(null); setToDelete(u) }}
-                      disabled={isPending}
-                      className="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
+                    {u.id === currentUserId ? (
+                      <span className="text-xs text-gray-500 self-center">This is you</span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleToggle(u.id, u.is_active)}
+                          // Activating is always allowed; deactivating may be blocked.
+                          disabled={isPending || (u.is_active && !!removalBlocked(u))}
+                          title={u.is_active ? removalBlocked(u) ?? undefined : undefined}
+                          className="text-xs px-2 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {u.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          onClick={() => { setDeleteError(null); setToDelete(u) }}
+                          disabled={isPending || !!removalBlocked(u)}
+                          title={removalBlocked(u) ?? undefined}
+                          className="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               )

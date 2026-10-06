@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import { FEE_SETTING_KEY, MAX_SPECIAL_EXAM_FEE, formatPeso } from '@/lib/fees'
+import { isToggleSettingKey } from '@/lib/settings'
 
 /**
  * Sets the special-exam fee per subject (lib/fees.ts). Only students the
@@ -33,4 +34,25 @@ export async function updateSpecialExamFee(input: string) {
   revalidatePath('/admin/settings')
   revalidatePath('/registrar/assessment')
   return { error: null, fee }
+}
+
+/** Turns one of the Settings switches (lib/settings.ts) on or off. */
+export async function updateToggleSetting(key: string, on: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (p?.role !== 'admin') return { error: 'Unauthorized' }
+  if (!isToggleSettingKey(key)) return { error: 'Unknown setting.' }
+
+  const { error } = await supabase
+    .from('settings')
+    .upsert({ key, value: on ? 'true' : 'false', updated_at: new Date().toISOString() })
+  if (error) {
+    return { error: friendlyError('updateToggleSetting', error, `We couldn't save this setting. Has supabase/migration_fee_setting.sql been run? ${RETRY_HINT}`) }
+  }
+
+  // The admin menu (Reset tab) and the Users page buttons both depend on these.
+  revalidatePath('/admin', 'layout')
+  return { error: null }
 }
