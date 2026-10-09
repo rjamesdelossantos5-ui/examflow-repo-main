@@ -1,0 +1,7 @@
+# GitHub language bar only — no effect on the app or the build.
+
+# The .claude folder holds editor tooling (design-skill scripts), not app code.
+.claude/** linguist-vendored
+
+# Supabase migrations: count as SQL.
+*.sql linguist-language=SQL
