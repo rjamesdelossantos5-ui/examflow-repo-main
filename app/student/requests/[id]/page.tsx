@@ -11,6 +11,7 @@ import DeleteRequestButton from './DeleteRequestButton'
 import { isApproved, isTerminal } from '@/lib/didit'
 import { REVERIFY_LOG_PREFIX } from '@/lib/rejectReasons'
 import { syncDiditResult } from '@/lib/diditSync'
+import { getSpecialExamFee } from '@/lib/fees'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
@@ -99,19 +100,29 @@ export default async function RequestDetailPage({
   // `assessed` defaults to TRUE when payment_assessed_at is absent — an
   // unmigrated database must not lock every student out of paying. The server
   // action applies the same rule (see uploadReceipt).
+  //
+  // amountDue: each subject at the fee locked in when the Registrar assessed it
+  // (assessed_fee), so an admin changing the fee later doesn't change what this
+  // student was told to pay. A subject without one uses the current fee.
   let assessed = true
   let paidSubjectCount = 1
+  let amountDue = 0
   if (req.exam_type === 'paid' && req.status === 'accepted') {
-    const { data: paidRows, error: paidErr } = await supabase
+    const loadPaid = (select: string) => supabase
       .from('special_exam_requests')
-      .select('id, payment_assessed_at')
+      .select(select)
       .eq('student_id', user.id)
       .eq('status', 'accepted')
       .eq('exam_type', 'paid')
+    const [first, fee] = await Promise.all([loadPaid('id, payment_assessed_at, assessed_fee'), getSpecialExamFee(supabase)])
+    // migration_fee_setting.sql not applied yet — no assessed_fee column.
+    const { data: paidRows, error: paidErr } = first.error ? await loadPaid('id, payment_assessed_at') : first
+    amountDue = fee
     if (!paidErr) {
-      const rows = (paidRows ?? []) as { payment_assessed_at: string | null }[]
+      const rows = (paidRows ?? []) as unknown as { payment_assessed_at: string | null; assessed_fee?: number | null }[]
       paidSubjectCount = Math.max(1, rows.length)
       assessed = !!(req.payment_assessed_at as string | null)
+      if (rows.length) amountDue = rows.reduce((sum, r) => sum + (r.assessed_fee ?? fee), 0)
     }
   }
 
@@ -303,6 +314,7 @@ export default async function RequestDetailPage({
           rejectedReason={req.rejection_reason as string | null}
           assessed={assessed}
           paidSubjectCount={paidSubjectCount}
+          amountDue={amountDue}
         />
       )}
 

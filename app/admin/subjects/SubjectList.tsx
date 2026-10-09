@@ -22,6 +22,10 @@ export interface TeacherOption {
   department: string | null
 }
 
+// Department pill values that aren't department names.
+const ALL_DEPTS = '__all__'
+const NO_DEPT = '__none__'
+
 const fieldClass = 'w-full rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]'
 const fieldStyle = { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }
 
@@ -31,10 +35,25 @@ const fieldStyle = { backgroundColor: 'var(--card)', color: 'var(--card-foregrou
  */
 export default function SubjectList({ subjects, teachers }: { subjects: SubjectRow[]; teachers: TeacherOption[] }) {
   const [query, setQuery] = useState('')
+  // The department pill picked: ALL_DEPTS, NO_DEPT, or a department name.
+  const [dept, setDept] = useState(ALL_DEPTS)
+  // One pill per department that has subjects, plus "No department" when some
+  // subject has none, so no subject can be left without a pill.
+  const deptPills = useMemo(() => {
+    const names = [...new Set(subjects.map((s) => s.department).filter((d): d is string => !!d))].sort((a, b) => a.localeCompare(b))
+    return [
+      { value: ALL_DEPTS, label: 'All' },
+      ...names.map((n) => ({ value: n, label: n })),
+      ...(subjects.some((s) => !s.department) ? [{ value: NO_DEPT, label: 'No department' }] : []),
+    ]
+  }, [subjects])
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return q ? subjects.filter((s) => [s.code, s.name, s.department ?? ''].some((v) => v.toLowerCase().includes(q))) : subjects
-  }, [subjects, query])
+    return subjects.filter((s) =>
+      (dept === ALL_DEPTS || (dept === NO_DEPT ? !s.department : s.department === dept)) &&
+      (!q || [s.code, s.name, s.department ?? ''].some((v) => v.toLowerCase().includes(q))),
+    )
+  }, [subjects, query, dept])
 
   const teacherName = useMemo(() => new Map(teachers.map((t) => [t.id, t.name])), [teachers])
   const teacherOptions = useMemo(
@@ -84,6 +103,27 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
         </p>
       </div>
 
+      {/* Department pills, styled like the top navigation. */}
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by department">
+        {deptPills.map((p) => {
+          const active = p.value === dept
+          return (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => setDept(p.value)}
+              aria-pressed={active}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                active ? 'shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'
+              }`}
+              style={active ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' } : { color: 'var(--muted)' }}
+            >
+              {p.label}
+            </button>
+          )
+        })}
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <SearchInput value={query} onChange={setQuery} placeholder="Search code, name or department…" label="Search subjects" />
         <span className="text-xs ef-muted tabular-nums">{visible.length} of {subjects.length}</span>
@@ -129,7 +169,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
               </tr>
             ))}
             {visible.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center ef-muted">{subjects.length ? 'No subject matches your search.' : 'No subjects yet — import the School Data file.'}</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center ef-muted">{subjects.length ? (query.trim() ? 'No subject matches your search.' : 'No subjects in this department.') : 'No subjects yet — import the School Data file.'}</td></tr>
             )}
           </tbody>
         </table>

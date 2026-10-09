@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { markPaymentAssessed } from '../actions'
-import { totalFee, formatPeso, SPECIAL_EXAM_FEE } from '@/lib/fees'
+import { totalFee, formatPeso } from '@/lib/fees'
 import { ordinalYear } from '@/lib/ordinal'
 
 export interface StudentAssessment {
@@ -12,7 +12,9 @@ export interface StudentAssessment {
   course: string | null
   yearLevel: number | null
   section: string | null
-  subjects: { id: string; code: string; name: string }[]
+  /** assessedFee: the fee locked in when this student was assessed; null if
+   *  not assessed yet (or assessed before migration_fee_setting.sql). */
+  subjects: { id: string; code: string; name: string; assessedFee: number | null }[]
   /** Set once the Registrar has totalled this student's fees and told the
    *  Cashier. Null = still awaiting assessment, and the student cannot upload a
    *  receipt yet. */
@@ -22,9 +24,12 @@ export interface StudentAssessment {
 export default function AssessmentList({
   students,
   migrated,
+  fee,
 }: {
   students: StudentAssessment[]
   migrated: boolean
+  /** The current fee per subject, set by the admin. */
+  fee: number
 }) {
   const [done, setDone] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
@@ -35,7 +40,7 @@ export default function AssessmentList({
     setError(null)
     setBusyId(studentId)
     startTransition(async () => {
-      const res = await markPaymentAssessed(studentId)
+      const res = await markPaymentAssessed(studentId, fee)
       setBusyId(null)
       if (res.error) { setError(res.error); return }
       // Move the card locally so it drops out of the pending list immediately,
@@ -95,10 +100,10 @@ export default function AssessmentList({
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-lg font-bold" style={{ color: 'var(--card-foreground)' }}>
-                      {formatPeso(totalFee(s.subjects.length))}
+                      {formatPeso(totalFee(s.subjects.length, fee))}
                     </p>
                     <p className="text-xs ef-muted">
-                      {s.subjects.length} subject{s.subjects.length === 1 ? '' : 's'} × {formatPeso(SPECIAL_EXAM_FEE)}
+                      {s.subjects.length} subject{s.subjects.length === 1 ? '' : 's'} × {formatPeso(fee)}
                     </p>
                   </div>
                 </div>
@@ -122,7 +127,7 @@ export default function AssessmentList({
                   className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                   style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                 >
-                  {busyId === s.studentId ? 'Recording…' : `Mark Assessed — ${formatPeso(totalFee(s.subjects.length))}`}
+                  {busyId === s.studentId ? 'Recording…' : `Mark Assessed — ${formatPeso(totalFee(s.subjects.length, fee))}`}
                 </button>
               </div>
             ))}
@@ -142,7 +147,7 @@ export default function AssessmentList({
                 <div className="min-w-0">
                   <p className="font-semibold text-sm truncate" style={{ color: 'var(--card-foreground)' }}>{s.name}</p>
                   <p className="text-xs ef-muted">
-                    {s.subjects.length} subject{s.subjects.length === 1 ? '' : 's'} · {formatPeso(totalFee(s.subjects.length))}
+                    {s.subjects.length} subject{s.subjects.length === 1 ? '' : 's'} · {formatPeso(s.subjects.reduce((sum, sub) => sum + (sub.assessedFee ?? fee), 0))}
                   </p>
                 </div>
                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300 whitespace-nowrap">

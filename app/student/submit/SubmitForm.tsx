@@ -7,6 +7,7 @@ import SubmitButton from '@/components/SubmitButton'
 import { Icon } from '@/components/Icon'
 import { compressImage } from '@/lib/compressImage'
 import Select from '@/components/Select'
+import { withoutAccountTag } from '@/lib/initials'
 
 // One (subject + section → teacher) row. The student picks a subject, then a
 // section available for it, and the teacher for that section fills in.
@@ -66,7 +67,8 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const enrolledYear = enrolled?.match(/^[A-Za-z]+\s+(\d)-/)?.[1] ?? null
   // Effective values: a resubmit's saved snapshot overrides the profile defaults.
   const eff = {
-    full_name: prefill?.fullName ?? profile.full_name,
+    // Without the Microsoft account's "(Student)" tag.
+    full_name: withoutAccountTag(prefill?.fullName ?? profile.full_name),
     student_number: prefill?.studentNumber ?? profile.student_number,
     course: prefill?.course ?? profile.course,
     year_level: prefill?.yearLevel ?? profile.year_level,
@@ -245,10 +247,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               />
             </div>
             <div>
-              {/* Explicitly marked optional — with every other field carrying a
-                  required "*", an unmarked field is ambiguous. */}
+              {/* No "(optional)" hint: the number is pre-filled from the
+                  student's account (School Data import). */}
               <label className="block text-sm font-medium ef-muted mb-1">
-                Student number <span className="font-normal text-2xs">(optional)</span>
+                Student number
               </label>
               <input
                 name="student_number"

@@ -33,7 +33,14 @@ export default function LoginModal() {
   const [departments, setDepartments] = useState<Department[]>([])
 
   useEffect(() => {
-    const sync = () => setOpen(window.location.hash === '#login')
+    const sync = () => {
+      // /login redirects here with ?login=1 and, if something went wrong
+      // (inactive account, Microsoft sign-in failed), ?error=….
+      const params = new URLSearchParams(window.location.search)
+      setOpen(window.location.hash === '#login' || params.has('login'))
+      const urlError = params.get('error')
+      if (urlError) setError(urlError)
+    }
     sync()
     window.addEventListener('hashchange', sync)
     return () => window.removeEventListener('hashchange', sync)
@@ -60,7 +67,12 @@ export default function LoginModal() {
   }, [view, departments.length])
 
   function close() {
-    history.replaceState(null, '', window.location.pathname + window.location.search)
+    // Drop #login and the ?login / ?error that opened it, so a reload doesn't reopen it.
+    const params = new URLSearchParams(window.location.search)
+    params.delete('login')
+    params.delete('error')
+    const query = params.toString()
+    history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : ''))
     setOpen(false)
     resetTransientState()
   }

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
+import { isSettingOn, TOGGLE_SETTINGS } from '@/lib/settings'
 
 // DESTRUCTIVE test-data reset. This exists so a demo or test run can start
 // clean without waiting for real dates to pass — it is not a school workflow.
@@ -39,6 +40,18 @@ async function requireAdmin() {
   return { userId: user.id }
 }
 
+const RESET_OFF = 'Reset Test Data is switched off. Turn it on in Admin → Settings first.'
+
+/** requireAdmin, plus the Reset Test Data switch in Admin → Settings
+ *  (lib/settings.ts) — off means every action here refuses, even when the page
+ *  is opened by its URL. */
+async function requireResetAllowed(): Promise<{ userId: string; error: null } | { userId: null; error: string }> {
+  const me = await requireAdmin()
+  if (!me) return { userId: null, error: 'Unauthorized' }
+  if (!(await isSettingOn(await createClient(), TOGGLE_SETTINGS.testReset))) return { userId: null, error: RESET_OFF }
+  return { userId: me.userId, error: null }
+}
+
 // Supabase caps a single .remove() call, so files go in batches rather than one
 // request carrying every path.
 const STORAGE_BATCH = 100
@@ -46,7 +59,8 @@ const STORAGE_BATCH = 100
 /** What a reset would destroy right now, for the confirmation dialog. Read
  *  before anything is deleted so the admin sees the real scale. */
 export async function getResetPreview() {
-  if (!(await requireAdmin())) return { error: 'Unauthorized', preview: null }
+  const gate = await requireResetAllowed()
+  if (gate.error) return { error: gate.error, preview: null }
   const admin = createAdminClient()
   if (!admin) return { error: SERVICE_KEY_MISSING, preview: null }
 
@@ -72,7 +86,8 @@ export async function getResetPreview() {
 
 /** Deletes every request and every file belonging to one. Irreversible. */
 export async function resetRequests() {
-  if (!(await requireAdmin())) return { error: 'Unauthorized' }
+  const gate = await requireResetAllowed()
+  if (gate.error) return { error: gate.error }
   const admin = createAdminClient()
   if (!admin) return { error: SERVICE_KEY_MISSING }
 
@@ -178,8 +193,8 @@ async function unusedAccountIds(admin: AdminClient, me: string) {
 
 /** What "Clear school data" would remove right now, for its confirmation. */
 export async function getSchoolDataPreview() {
-  const me = await requireAdmin()
-  if (!me) return { error: 'Unauthorized', preview: null }
+  const me = await requireResetAllowed()
+  if (me.error !== null) return { error: me.error, preview: null }
   const admin = createAdminClient()
   if (!admin) return { error: SERVICE_KEY_MISSING, preview: null }
 
@@ -208,8 +223,8 @@ export async function getSchoolDataPreview() {
 /** Deletes up to ACCOUNT_BATCH never-signed-in, non-admin accounts. Call again
  *  until `remaining` is 0. */
 export async function clearUnusedAccounts() {
-  const me = await requireAdmin()
-  if (!me) return { error: 'Unauthorized', deleted: 0, remaining: 0 }
+  const me = await requireResetAllowed()
+  if (me.error !== null) return { error: me.error, deleted: 0, remaining: 0 }
   const admin = createAdminClient()
   if (!admin) return { error: SERVICE_KEY_MISSING, deleted: 0, remaining: 0 }
 
@@ -237,7 +252,8 @@ export async function clearUnusedAccounts() {
 /** Deletes every class, subject, program and department, and the analytics
  *  rows that point at them. Run after resetRequests(). */
 export async function clearSchoolStructure() {
-  if (!(await requireAdmin())) return { error: 'Unauthorized' }
+  const gate = await requireResetAllowed()
+  if (gate.error) return { error: gate.error }
   const admin = createAdminClient()
   if (!admin) return { error: SERVICE_KEY_MISSING }
 

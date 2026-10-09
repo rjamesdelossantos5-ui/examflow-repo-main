@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { ROLE_HOME } from '@/lib/role-home'
+import { recordLogin } from '@/lib/loginHistory'
 
 // The address the person is actually on — localhost, a phone on the same Wi-Fi,
 // a Vercel preview or the live site — so Microsoft sends them back there. A fixed
@@ -89,6 +90,8 @@ export async function signIn(formData: FormData): Promise<{ error: string } | vo
     return { error: 'Your account is inactive. Please contact the registrar.' }
   }
 
+  await recordLogin(supabase, 'password')
+
   const cookieStore = await cookies()
   cookieStore.delete('ef_banner_dismissed')
   cookieStore.delete('ef_modal_seen')
@@ -126,5 +129,6 @@ export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
   revalidatePath('/', 'layout')
-  redirect('/')
+  // Straight to the landing page's login popup.
+  redirect('/?login=1')
 }

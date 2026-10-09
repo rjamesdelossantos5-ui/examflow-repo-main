@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getActivePeriod, computeWindow } from '@/lib/examSettings'
 import { isValidPhone, isValidStudentNumber } from '@/lib/validation'
+import { withoutAccountTag } from '@/lib/initials'
 import type { ExcusedReason } from '@/lib/supabase/types'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
@@ -92,7 +93,7 @@ export async function submitRequest(formData: FormData) {
   const yearRaw = String(formData.get('year_level') ?? '').trim()
   const yearNum = yearRaw ? Number(yearRaw) : null
   const snapshot = {
-    snap_name: String(formData.get('full_name') ?? '').trim().slice(0, 120) || null,
+    snap_name: withoutAccountTag(String(formData.get('full_name') ?? '')).slice(0, 120) || null,
     snap_student_number: String(formData.get('student_number') ?? '').trim().slice(0, 40) || null,
     snap_course: String(formData.get('course') ?? '').trim().slice(0, 60) || null,
     snap_year_level: Number.isInteger(yearNum) && yearNum! >= 1 && yearNum! <= 6 ? yearNum : null,
@@ -402,7 +403,9 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     norm(effectiveOther) !== norm(oldRow.other_reason)
   if (hasSnapshotCols) {
     fieldsChanged = fieldsChanged ||
-      norm(snap.snap_name) !== norm(oldRow.snap_name) ||
+      // Older requests saved the name with its "(Student)" tag; dropping only
+      // the tag is not an edit.
+      withoutAccountTag(norm(snap.snap_name)) !== withoutAccountTag(norm(oldRow.snap_name)) ||
       norm(snap.snap_student_number) !== norm(oldRow.snap_student_number) ||
       norm(snap.snap_course) !== norm(oldRow.snap_course) ||
       norm(snap.snap_year_level) !== norm(oldRow.snap_year_level) ||

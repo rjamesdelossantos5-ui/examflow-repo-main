@@ -33,32 +33,35 @@ const UNKNOWN_SUBJECT = 'Unknown Subject'
  * (history-only) or lose everything older than one term (live-only) — so
  * "today's" and "last year's" numbers both need to come from here together.
  */
-export async function getExamStatRows(supabase: SupabaseServerClient): Promise<ExamStatRow[]> {
+export async function getExamStatRows(supabase: SupabaseServerClient, departmentId: string | null = null): Promise<ExamStatRow[]> {
+  // departmentId: a Program Head's own department (only that department's
+  // rows); null = every department, for the admin.
   const [liveRows, historyRows] = await Promise.all([
-    getLiveScheduledRows(supabase),
-    getHistoryRows(supabase),
+    getLiveScheduledRows(supabase, departmentId),
+    getHistoryRows(supabase, departmentId),
   ])
   return [...liveRows, ...historyRows]
 }
 
-async function getLiveScheduledRows(supabase: SupabaseServerClient): Promise<ExamStatRow[]> {
+async function getLiveScheduledRows(supabase: SupabaseServerClient, departmentId: string | null): Promise<ExamStatRow[]> {
   const { data } = await supabase
     .from('special_exam_requests')
     .select(`
       final_schedule, period_id, exam_type,
-      subjects(subject_code, subject_name, departments(name))
+      subjects(subject_code, subject_name, department_id, departments(name))
     `)
     .eq('status', 'scheduled')
   // The Supabase client can't statically know a joined relation is single (not
   // an array) without generated types — `as unknown as` is the established
   // workaround used throughout this codebase for that (see any `r.subjects as
   // unknown as {...}` cast in the app/ role queries).
-  const rows = (data ?? []) as unknown as {
+  const all = (data ?? []) as unknown as {
     final_schedule: string | null
     period_id: string | null
     exam_type: string
-    subjects: { subject_code: string; subject_name: string; departments: { name: string } | null } | null
+    subjects: { subject_code: string; subject_name: string; department_id: string | null; departments: { name: string } | null } | null
   }[]
+  const rows = departmentId ? all.filter((r) => r.subjects?.department_id === departmentId) : all
   if (!rows.length) return []
 
   // Batch-fetch the periods these rows reference, for the exam date + term
@@ -87,16 +90,19 @@ async function getLiveScheduledRows(supabase: SupabaseServerClient): Promise<Exa
   })
 }
 
-async function getHistoryRows(supabase: SupabaseServerClient): Promise<ExamStatRow[]> {
+async function getHistoryRows(supabase: SupabaseServerClient, departmentId: string | null): Promise<ExamStatRow[]> {
   // exam_history may not exist yet if migration_exam_history.sql hasn't been
   // run — fail open (empty history) rather than break the whole dashboard.
-  const { data, error } = await supabase
+  // A Program Head also needs migration_exam_history_ph_read.sql to read it.
+  let query = supabase
     .from('exam_history')
     .select(`
       exam_date, exam_type, term, semester, school_year,
       subjects(subject_code, subject_name),
       departments(name)
     `)
+  if (departmentId) query = query.eq('department_id', departmentId)
+  const { data, error } = await query
     .order('exam_date', { ascending: false })
     .limit(5000)
   if (error) return []

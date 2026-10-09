@@ -3,13 +3,13 @@
 import { useRef, useState, useTransition } from 'react'
 import { uploadReceipt } from './actions'
 import { compressImage } from '@/lib/compressImage'
-import { totalFee, formatPeso } from '@/lib/fees'
+import { formatPeso } from '@/lib/fees'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_MB = 5
 
 /**
- * Paid-exam step: after acceptance the student pays the ₱200 fee at the
+ * Paid-exam step: after acceptance the student pays the assessed fee at the
  * Cashier and uploads the official receipt here, which moves the request to
  * 'receipt_uploaded' for the Program Head's second approval. Photos are
  * compressed in the browser before upload (phone camera shots are huge).
@@ -19,6 +19,7 @@ export default function ReceiptUpload({
   rejectedReason,
   assessed,
   paidSubjectCount,
+  amountDue,
 }: {
   requestId: string
   rejectedReason?: string | null
@@ -28,6 +29,9 @@ export default function ReceiptUpload({
   /** How many accepted paid subjects this student has — the Cashier bills for
    *  all of them at once, so the figure shown must be the total, not ₱200. */
   paidSubjectCount: number
+  /** The total to pay for all of those subjects, at the fee locked in when the
+   *  Registrar assessed them (worked out on the server, see page.tsx). */
+  amountDue: number
 }) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -127,12 +131,12 @@ export default function ReceiptUpload({
             The Registrar has assessed your fees and sent them to the Cashier
             {paidSubjectCount > 1 ? (
               <>
-                {' '}— <strong style={{ color: 'var(--card-foreground)' }}>{formatPeso(totalFee(paidSubjectCount))}</strong>{' '}
+                {' '}— <strong style={{ color: 'var(--card-foreground)' }}>{formatPeso(amountDue)}</strong>{' '}
                 for all {paidSubjectCount} of your special exams.
               </>
             ) : (
               <>
-                {' '}— <strong style={{ color: 'var(--card-foreground)' }}>{formatPeso(totalFee(1))}</strong>.
+                {' '}— <strong style={{ color: 'var(--card-foreground)' }}>{formatPeso(amountDue)}</strong>.
               </>
             )}{' '}
             Pay at the Cashier window, then upload your official receipt below. One receipt is required per request.

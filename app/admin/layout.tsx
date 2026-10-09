@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getNotifications, countWaitingForAnyone } from '@/lib/notifications'
+import { isSettingOn, TOGGLE_SETTINGS } from '@/lib/settings'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -12,16 +13,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   // One parallel wave — nothing below depends on the profile row, so it must
   // not wait behind it (the header can't paint until this layout resolves).
-  const [profile, notifications, waiting] = await Promise.all([
+  const [profile, notifications, waiting, resetOn] = await Promise.all([
     getMyProfileMeta(),
     getNotifications(supabase, user.id, 'admin'),
     countWaitingForAnyone(supabase),
+    isSettingOn(supabase, TOGGLE_SETTINGS.testReset),
   ])
 
   if (!profile || profile.role !== 'admin') redirect('/login')
   const nav = [
     { label: 'Analytics', href: '/admin/analytics', icon: 'chart' as const },
     { label: 'Users', href: '/admin/users', icon: 'users' as const },
+    // Who signed in and when, last 90 days (supabase/migration_login_history.sql).
+    { label: 'Login History', href: '/admin/login-history', icon: 'history' as const },
     { label: 'Subjects', href: '/admin/subjects', icon: 'book' as const },
     // One workbook (departments, programs, staff, students, classes) that sets
     // up everyone's accounts and routes each request to its teacher.
@@ -38,9 +42,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // The same Exam Periods form as the Program Head's: term, submission
     // window and exam date.
     { label: 'Exam Periods', href: '/admin/exam-periods', icon: 'calendar' as const },
+    // School-wide settings, starting with the special-exam fee.
+    { label: 'Settings', href: '/admin/settings', icon: 'settings' as const },
     // Testing tool, not a school workflow: wipes every request so a demo run
-    // can start clean. Kept on Admin, away from the daily queues.
-    { label: 'Reset Test Data', href: '/admin/reset', icon: 'x' as const },
+    // can start clean. Kept on Admin, away from the daily queues, and only
+    // listed while switched on in Settings (lib/settings.ts).
+    ...(resetOn ? [{ label: 'Reset Test Data', href: '/admin/reset', icon: 'x' as const }] : []),
   ]
 
   return (

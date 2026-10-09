@@ -1,112 +1,19 @@
-import Link from 'next/link'
-import { login } from './actions'
-import SubmitButton from '@/components/SubmitButton'
+import { redirect } from 'next/navigation'
 
 export const metadata = { title: 'EXAMFLOW — Login' }
 
+/**
+ * There is no separate login page: signing in happens in the landing page's
+ * popup (app/LoginModal.tsx). /login is kept only as a redirect, because the
+ * proxy, every role layout and the Microsoft callback still send people here
+ * (with ?error=… when something went wrong). `?login=1` opens the popup and
+ * the error is shown inside it.
+ */
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>
 }) {
   const { error } = await searchParams
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
-        {/* Logo / Brand */}
-        <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
-            style={{ backgroundColor: 'var(--sti-gold)' }}
-          >
-            <span className="text-2xl font-black" style={{ color: 'var(--sti-navy)' }}>EF</span>
-          </div>
-          <h1 className="text-3xl font-black" style={{ color: 'var(--sti-navy)' }}>
-            EXAMFLOW
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">Special Exam Request System</p>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Sign in to your account</h2>
-
-          {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {decodeURIComponent(error)}
-            </div>
-          )}
-
-          <form action={login} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autoComplete="email"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
-                style={{ '--tw-ring-color': 'var(--sti-gold)' } as React.CSSProperties}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
-              />
-            </div>
-
-            <SubmitButton
-              pendingText="Signing in…"
-              className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-            >
-              Sign In
-            </SubmitButton>
-
-            <Link
-              href="/signup"
-              className="block w-full text-center py-2.5 rounded-lg font-medium text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              Create a student account
-            </Link>
-
-            <Link
-              href="/"
-              className="block w-full text-center py-2.5 rounded-lg font-medium text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Cancel
-            </Link>
-          </form>
-        </div>
-
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Special Exam Request System
-        </p>
-        <p className="text-center mt-3 flex items-center justify-center gap-3">
-          <Link href="/" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-            ← Back to Home
-          </Link>
-          <span className="text-xs text-gray-300" aria-hidden="true">·</span>
-          {/* Reachable before sign-in on purpose — someone must be able to read
-              what will be collected before they hand anything over. */}
-          <Link href="/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-            Privacy Notice
-          </Link>
-        </p>
-      </div>
-    </div>
-  )
+  redirect(error ? `/?login=1&error=${encodeURIComponent(error)}` : '/?login=1')
 }

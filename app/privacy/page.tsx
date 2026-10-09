@@ -49,6 +49,9 @@ export default function PrivacyPage() {
             and back of a parent or guardian&apos;s valid ID, a
             payment receipt for paid exams, and a supporting document for excused exams (for example, a
             medical certificate).</p>
+          <p><strong style={{ color: 'var(--card-foreground)' }}>Sign-in records:</strong> each time you
+            sign in, your name, email address, role, how you signed in, and the date and time. Nothing
+            else is recorded — not your location, IP address or device.</p>
           <p>
             Government-issued IDs and health records such as medical certificates are
             <strong style={{ color: 'var(--card-foreground)' }}> sensitive personal information</strong> under
@@ -60,6 +63,8 @@ export default function PrivacyPage() {
           <p>
             Solely to receive, verify, approve or reject, and schedule special exam requests. Identity
             documents exist to confirm that a parent or guardian genuinely authorised the request.
+            Sign-in records exist to keep accounts secure — for example, to check whether an account was
+            used by someone else.
             Your information is not used for advertising, and it is not sold or shared with anyone
             outside the school.
           </p>
@@ -75,7 +80,7 @@ export default function PrivacyPage() {
             <li><strong style={{ color: 'var(--card-foreground)' }}>Registrar</strong> — requests under review, including uploaded documents.</li>
             <li><strong style={{ color: 'var(--card-foreground)' }}>Subject teacher</strong> — only requests for subjects they teach. Teachers <em>cannot</em> view uploaded documents.</li>
             <li><strong style={{ color: 'var(--card-foreground)' }}>Program head</strong> — requests in their approval stage, including receipts.</li>
-            <li><strong style={{ color: 'var(--card-foreground)' }}>Administrator</strong> — account management and anonymised statistics.</li>
+            <li><strong style={{ color: 'var(--card-foreground)' }}>Administrator</strong> — account management, anonymised statistics, and sign-in records.</li>
           </ul>
         </Section>
 
@@ -89,6 +94,9 @@ export default function PrivacyPage() {
             Anonymised counts (how many students took a special exam, by department, subject and term)
             are kept for reporting. These contain no names, student numbers, or documents, and cannot
             be traced back to any individual.
+          </p>
+          <p>
+            Sign-in records are <strong style={{ color: 'var(--card-foreground)' }}>deleted automatically after 90 days</strong>.
           </p>
         </Section>
 

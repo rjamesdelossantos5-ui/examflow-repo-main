@@ -98,7 +98,13 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
         ))}
       </div>
 
-      {/* Table */}
+      {/* A line between the cards and the table, and the picked card's name
+          above the table so it's clear what the table is showing. */}
+      <div className="border-t ef-border pt-5">
+        <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+          {filter === 'all' ? 'All Requests' : STAGES.find((s) => s.status === filter)?.label}{' '}
+          <span className="font-normal ef-muted tabular-nums">({visible.length})</span>
+        </h3>
       <div className="ef-card rounded-xl shadow-sm overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
@@ -155,6 +161,7 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
             )}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   )
