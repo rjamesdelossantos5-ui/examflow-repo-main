@@ -33,7 +33,7 @@ const securityHeaders = [
   // Don't leak full URLs to other origins
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // Lock down powerful browser features the app doesn't use
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   // Force HTTPS for a year (only honored over HTTPS, e.g. Vercel)
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
   // Isolate cross-origin window references
