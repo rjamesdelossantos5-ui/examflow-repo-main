@@ -77,35 +77,35 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
         </p>
       </div>
 
-      {/* Clickable stage cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        <button
-          onClick={() => setFilter('all')}
-          className={`ef-card rounded-xl shadow-sm p-3 text-left transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${filter === 'all' ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
-        >
-          <p className="text-2xl font-bold" style={{ color: 'var(--card-foreground)' }}>{rows.length}</p>
-          <p className="text-xs ef-muted mt-0.5">All Requests</p>
-        </button>
-        {STAGES.map((s) => (
-          <button
-            key={s.status}
-            onClick={() => setFilter(s.status)}
-            className={`ef-card rounded-xl shadow-sm p-3 text-left transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${filter === s.status ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
-          >
-            <p className="text-2xl font-bold" style={{ color: 'var(--card-foreground)' }}>{counts[s.status] ?? 0}</p>
-            <p className="text-xs ef-muted mt-0.5">{s.label}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* A line between the cards and the table, and the picked card's name
-          above the table so it's clear what the table is showing. */}
-      <div className="border-t ef-border pt-5">
-        <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-          {filter === 'all' ? 'All Requests' : STAGES.find((s) => s.status === filter)?.label}{' '}
-          <span className="font-normal ef-muted tabular-nums">({visible.length})</span>
-        </h3>
-      <div className="ef-card rounded-xl shadow-sm overflow-x-auto">
+      {/* One card: a single row of stage filters, then the table. The filters
+          used to be seven big number cards in two rows that pushed the table
+          (the actual work) down the page. Scrolls sideways on phones. */}
+      <div className="ef-card rounded-xl shadow-sm overflow-hidden">
+        <div className="flex overflow-x-auto no-scrollbar border-b ef-border px-2" aria-label="Filter by stage">
+          {[{ status: 'all' as const, label: 'All Requests', count: rows.length }, ...STAGES.map((s) => ({ ...s, count: counts[s.status] ?? 0 }))].map((s) => {
+            const active = filter === s.status
+            return (
+              <button
+                key={s.status}
+                type="button"
+                onClick={() => setFilter(s.status)}
+                aria-pressed={active}
+                className={`relative shrink-0 flex items-center gap-2 px-3 py-3 text-sm whitespace-nowrap transition-colors ${active ? 'font-semibold' : 'ef-muted hover:text-[var(--card-foreground)]'}`}
+                style={active ? { color: 'var(--card-foreground)' } : undefined}
+              >
+                {s.label}
+                <span
+                  className={`tabular-nums text-xs px-1.5 py-0.5 rounded-full ${s.count === 0 && !active ? 'opacity-60' : ''}`}
+                  style={{ background: active ? 'color-mix(in srgb, var(--sti-gold) 25%, transparent)' : 'color-mix(in srgb, var(--muted) 12%, transparent)' }}
+                >
+                  {s.count}
+                </span>
+                {active && <span aria-hidden className="absolute left-3 right-3 bottom-0 h-0.5 rounded-full" style={{ background: 'var(--sti-gold)' }} />}
+              </button>
+            )
+          })}
+        </div>
+      <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b ef-border text-left text-xs font-semibold ef-muted uppercase tracking-wide">
