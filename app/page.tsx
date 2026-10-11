@@ -133,22 +133,15 @@ export default function LandingPage() {
               </li>
             ))}
           </ol>
-          <div className="mt-12">
-            <a href="#login" className="ef-press inline-block px-6 py-3.5 rounded-[4px] text-base font-bold" style={{ background: NAVY, color: '#FFFFFF' }}>
-              Log in to start a request
-            </a>
-          </div>
         </div>
       </section>
 
-      {/* ───────── Footer ───────── */}
-      <footer style={{ borderTop: `1px solid ${RULE}` }}>
-        <div className={`${CONTAINER} py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm`} style={{ color: INK_SOFT }}>
-          <span>
-            <span className="font-black" style={{ color: NAVY, fontStretch: '115%' }}>EXAM<span style={{ color: '#8A6500' }}>FLOW</span></span>
-            <span className="ml-3">Special exam requests, STI College Sta. Maria</span>
+      {/* ───────── Footer: the wordmark, centred, in navy ink on white ───────── */}
+      <footer style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}` }}>
+        <div className={`${CONTAINER} h-16 flex items-center justify-center`}>
+          <span className="font-black text-lg leading-none" style={{ fontStretch: '115%' }}>
+            EXAM<span style={{ color: GOLD }}>FLOW</span>
           </span>
-          <a href="/privacy" className="ef-landing-link" style={{ color: NAVY }}>Privacy notice</a>
         </div>
       </footer>
 
