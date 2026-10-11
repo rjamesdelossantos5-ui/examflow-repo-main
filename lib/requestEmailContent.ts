@@ -81,13 +81,11 @@ interface Content {
 const COLOR = {
   navy: '#002F6C',
   gold: '#FDB913',
-  page: '#EEF2F7',
+  page: '#F5F7FA',
   card: '#FFFFFF',
-  soft: '#F8FAFC',
   text: '#1F2937',
   muted: '#6B7280',
-  line: '#E5E7EB',
-  headerSub: '#C7D2E3',
+  line: '#D5DCE6',
 }
 
 const TONES: Record<Tone, { bg: string; fg: string; bar: string }> = {
@@ -416,6 +414,9 @@ export function escapeHtml(s: string): string {
 
 const e = escapeHtml
 
+// Same world as the landing page (app/page.tsx): the navy bar with the text
+// wordmark, white paper with hairline rules on a cool off-white page, navy
+// ink. No logo badge, no caps labels, no tinted boxes — a plain letter.
 function renderHtml(c: Content, r: RequestEmailInfo): string {
   const tone = TONES[c.tone]
   const details = detailRows(r)
@@ -434,105 +435,81 @@ function renderHtml(c: Content, r: RequestEmailInfo): string {
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${e(preheader)}${'&nbsp;&zwnj;'.repeat(40)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLOR.page};">
 <tr><td align="center" style="padding:28px 12px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;border:1px solid ${COLOR.line};border-radius:6px;border-collapse:separate;">
 
-<tr><td style="background:${COLOR.navy};border-radius:14px 14px 0 0;padding:20px 28px;">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td width="40" height="40" align="center" valign="middle" style="width:40px;height:40px;background:${COLOR.gold};border-radius:20px;font-family:${FONT};font-size:15px;font-weight:800;line-height:40px;color:${COLOR.navy};">EF</td>
-<td style="padding-left:12px;font-family:${FONT};">
-<div style="font-size:18px;font-weight:800;letter-spacing:1px;line-height:1.2;color:#FFFFFF;">EXAMFLOW</div>
-<div style="font-size:12px;line-height:1.4;color:${COLOR.headerSub};">Special Exam Request System</div>
-</td>
-</tr></table>
-</td></tr>
-<tr><td style="background:${COLOR.gold};height:4px;line-height:4px;font-size:0;">&nbsp;</td></tr>
+<tr><td style="background:${COLOR.navy};border-radius:6px 6px 0 0;padding:18px 32px;font-family:${FONT};font-size:18px;font-weight:800;line-height:1;color:#FFFFFF;">EXAM<span style="color:${COLOR.gold};">FLOW</span></td></tr>
 
-<tr><td style="background:${COLOR.card};padding:28px 28px 8px;font-family:${FONT};color:${COLOR.text};">
-<span style="display:inline-block;background:${tone.bg};color:${tone.fg};font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;line-height:1;padding:7px 11px;border-radius:999px;">${e(c.badge)}</span>
-<h1 style="margin:16px 0 0;font-size:22px;line-height:1.3;font-weight:800;color:${COLOR.navy};">${e(c.heading)}</h1>
-<p style="margin:18px 0 0;font-size:15px;line-height:1.6;">${e(c.greeting)}</p>
+<tr><td style="background:${COLOR.card};padding:32px 32px 0;font-family:${FONT};color:${COLOR.text};">
+<p style="margin:0;font-size:13px;line-height:1.4;font-weight:600;color:${tone.fg};">${e(c.badge)}</p>
+<h1 style="margin:8px 0 0;font-size:24px;line-height:1.25;font-weight:800;color:${COLOR.navy};">${e(c.heading)}</h1>
+<p style="margin:20px 0 0;font-size:15px;line-height:1.6;">${e(c.greeting)}</p>
 ${c.paragraphs.map((p) => `<p style="margin:10px 0 0;font-size:15px;line-height:1.6;">${e(p)}</p>`).join('\n')}
-${c.callout ? calloutHtml(c.callout, tone) : ''}
+${c.callout ? calloutHtml(c.callout) : ''}
 </td></tr>
 
-${c.stage ? `<tr><td style="background:${COLOR.card};padding:22px 28px 4px;">${stepsHtml(steps(r, c.stage), c.tone)}</td></tr>` : ''}
-${c.schedule ? `<tr><td style="background:${COLOR.card};padding:18px 28px 0;">${cardHtml('Exam schedule', c.schedule, true)}</td></tr>` : ''}
-<tr><td style="background:${COLOR.card};padding:18px 28px 0;">${cardHtml('Request details', details, false)}</td></tr>
+${c.stage ? `<tr><td style="background:${COLOR.card};padding:28px 32px 0;">${stepsHtml(steps(r, c.stage), c.tone)}</td></tr>` : ''}
+${c.schedule ? `<tr><td style="background:${COLOR.card};padding:28px 32px 0;">${rowsHtml('Exam schedule', c.schedule)}</td></tr>` : ''}
+<tr><td style="background:${COLOR.card};padding:28px 32px 0;">${rowsHtml('Request details', details)}</td></tr>
 
-<tr><td style="background:${COLOR.card};padding:24px 28px 28px;font-family:${FONT};">
+<tr><td style="background:${COLOR.card};padding:28px 32px 32px;font-family:${FONT};">
+${c.next ? `<p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:${COLOR.text};"><strong style="color:${COLOR.navy};">Next:</strong> ${e(c.next)}</p>` : ''}
 ${buttonHtml(c.button.label, c.button.url)}
-${c.next ? `<p style="margin:18px 0 0;font-size:14px;line-height:1.6;color:${COLOR.text};"><strong style="color:${COLOR.navy};">What happens next:</strong> ${e(c.next)}</p>` : ''}
-<p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:${COLOR.muted};">Button not working? Open this link:<br><a href="${e(c.button.url)}" style="color:${COLOR.navy};word-break:break-all;">${e(c.button.url)}</a></p>
 </td></tr>
 
-<tr><td style="background:${COLOR.soft};border-top:1px solid ${COLOR.line};border-radius:0 0 14px 14px;padding:18px 28px;font-family:${FONT};font-size:12px;line-height:1.6;color:${COLOR.muted};">
-You are receiving this because of your part in a special exam request on EXAMFLOW.<br>
-This is an automated message from EXAMFLOW.
+<tr><td style="background:${COLOR.card};border-top:1px solid ${COLOR.line};border-radius:0 0 6px 6px;padding:16px 32px;font-family:${FONT};font-size:12px;line-height:1.6;color:${COLOR.muted};">
+Automated message from EXAMFLOW, the special exam request system of STI College Sta. Maria.
 </td></tr>
 
 </table>
-<p style="margin:16px 0 0;font-family:${FONT};font-size:11px;line-height:1.5;color:${COLOR.muted};">EXAMFLOW · Special Exam Request System · STI College Sta. Maria</p>
 </td></tr>
 </table>
 </body>
 </html>`
 }
 
-function calloutHtml(c: Row, tone: { bg: string; fg: string; bar: string }): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
-<tr><td style="background:${tone.bg};border-left:4px solid ${tone.bar};border-radius:8px;padding:12px 16px;font-family:${FONT};">
-<div style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:${tone.fg};">${e(c.label)}</div>
-<div style="margin-top:4px;font-size:14px;line-height:1.5;color:${COLOR.text};">${e(c.value || '—')}</div>
+/** The one thing to notice (a reason, an amount): a label and its value between two rules. */
+function calloutHtml(c: Row): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;border-top:1px solid ${COLOR.line};border-bottom:1px solid ${COLOR.line};">
+<tr><td style="padding:14px 0;font-family:${FONT};">
+<div style="font-size:13px;line-height:1.4;color:${COLOR.muted};">${e(c.label)}</div>
+<div style="margin-top:4px;font-size:16px;line-height:1.5;font-weight:700;color:${COLOR.navy};">${e(c.value || '—')}</div>
 </td></tr></table>`
 }
 
+/** "Step 4 of 6 · Program Head" over a thin segmented bar: done navy, current gold. */
 function stepsHtml(s: { labels: string[]; current: number }, tone: Tone): string {
-  const width = Math.floor(100 / s.labels.length)
+  const currentColor = tone === 'danger' || tone === 'warning' ? TONES[tone].bar : COLOR.gold
   const cells = s.labels
-    .map((label, i) => {
-      const done = i < s.current
-      const current = i === s.current
-      const bg = done ? COLOR.navy : current ? (tone === 'danger' || tone === 'warning' ? TONES[tone].bar : COLOR.gold) : '#FFFFFF'
-      const border = done || current ? bg : '#CBD5E1'
-      const color = done ? '#FFFFFF' : current ? (tone === 'danger' || tone === 'warning' ? '#FFFFFF' : COLOR.navy) : '#94A3B8'
-      const mark = done ? '&#10003;' : String(i + 1)
-      const labelColor = current ? COLOR.navy : done ? COLOR.text : '#94A3B8'
-      return `<td width="${width}%" align="center" valign="top" style="padding:0 2px;font-family:${FONT};">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
-<td width="26" height="26" align="center" valign="middle" style="width:24px;height:24px;background:${bg};border:1px solid ${border};border-radius:13px;font-size:12px;font-weight:700;line-height:24px;color:${color};">${mark}</td>
-</tr></table>
-<div style="margin-top:6px;font-size:11px;line-height:1.3;font-weight:${current ? 700 : 500};color:${labelColor};">${e(label)}</div>
-</td>`
+    .map((_, i) => {
+      const bg = i < s.current ? COLOR.navy : i === s.current ? currentColor : COLOR.line
+      return `<td style="padding:0 ${i === s.labels.length - 1 ? 0 : 3}px 0 0;"><div style="height:4px;line-height:4px;font-size:0;background:${bg};border-radius:2px;">&nbsp;</div></td>`
     })
-    .join('\n')
-  return `<div style="font-family:${FONT};font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:${COLOR.muted};margin-bottom:12px;">Progress</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-${cells}
-</tr></table>`
+    .join('')
+  return `<p style="margin:0 0 10px;font-family:${FONT};font-size:13px;line-height:1.4;color:${COLOR.muted};">Step ${s.current + 1} of ${s.labels.length} <span style="color:${COLOR.text};font-weight:600;">· ${e(s.labels[s.current])}</span></p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>`
 }
 
-function cardHtml(title: string, rows: Row[], highlight: boolean): string {
+/** A heading, then label–value rows separated by hairlines. */
+function rowsHtml(title: string, rows: Row[]): string {
   if (!rows.length) return ''
-  const bg = highlight ? '#FFFBEB' : COLOR.soft
-  const edge = highlight ? `border-left:4px solid ${COLOR.gold};` : ''
   const body = rows
     .map(
-      (r, i) => `<tr>
-<td valign="top" style="padding:${i === 0 ? 4 : 6}px 12px ${i === rows.length - 1 ? 14 : 6}px 16px;width:34%;font-family:${FONT};font-size:13px;line-height:1.5;color:${COLOR.muted};">${e(r.label)}</td>
-<td valign="top" style="padding:${i === 0 ? 4 : 6}px 16px ${i === rows.length - 1 ? 14 : 6}px 0;font-family:${FONT};font-size:13px;line-height:1.5;font-weight:600;color:${COLOR.text};">${e(r.value)}</td>
+      (r) => `<tr>
+<td valign="top" style="padding:9px 12px 9px 0;width:34%;border-top:1px solid ${COLOR.line};font-family:${FONT};font-size:14px;line-height:1.5;color:${COLOR.muted};">${e(r.label)}</td>
+<td valign="top" style="padding:9px 0;border-top:1px solid ${COLOR.line};font-family:${FONT};font-size:14px;line-height:1.5;color:${COLOR.text};">${e(r.value)}</td>
 </tr>`,
     )
     .join('\n')
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${bg};border:1px solid ${COLOR.line};${edge}border-radius:10px;border-collapse:separate;">
-<tr><td colspan="2" style="padding:14px 16px 6px;font-family:${FONT};font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:${COLOR.muted};">${e(title)}</td></tr>
+  return `<p style="margin:0 0 8px;font-family:${FONT};font-size:15px;line-height:1.4;font-weight:700;color:${COLOR.navy};">${e(title)}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-bottom:1px solid ${COLOR.line};">
 ${body}
 </table>`
 }
 
 function buttonHtml(label: string, url: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td align="center" bgcolor="${COLOR.navy}" style="background:${COLOR.navy};border-radius:8px;">
-<a href="${e(url)}" target="_blank" style="display:inline-block;padding:13px 26px;font-family:${FONT};font-size:14px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:8px;">${e(label)} &rarr;</a>
+<td align="center" bgcolor="${COLOR.navy}" style="background:${COLOR.navy};border-radius:4px;">
+<a href="${e(url)}" target="_blank" style="display:inline-block;padding:14px 24px;font-family:${FONT};font-size:15px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:4px;">${e(label)}</a>
 </td>
 </tr></table>`
 }
@@ -541,7 +518,7 @@ function buttonHtml(label: string, url: string): string {
 
 function renderText(c: Content, r: RequestEmailInfo): string {
   const block = (title: string, rows: Row[]) =>
-    rows.length ? `${title.toUpperCase()}\n${rows.map((x) => `${x.label}: ${x.value}`).join('\n')}` : ''
+    rows.length ? `${title}\n${rows.map((x) => `${x.label}: ${x.value}`).join('\n')}` : ''
   return [
     `EXAMFLOW — ${c.heading}`,
     c.greeting,
