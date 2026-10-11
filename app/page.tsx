@@ -72,7 +72,7 @@ export default function LandingPage() {
             className="ef-reveal font-extrabold leading-[0.98] text-balance"
             // marginLeft: optical alignment. At this size the M's built-in side
             // space pushes it visibly right of the text below; pull it back.
-            style={{ fontStretch: '125%', fontSize: 'clamp(2.6rem, 7vw, 5.5rem)', letterSpacing: '-0.03em', marginLeft: '-0.04em' }}
+            style={{ fontStretch: '125%', fontSize: 'clamp(2.4rem, 5.2vw, 4.25rem)', letterSpacing: '-0.03em', marginLeft: '-0.04em' }}
           >
             Missed an exam?
           </h1>
