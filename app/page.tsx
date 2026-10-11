@@ -11,10 +11,8 @@
  * FIRST VIEWPORT: Navy nav bar; on cool off-white the headline, one sentence
  *   and the navy Log in button, left-aligned, revealed once on load.
  */
-import { Archivo } from 'next/font/google'
+import { archivo } from './fonts'
 import LoginModal from './LoginModal'
-
-const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo' })
 
 const NAVY = '#002F6C'
 const GOLD = '#FDB913'
