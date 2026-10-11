@@ -34,9 +34,14 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // The special exam in one phrase for the status strip.
+  const examSummary = active?.examDay
+    ? `${fmt(active.examDay)}${active.examEndDay ? ` to ${fmt(active.examEndDay)}` : ''}${active.examLocation ? `, ${active.examLocation}` : ''}`
+    : 'Not scheduled yet'
+
   return (
-    <div className="max-w-lg space-y-8">
-      <div>
+    <div className="space-y-6">
+      <div className="max-w-2xl">
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Exam Periods</h2>
         <p className="text-sm ef-muted">Each term has its own submission window and one special-exam schedule. Students submit to the active term.</p>
       </div>
@@ -47,30 +52,44 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
         </div>
       )}
 
+      {/* The whole current setup at a glance, full width. */}
       {active ? (
-        <div className="space-y-3">
-          <div className="ef-card rounded-xl shadow-sm p-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs ef-muted">Active term</p>
+        <div className="ef-card rounded-xl shadow-sm px-5 py-4">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: 'color-mix(in srgb, var(--status-success) 14%, transparent)', color: 'var(--status-success)' }}>
+                Active
+              </span>
               <p className="font-bold" style={{ color: 'var(--card-foreground)' }}>{SEMESTER_LABEL[active.semester]} · {TERM_LABEL[active.term]}</p>
-              <p className="text-xs ef-muted mt-0.5">{windowSummary(active)}</p>
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-green-100 text-green-700">Active</span>
+            <p className="text-sm">
+              <span className="ef-muted">Submissions: </span>
+              <span style={{ color: 'var(--card-foreground)' }}>{windowSummary(active)}</span>
+            </p>
+            <p className="text-sm">
+              <span className="ef-muted">Special exam: </span>
+              <span style={{ color: 'var(--card-foreground)' }}>{examSummary}</span>
+            </p>
           </div>
           {/* The cost of letting a term exist without a window: it can be
               forgotten. Nothing else tells the PH submissions are shut. */}
           {!active.submissionStart && (
-            <div className="rounded-lg px-4 py-3 text-sm bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
+            <p className="mt-3 pt-3 border-t ef-border text-sm" style={{ color: 'var(--status-warning)' }}>
               <strong>Students can&apos;t submit yet.</strong> {SEMESTER_LABEL[active.semester]} · {TERM_LABEL[active.term]} is the current term, but no submission window is set. Add the start date below once you have it.
-            </div>
+            </p>
           )}
         </div>
       ) : (
-        <div className="ef-card rounded-xl shadow-sm p-4 text-sm ef-muted">No active term — students can&apos;t submit until you set one below.</div>
+        <div className="ef-card rounded-xl shadow-sm px-5 py-4 text-sm" style={{ color: 'var(--status-warning)' }}>
+          No active term. Students can&apos;t submit until you set one below.
+        </div>
       )}
 
-      <WindowForm active={active} periods={periods} onError={setError} isPending={isPending} startTransition={startTransition} />
-      <ScheduleForm active={active} onError={setError} isPending={isPending} startTransition={startTransition} />
+      {/* The two forms side by side on wide screens; stacked on phones. */}
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
+        <WindowForm active={active} periods={periods} onError={setError} isPending={isPending} startTransition={startTransition} />
+        <ScheduleForm active={active} onError={setError} isPending={isPending} startTransition={startTransition} />
+      </div>
     </div>
   )
 }
@@ -144,10 +163,13 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
       </div>
       {saved && <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">{effectiveStart ? 'Window saved and set active.' : 'Term set as current. Submissions stay closed until you add a start date.'}</div>}
       {info && <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 text-sm text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-300">{info}</div>}
+      {/* What is already saved for the semester + term picked below, which
+          may be a future term rather than the active one. */}
       {existing && !saved && (
-        <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
-          Current: <strong>{windowSummary(existing)}</strong>{existing.isActive ? '' : ' — not the current term'}
-        </div>
+        <p className="text-sm ef-muted">
+          Saved for this term: <span className="font-semibold" style={{ color: 'var(--card-foreground)' }}>{windowSummary(existing)}</span>
+          {existing.isActive ? '' : ' (not the current term)'}
+        </p>
       )}
 
       <div className="grid sm:grid-cols-2 gap-4">
