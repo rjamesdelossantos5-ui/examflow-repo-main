@@ -33,6 +33,9 @@ function readProfileFields(formData: FormData) {
   if (!fullName || !ALLOWED_ROLES.includes(role)) return fail('Missing or invalid fields')
   if (role === 'program_head' && !departmentId) return fail('A Program Head needs a department — it decides which requests they review.')
   if (!isValidName(fullName)) return fail('Enter a valid full name (letters only).')
+  // A student's course, year and section fill in the submit form and decide
+  // which classes they see, so a student account can't be saved without them.
+  if (isStudent && (!course || yearLevel === null || !section)) return fail('A student needs a course, year level and section.')
   if (studentNumber && !isValidStudentNumber(studentNumber)) return fail('Enter a valid student number (digits only, e.g. 2024-00001).')
   if (course && !isValidCode(course)) return fail('Enter a valid course (letters and numbers only).')
   if (section && !isValidCode(section)) return fail('Enter a valid section (letters and numbers only).')

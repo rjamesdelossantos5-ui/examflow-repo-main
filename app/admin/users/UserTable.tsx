@@ -278,16 +278,16 @@ function RoleFields({
             <input name="student_number" defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Course</label>
-            <input name="course" defaultValue={initial?.course ?? ''} placeholder="BSIT" className={inputClass} />
+            <label className={labelClass}>Course *</label>
+            <input name="course" required defaultValue={initial?.course ?? ''} placeholder="BSIT" className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Year Level</label>
-            <input name="year_level" type="number" min={1} max={6} defaultValue={initial?.year_level ?? ''} placeholder="2" className={inputClass} />
+            <label className={labelClass}>Year Level *</label>
+            <input name="year_level" required type="number" min={1} max={6} defaultValue={initial?.year_level ?? ''} placeholder="2" className={inputClass} />
           </div>
           <div>
-            <label className={labelClass}>Section</label>
-            <input name="section" defaultValue={initial?.section ?? ''} placeholder="BSIT 2-201" className={inputClass} />
+            <label className={labelClass}>Section *</label>
+            <input name="section" required defaultValue={initial?.section ?? ''} placeholder="BSIT 2-201" className={inputClass} />
           </div>
         </>
       )}
