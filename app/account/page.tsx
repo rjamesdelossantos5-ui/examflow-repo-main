@@ -70,7 +70,8 @@ export default async function AccountPage() {
   ) : null
 
   return (
-    <div className="max-w-4xl">
+    // Full width of the dashboard, like the other dashboard pages.
+    <div>
       <Link
         href={ROLE_HOME[role] ?? '/'}
         className="inline-flex items-center gap-1 text-sm ef-muted hover:underline mb-3"
