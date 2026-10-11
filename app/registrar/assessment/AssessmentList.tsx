@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { markPaymentAssessed } from '../actions'
 import { totalFee, formatPeso } from '@/lib/fees'
 import { ordinalYear } from '@/lib/ordinal'
+import { Icon } from '@/components/Icon'
 
 export interface StudentAssessment {
   studentId: string
@@ -35,6 +36,8 @@ export default function AssessmentList({
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [tab, setTab] = useState<'pending' | 'assessed'>('pending')
+  const [query, setQuery] = useState('')
 
   function assess(studentId: string) {
     setError(null)
@@ -43,7 +46,7 @@ export default function AssessmentList({
       const res = await markPaymentAssessed(studentId, fee)
       setBusyId(null)
       if (res.error) { setError(res.error); return }
-      // Move the card locally so it drops out of the pending list immediately,
+      // Move the row locally so it drops out of the pending tab immediately,
       // rather than waiting for a revalidate round-trip.
       setDone((s) => new Set(s).add(studentId))
     })
@@ -53,13 +56,29 @@ export default function AssessmentList({
   const pending = students.filter((s) => !isAssessed(s))
   const assessed = students.filter(isAssessed)
 
+  // Search by name, student number, course, section or subject code.
+  const q = query.trim().toLowerCase()
+  const matches = (s: StudentAssessment) =>
+    !q || [s.name, s.studentNumber, s.course, s.section, ...s.subjects.map((x) => x.code)]
+      .some((v) => v && v.toLowerCase().includes(q))
+  const list = (tab === 'pending' ? pending : assessed).filter(matches)
+
+  // Assessed: the fee locked in at assessment. Pending: today's fee.
+  const amountOf = (s: StudentAssessment) =>
+    isAssessed(s) ? s.subjects.reduce((sum, sub) => sum + (sub.assessedFee ?? fee), 0) : totalFee(s.subjects.length, fee)
+
+  const TABS = [
+    { key: 'pending' as const, label: 'Awaiting assessment', count: pending.length },
+    { key: 'assessed' as const, label: 'Assessed', count: assessed.length },
+  ]
+
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Payment Assessment</h1>
         <p className="text-sm ef-muted mt-1">
-          Students whose paid special exams the Program Head has approved. Check what each student owes, then mark
-          them assessed — the student can only upload a receipt after that.
+          Paid special exams accepted by the Program Head. Confirm the amount each student owes and mark it assessed;
+          the student can upload the official receipt only after that.
         </p>
       </div>
 
@@ -76,88 +95,115 @@ export default function AssessmentList({
         </div>
       )}
 
-      {/* ── Awaiting assessment ─────────────────────────────────────────── */}
-      <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide ef-muted mb-3">
-          Awaiting assessment ({pending.length})
-        </h2>
-
-        {pending.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed ef-border px-6 py-12 text-center ef-muted text-sm">
-            Nothing awaiting assessment right now.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {pending.map((s) => (
-              <div key={s.studentId} className="ef-card rounded-xl shadow-sm p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>{s.name}</h3>
-                    <p className="text-xs ef-muted mt-0.5">
-                      {[s.studentNumber, s.course, s.yearLevel ? ordinalYear(s.yearLevel) : null, s.section]
-                        .filter(Boolean).join(' · ') || '—'}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-lg font-bold" style={{ color: 'var(--card-foreground)' }}>
-                      {formatPeso(totalFee(s.subjects.length, fee))}
-                    </p>
-                    <p className="text-xs ef-muted">
-                      {s.subjects.length} subject{s.subjects.length === 1 ? '' : 's'} × {formatPeso(fee)}
-                    </p>
-                  </div>
-                </div>
-
-                <ul className="mt-3 space-y-1">
-                  {s.subjects.map((sub) => (
-                    <li key={sub.id} className="flex items-baseline gap-2 text-sm">
-                      <span className="font-mono text-xs px-1.5 py-0.5 rounded shrink-0"
-                        style={{ background: 'var(--sti-navy)', color: 'var(--sti-gold)' }}>
-                        {sub.code}
-                      </span>
-                      <span className="ef-muted truncate">{sub.name}</span>
-                    </li>
-                  ))}
-                </ul>
-
+      {/* One card: tabs and search on top, then a table. Same pattern as the
+          requests overview. */}
+      <div className="ef-card rounded-xl shadow-sm overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b ef-border px-2 sm:pr-3">
+          <div className="flex overflow-x-auto no-scrollbar" aria-label="Assessment status">
+            {TABS.map((t) => {
+              const active = tab === t.key
+              return (
                 <button
+                  key={t.key}
                   type="button"
-                  onClick={() => assess(s.studentId)}
-                  disabled={!migrated || isPending}
-                  className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                  onClick={() => setTab(t.key)}
+                  aria-pressed={active}
+                  className={`relative shrink-0 flex items-center gap-2 px-3 py-3 text-sm whitespace-nowrap transition-colors ${active ? 'font-semibold' : 'ef-muted hover:text-[var(--card-foreground)]'}`}
+                  style={active ? { color: 'var(--card-foreground)' } : undefined}
                 >
-                  {busyId === s.studentId ? 'Recording…' : `Mark Assessed — ${formatPeso(totalFee(s.subjects.length, fee))}`}
+                  {t.label}
+                  <span
+                    className={`tabular-nums text-xs px-1.5 py-0.5 rounded-full ${t.count === 0 && !active ? 'opacity-60' : ''}`}
+                    style={{ background: active ? 'color-mix(in srgb, var(--sti-gold) 25%, transparent)' : 'color-mix(in srgb, var(--muted) 12%, transparent)' }}
+                  >
+                    {t.count}
+                  </span>
+                  {active && <span aria-hidden className="absolute left-3 right-3 bottom-0 h-0.5 rounded-full" style={{ background: 'var(--sti-gold)' }} />}
                 </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
-        )}
-      </section>
+          <div className="relative px-1 pb-2 sm:p-0 sm:w-80">
+            <Icon name="search" className="absolute left-4 sm:left-3 top-[calc(50%-0.25rem)] sm:top-1/2 -translate-y-1/2 w-4 h-4 ef-muted pointer-events-none" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search students"
+              placeholder="Search name, student no., section, subject"
+              className="w-full rounded-lg pl-9 pr-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent"
+            />
+          </div>
+        </div>
 
-      {/* ── Already assessed ────────────────────────────────────────────── */}
-      {assessed.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold uppercase tracking-wide ef-muted mb-3">
-            Assessed — waiting for the student to pay ({assessed.length})
-          </h2>
-          <div className="space-y-2">
-            {assessed.map((s) => (
-              <div key={s.studentId} className="ef-card rounded-lg p-4 flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm truncate" style={{ color: 'var(--card-foreground)' }}>{s.name}</p>
-                  <p className="text-xs ef-muted">
-                    {s.subjects.length} subject{s.subjects.length === 1 ? '' : 's'} · {formatPeso(s.subjects.reduce((sum, sub) => sum + (sub.assessedFee ?? fee), 0))}
-                  </p>
-                </div>
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300 whitespace-nowrap">
-                  ✓ Assessed
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b ef-border text-left text-xs font-semibold ef-muted">
+                <th className="px-4 py-3">Student</th>
+                <th className="px-4 py-3">Course and section</th>
+                <th className="px-4 py-3">Subjects</th>
+                <th className="px-4 py-3 text-right">Amount</th>
+                <th className="px-4 py-3 text-right">{tab === 'pending' ? 'Action' : 'Assessed on'}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {list.map((s) => (
+                <tr key={s.studentId} className="align-top">
+                  <td className="px-4 py-3">
+                    <div className="font-medium" style={{ color: 'var(--card-foreground)' }}>{s.name}</div>
+                    <div className="text-xs ef-muted tabular-nums">{s.studentNumber ?? '—'}</div>
+                  </td>
+                  <td className="px-4 py-3 ef-muted whitespace-nowrap">
+                    {[s.course, s.yearLevel ? ordinalYear(s.yearLevel) : null].filter(Boolean).join(' · ') || '—'}
+                    {s.section && <div className="text-xs">{s.section}</div>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <ul className="space-y-0.5">
+                      {s.subjects.map((sub) => (
+                        <li key={sub.id}>
+                          <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{sub.code}</span>{' '}
+                          <span className="ef-muted">{sub.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <div className="font-semibold tabular-nums" style={{ color: 'var(--card-foreground)' }}>{formatPeso(amountOf(s))}</div>
+                    {tab === 'pending' && (
+                      <div className="text-xs ef-muted tabular-nums">{s.subjects.length} × {formatPeso(fee)}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    {tab === 'pending' ? (
+                      <button
+                        type="button"
+                        onClick={() => assess(s.studentId)}
+                        disabled={!migrated || isPending}
+                        className="ef-press px-3.5 py-2 rounded-lg font-semibold text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                      >
+                        {busyId === s.studentId ? 'Recording…' : 'Mark assessed'}
+                      </button>
+                    ) : (
+                      <span className="ef-muted tabular-nums">
+                        {s.assessedAt ? new Date(s.assessedAt).toLocaleDateString() : 'Just now'}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {list.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center ef-muted">
+                    {q ? 'No students match your search.' : tab === 'pending' ? 'No students are awaiting assessment.' : 'No students have been assessed yet.'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }

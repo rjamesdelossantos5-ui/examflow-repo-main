@@ -16,14 +16,25 @@ export interface OverviewRow {
   subject_name: string
   rejected_by_role: string | null
   rejection_reason: string | null
+  /** A paid request the Registrar has assessed (payment_assessed_at set). */
+  assessed: boolean
 }
 
+// 'accepted' (the Program Head accepted a paid request) is split in two, because
+// the status doesn't change when the Registrar assesses it: first it waits for
+// the Registrar's assessment, then for the student to pay and upload a receipt.
+type Stage = Exclude<RequestStatus, 'accepted' | 'scheduled'> | 'to_assess' | 'to_pay'
+
+const stageOf = (r: OverviewRow): Stage =>
+  r.status === 'accepted' ? (r.assessed ? 'to_pay' : 'to_assess') : (r.status as Stage)
+
 // 'scheduled' is intentionally omitted — scheduled requests drop off the overview.
-const STAGES: { status: RequestStatus; label: string }[] = [
+const STAGES: { status: Stage; label: string; badge?: string }[] = [
   { status: 'submitted', label: 'Waiting for Registrar' },
   { status: 'verified_by_registrar', label: 'Waiting for Teacher' },
   { status: 'approved_by_teacher', label: 'Waiting for Program Head' },
-  { status: 'accepted', label: 'Accepted' },
+  { status: 'to_assess', label: 'Waiting for assessment', badge: 'Awaiting assessment' },
+  { status: 'to_pay', label: 'Waiting for payment', badge: 'Awaiting payment' },
   { status: 'receipt_uploaded', label: 'Receipt to verify' },
   { status: 'rejected', label: 'Rejected' },
 ]
@@ -53,16 +64,19 @@ const OPEN: Partial<Record<RequestStatus, { href: (id: string) => string; label:
  * open any waiting form on the page where that step is done.
  */
 export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; viewer: 'admin' | 'program_head' }) {
-  const [filter, setFilter] = useState<RequestStatus | 'all'>('all')
+  const [filter, setFilter] = useState<Stage | 'all'>('all')
 
   const counts = rows.reduce<Record<string, number>>((acc, r) => {
-    acc[r.status] = (acc[r.status] ?? 0) + 1
+    const s = stageOf(r)
+    acc[s] = (acc[s] ?? 0) + 1
     return acc
   }, {})
 
-  const visible = filter === 'all' ? rows : rows.filter((r) => r.status === filter)
-  const openFor = (status: RequestStatus) => {
-    const o = OPEN[status]
+  const visible = filter === 'all' ? rows : rows.filter((r) => stageOf(r) === filter)
+  const openFor = (r: OverviewRow) => {
+    // Once assessed, it waits on the student — nothing to open.
+    if (r.status === 'accepted' && r.assessed) return null
+    const o = OPEN[r.status]
     return o && (viewer === 'admin' || !o.admin) ? o : null
   }
 
@@ -120,7 +134,8 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
           </thead>
           <tbody className="divide-y">
             {visible.map((r) => {
-              const open = openFor(r.status)
+              const open = openFor(r)
+              const badge = STAGES.find((s) => s.status === stageOf(r))?.badge
               return (
                 <tr key={r.id} className="hover:bg-black/5 dark:hover:bg-white/5">
                   <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.name}</td>
@@ -131,7 +146,7 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
                   </td>
                   <td className="px-4 py-3 capitalize ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={r.status} />
+                    <StatusBadge status={r.status} label={badge} />
                     {r.status === 'rejected' && (
                       <div className="mt-1 text-xs">
                         <span className="font-medium text-red-600 dark:text-red-400">

@@ -51,6 +51,8 @@ export async function loadOverviewRows(supabase: SupabaseServer, departmentId: s
       subject_name: subj?.subject_name ?? '',
       rejected_by_role: (r.rejected_by_role as string | null) ?? null,
       rejection_reason: (r.rejection_reason as string | null) ?? null,
+      // Stamped by markPaymentAssessed; the status stays 'accepted'.
+      assessed: !!(r as { payment_assessed_at?: string | null }).payment_assessed_at,
     }
   })
 }

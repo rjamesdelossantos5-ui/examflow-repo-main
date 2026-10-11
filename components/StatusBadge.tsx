@@ -12,11 +12,13 @@ const CONFIG: Record<RequestStatus, { label: string; classes: string }> = {
   rejected:               { label: 'Rejected',               classes: 'bg-red-100 text-red-700' },
 }
 
-export default function StatusBadge({ status }: { status: RequestStatus }) {
+/** `label` overrides the text (same colour), for a view that splits a status
+ *  into finer steps — e.g. the overview's "Awaiting assessment". */
+export default function StatusBadge({ status, label: labelOverride }: { status: RequestStatus; label?: string }) {
   const { label, classes } = CONFIG[status] ?? { label: status, classes: 'bg-gray-100 text-gray-700' }
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${classes}`}>
-      {label}
+      {labelOverride ?? label}
     </span>
   )
 }
