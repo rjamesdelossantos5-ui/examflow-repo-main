@@ -24,10 +24,14 @@ export default async function AdminSettingsPage() {
       </div>
       {/* Two groups side by side on wide screens: money on the left, the
           safety switches on the right. Stacked on phones. */}
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
-        <section className="space-y-3">
+      {/* Columns stretch to the same height, and the fee card fills its
+          column, so its bottom edge lines up with the last Safety card. */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <section className="flex flex-col gap-3">
           <h3 className="font-semibold" style={{ color: 'var(--foreground)' }}>Fees</h3>
-          <FeeForm fee={fee} />
+          <div className="flex-1 [&>form]:h-full">
+            <FeeForm fee={fee} />
+          </div>
         </section>
 
         <section className="space-y-3">
