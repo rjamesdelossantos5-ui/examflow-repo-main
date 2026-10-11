@@ -136,7 +136,9 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const selectStyle = { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' } as React.CSSProperties
 
   return (
-    <div className="max-w-xl">
+    // Phones and tablets keep the narrow form; on a laptop or desktop it grows
+    // so the page isn't a thin column beside empty space.
+    <div className="max-w-xl lg:max-w-4xl">
       <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--foreground)' }}>Submit New Request</h1>
       <p className="text-sm ef-muted mb-6">Complete the form below to request a special exam.</p>
 
