@@ -382,17 +382,12 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             a blanket tick at sign-up. It also covers the parent, who is a data
             subject but never a user of this system. Enforced on the server too
             (a required checkbox in the browser is trivially bypassed). */}
-        {/* The whole card is the tap target. The real checkbox stays in the
+        {/* The whole block is the tap target. The real checkbox stays in the
             layout (restyled, not hidden) so reportValidity() can still point
-            its "please tick this box" bubble at it. Ticking it fills the box
-            gold, draws the check, and lifts the card. */}
-        <label
-          className="group block cursor-pointer rounded-xl border p-4 sm:p-5 border-[var(--border)] bg-[color-mix(in_srgb,var(--sti-gold)_5%,transparent)] transition-[border-color,background-color,box-shadow] duration-300 ease-[var(--ease-out)] hover:border-[color-mix(in_srgb,var(--sti-gold)_45%,var(--border))] has-[:checked]:border-[var(--sti-gold)] has-[:checked]:bg-[color-mix(in_srgb,var(--sti-gold)_12%,transparent)] has-[:checked]:shadow-[0_10px_24px_-16px_rgb(253_185_19/0.7)] motion-reduce:transition-none"
-        >
-          <span className="flex items-center gap-2 mb-3">
-            <Icon name="shield-check" className="w-[18px] h-[18px] shrink-0" style={{ color: 'var(--sti-gold)' }} />
-            <span className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>Data privacy consent</span>
-          </span>
+            its "please tick this box" bubble at it. Plain section: a hairline
+            above, a title, the checkbox and the statement. No tinted box. */}
+        <label className="group block cursor-pointer pt-5 border-t ef-border">
+          <span className="block text-sm font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>Data privacy consent</span>
           <span className="flex gap-3 items-start">
             <span className="relative mt-0.5 w-6 h-6 shrink-0">
               <input
@@ -450,28 +445,35 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
         {/* Confirmation dialog — the real submit lives here */}
         {confirming && (
           <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirming(false)}>
-            <div className="ef-dialog ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-              <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 18%, transparent)' }}>
-                <Icon name="file" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
-              </div>
-              <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Ready to verify?</h3>
-              <p className="text-sm ef-muted mt-1 mb-5">
-                Double-check your details first. Next you&apos;ll verify your parent or guardian&apos;s identity —
-                <strong style={{ color: 'var(--card-foreground)' }}> they need to be with you now</strong>. Your request is
-                only sent to the Registrar after that passes.
+            {/* Plain dialog: title, two short lines, the decision at the bottom right. */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="confirm-verify-title"
+              className="ef-dialog ef-card rounded-lg shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 id="confirm-verify-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>
+                Verify your parent or guardian
+              </h3>
+              <p className="text-sm mt-2" style={{ color: 'var(--card-foreground)' }}>
+                They need to be with you now, with a valid ID, for a quick face and ID check.
               </p>
-              <div className="flex gap-3">
+              <p className="text-sm ef-muted mt-1">
+                Your request goes to the Registrar only after this passes.
+              </p>
+              <div className="mt-6 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setConfirming(false)}
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border"
+                  className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                   style={{ color: 'var(--card-foreground)' }}
                 >
-                  Go Back
+                  Go back
                 </button>
                 <SubmitButton
                   pendingText="Saving…"
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                 >
                   Continue
