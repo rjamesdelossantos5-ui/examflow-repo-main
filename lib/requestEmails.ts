@@ -158,6 +158,7 @@ async function send(admin: Admin, event: RequestEmailEvent, r: RequestRow, base:
     case 'returned':
     case 'scheduled':
     case 'receipt_rejected':
+    case 'fees_assessed':
       return toStudent()
     case 'accepted_paid':
       await toStudent()

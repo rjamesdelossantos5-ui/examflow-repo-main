@@ -190,6 +190,11 @@ export async function markPaymentAssessed(studentId: string, shownFee: number) {
   // the log must not fail an assessment that already succeeded.
   if (logErr) console.error('[markPaymentAssessed] progress log failed', logErr)
 
+  // One email per student (not per subject), carrying the whole total. Sent
+  // after the response — see lib/requestEmails.ts.
+  const total = `${formatPeso(fee * ids.length)} for ${ids.length} subject${ids.length === 1 ? '' : 's'}`
+  after(() => emailRequestEvent('fees_assessed', [ids[0]], { reason: total }))
+
   revalidatePath('/registrar/assessment')
   revalidatePath('/student')
   return { error: null, count: ids.length }

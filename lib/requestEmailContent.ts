@@ -19,6 +19,7 @@ export type RequestEmailEvent =
   | 'rejected'           // any reviewer → Student
   | 'returned'           // Program Head returned it for re-verification → Student
   | 'accepted_paid'      // → Student (fee assessment next) and Registrar (assess fees)
+  | 'fees_assessed'      // Registrar assessed the fees → Student (pay, then upload the receipt). One per student; `reason` carries the total
   | 'scheduled'          // excused accepted, or receipt confirmed → Student
   | 'receipt_uploaded'   // → Program Head (second approval)
   | 'receipt_rejected'   // → Student
@@ -266,6 +267,19 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
         stage: 'payment',
         button: { label: 'View request', url: studentLink },
         next: 'Go to the Registrar for your fee assessment, pay at the Cashier, then upload your receipt in EXAMFLOW.',
+      }
+
+    case 'fees_assessed':
+      return {
+        ...needed,
+        subject: 'Your special exam fees are assessed',
+        heading: 'Your fees are assessed',
+        greeting: hiStudent,
+        paragraphs: ['The Registrar assessed your special exam fees. You can now pay at the Cashier.'],
+        callout: { label: 'Amount to pay', value: reason },
+        stage: 'payment',
+        button: { label: 'Upload receipt', url: studentLink },
+        next: 'Pay at the Cashier, then upload a photo of your official receipt in EXAMFLOW.',
       }
 
     case 'scheduled': {
