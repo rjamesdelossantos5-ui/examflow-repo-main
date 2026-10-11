@@ -9,6 +9,7 @@ import { ordinalYear } from '@/lib/ordinal'
 import type { RequestStatus } from '@/lib/supabase/types'
 import type { ParentCheck } from '@/lib/didit'
 import ParentNameCheck from '@/components/ParentNameCheck'
+import { shownInHistory } from '@/lib/historyFilter'
 
 interface MediaItem {
   id: string
@@ -166,6 +167,7 @@ export default function RequestReviewPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const shownLogs = logs.filter((l) => shownInHistory(l.action))
   const viewerMedia = media.map((m) => ({
     id: m.id,
     media_type: m.media_type,
@@ -260,19 +262,28 @@ export default function RequestReviewPanel({
           </div>
         )}
 
-        {/* Documents — all shown inline as clickable thumbnails (click to zoom) */}
-        {showDocuments && (
+        {/* Documents — all shown inline as clickable thumbnails (click to zoom).
+            Left out entirely when there are none: only an excused request has
+            a supporting document, so an empty section says nothing useful. */}
+        {showDocuments && viewerMedia.length > 0 && (
         <div>
           <SectionLabel icon="file">Documents</SectionLabel>
           <DocumentViewer media={viewerMedia} />
         </div>
         )}
 
-        {/* History — mini timeline with role-colored dots */}
-        <div>
-          <SectionLabel icon="history">History</SectionLabel>
-          <ol className="space-y-2.5">
-            {logs.map((l) => (
+        {/* History — mini timeline with role-colored dots, collapsed until
+            opened so the review stays focused on the decision. */}
+        <details className="group">
+          <summary className="list-none cursor-pointer select-none [&::-webkit-details-marker]:hidden">
+            <h4 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ef-muted">
+              <Icon name="history" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} />
+              History ({shownLogs.length})
+              <Icon name="chevron-down" className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
+            </h4>
+          </summary>
+          <ol className="space-y-2.5 mt-2.5">
+            {shownLogs.map((l) => (
               <li key={l.id} className="flex gap-2.5 text-xs">
                 <span className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ background: ROLE_DOT[l.actor_role] ?? '#64748b' }} />
                 <div className="min-w-0">
@@ -283,9 +294,9 @@ export default function RequestReviewPanel({
                 </div>
               </li>
             ))}
-            {logs.length === 0 && <li className="text-xs ef-muted">No activity yet.</li>}
+            {shownLogs.length === 0 && <li className="text-xs ef-muted">No activity yet.</li>}
           </ol>
-        </div>
+        </details>
       </div>
 
       {/* Right: actions */}

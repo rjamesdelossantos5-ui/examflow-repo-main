@@ -13,6 +13,7 @@ import RejectReasonPicker from '@/components/RejectReasonPicker'
 import { PH_REJECT_EXCUSED, PH_REJECT_PAID, PH_RECEIPT_REJECT, PH_REVERIFY } from '@/lib/rejectReasons'
 import { verificationPhotoSrc, type VerificationPhoto } from '@/lib/verificationPhotos'
 import { ordinalYear } from '@/lib/ordinal'
+import { shownInHistory } from '@/lib/historyFilter'
 
 // Timeline dot color per actor role (mirrors the shared RequestReviewPanel).
 const ROLE_DOT: Record<string, string> = {
@@ -228,6 +229,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const shownLogs = r.logs.filter((l) => shownInHistory(l.action))
   const viewerMedia = r.media.map((m) => ({
     id: m.id,
     media_type: m.media_type,
@@ -320,22 +322,30 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
       {/* The parent's ID and selfie — the Program Head's manual check at first approval. */}
       {r.status === 'approved_by_teacher' && <ParentPhotos requestId={r.id} verification={r.verification ?? null} />}
 
-      {/* Documents */}
-      <div>
-        <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
-          <Icon name="file" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> Documents
-        </h4>
-        {/* All docs shown inline as clickable thumbnails (click to zoom) */}
-        <DocumentViewer media={viewerMedia} />
-      </div>
+      {/* Documents — left out when there are none (only an excused request
+          has a supporting document). */}
+      {viewerMedia.length > 0 && (
+        <div>
+          <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
+            <Icon name="file" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> Documents
+          </h4>
+          {/* All docs shown inline as clickable thumbnails (click to zoom) */}
+          <DocumentViewer media={viewerMedia} />
+        </div>
+      )}
 
-      {/* History — mini timeline with role-colored dots */}
-      <div className="border-t ef-border pt-3">
-        <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
-          <Icon name="history" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> History
-        </h4>
-        <ol className="space-y-2.5">
-          {r.logs.map((l) => (
+      {/* History — mini timeline with role-colored dots, collapsed until
+          opened so the review stays focused on the decision. */}
+      <details className="group border-t ef-border pt-3">
+        <summary className="list-none cursor-pointer select-none [&::-webkit-details-marker]:hidden">
+          <h4 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ef-muted">
+            <Icon name="history" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} />
+            History ({shownLogs.length})
+            <Icon name="chevron-down" className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
+          </h4>
+        </summary>
+        <ol className="space-y-2.5 mt-2.5">
+          {shownLogs.map((l) => (
             <li key={l.id} className="flex gap-2.5 text-xs">
               <span className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ background: ROLE_DOT[l.actor_role] ?? '#64748b' }} />
               <div className="min-w-0">
@@ -344,9 +354,9 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
               </div>
             </li>
           ))}
-          {r.logs.length === 0 && <li className="text-xs ef-muted">No activity yet.</li>}
+          {shownLogs.length === 0 && <li className="text-xs ef-muted">No activity yet.</li>}
         </ol>
-      </div>
+      </details>
 
       {/* Actions */}
       {r.status === 'approved_by_teacher' && !rejectMode && (

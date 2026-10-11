@@ -15,7 +15,7 @@ export default function AdminActingBanner({ asRole }: { asRole: string }) {
         <strong>Admin view</strong> — you can do everything the {asRole} does on this page. What you do is recorded as
         done by Admin.
       </p>
-      <Link href="/admin/requests" className="font-semibold underline underline-offset-2 whitespace-nowrap">
+      <Link href="/admin/requests" className="font-semibold whitespace-nowrap hover:underline underline-offset-2">
         Back to all requests
       </Link>
     </div>

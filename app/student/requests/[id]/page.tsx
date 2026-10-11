@@ -13,6 +13,7 @@ import { REVERIFY_LOG_PREFIX } from '@/lib/rejectReasons'
 import { syncDiditResult } from '@/lib/diditSync'
 import { getSpecialExamFee } from '@/lib/fees'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
+import { shownInHistory } from '@/lib/historyFilter'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
 
@@ -127,6 +128,8 @@ export default async function RequestDetailPage({
   }
 
   const logs = (req.progress_logs as { id: string; action: string; created_at: string; actor_role: UserRole }[]) ?? []
+  // The timeline below leaves out the consent record (kept in the database).
+  const shownLogs = logs.filter((l) => shownInHistory(l.action))
   // The Program Head's reason, from the log line returnForReverification writes.
   const reverifyReason = reverifyRequested
     ? [...logs]
@@ -332,9 +335,9 @@ export default async function RequestDetailPage({
       <div className="ef-card rounded-xl shadow-sm p-6">
         <h2 className="font-semibold mb-4" style={{ color: 'var(--card-foreground)' }}>Activity Timeline</h2>
         <ol className="relative ml-2">
-          {logs.map((log, i) => (
+          {shownLogs.map((log, i) => (
             <li key={log.id} className="relative pl-6 pb-5 last:pb-0">
-              {i < logs.length - 1 && (
+              {i < shownLogs.length - 1 && (
                 <span className="absolute left-[5px] top-3 bottom-0 w-px" style={{ background: 'var(--border)' }} />
               )}
               <span
