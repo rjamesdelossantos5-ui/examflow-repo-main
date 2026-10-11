@@ -26,7 +26,7 @@ export default function FeeForm({ fee }: { fee: number }) {
   }
 
   return (
-    <form onSubmit={save} className="ef-card rounded-xl shadow-sm p-5 max-w-xl space-y-4">
+    <form onSubmit={save} className="ef-card rounded-xl shadow-sm p-5 space-y-4">
       <div>
         <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Special exam fee</h3>
         <p className="text-sm ef-muted mt-1">

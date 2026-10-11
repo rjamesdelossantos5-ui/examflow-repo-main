@@ -30,7 +30,7 @@ export default function ToggleSetting({
   }
 
   return (
-    <div className="ef-card rounded-xl shadow-sm p-5 max-w-xl">
+    <div className="ef-card rounded-xl shadow-sm p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>{title}</h3>

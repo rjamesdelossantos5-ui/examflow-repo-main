@@ -22,9 +22,17 @@ export default async function AdminSettingsPage() {
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Settings</h2>
         <p className="text-sm ef-muted">School-wide settings for EXAMFLOW.</p>
       </div>
-      <FeeForm fee={fee} />
+      {/* Two groups side by side on wide screens: money on the left, the
+          safety switches on the right. Stacked on phones. */}
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
+        <section className="space-y-3">
+          <h3 className="font-semibold" style={{ color: 'var(--foreground)' }}>Fees</h3>
+          <FeeForm fee={fee} />
+        </section>
 
-      <h3 className="text-sm font-semibold uppercase tracking-wide ef-muted pt-2">Safety</h3>
+        <section className="space-y-3">
+          <h3 className="font-semibold" style={{ color: 'var(--foreground)' }}>Safety</h3>
+          <div className="space-y-4">
       <ToggleSetting
         settingKey={TOGGLE_SETTINGS.testReset}
         title="Reset Test Data"
@@ -47,6 +55,9 @@ export default async function AdminSettingsPage() {
           </>
         }
       />
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
