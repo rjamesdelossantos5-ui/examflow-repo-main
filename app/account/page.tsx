@@ -39,52 +39,49 @@ export default async function AccountPage() {
     mySubjects = data ?? []
   }
 
+  // Teacher / Program Head assignment (set by the admin, shown for reference),
+  // as label–value rows inside the account card.
+  const assignment = role === 'program_head' ? (
+    <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-y-1 text-sm">
+      <dt className="ef-muted">Department</dt>
+      <dd className="font-medium" style={{ color: 'var(--card-foreground)' }}>{deptName ?? 'No department assigned'}</dd>
+    </dl>
+  ) : role === 'subject_teacher' ? (
+    <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-y-1 text-sm">
+      {deptName && (
+        <>
+          <dt className="ef-muted">Department</dt>
+          <dd className="font-medium" style={{ color: 'var(--card-foreground)' }}>{deptName}</dd>
+        </>
+      )}
+      <dt className="ef-muted">Subject{mySubjects.length === 1 ? '' : 's'}</dt>
+      <dd style={{ color: 'var(--card-foreground)' }}>
+        {mySubjects.length ? (
+          <ul className="space-y-0.5">
+            {mySubjects.map((s) => (
+              <li key={s.subject_code}><strong>{s.subject_code}</strong> {s.subject_name}</li>
+            ))}
+          </ul>
+        ) : (
+          <span className="ef-muted">No subject assigned yet.</span>
+        )}
+      </dd>
+    </dl>
+  ) : null
+
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-4xl">
       <Link
         href={ROLE_HOME[role] ?? '/'}
-        className="inline-flex items-center gap-1 text-sm ef-muted hover:underline mb-4"
+        className="inline-flex items-center gap-1 text-sm ef-muted hover:underline mb-3"
       >
         ← Back to dashboard
       </Link>
-      <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--foreground)' }}>My Account</h1>
-      <p className="text-sm ef-muted mb-6">Manage your personal information and password.</p>
-
-      {/* Role assignment (managed by the admin — shown here for reference) */}
-      {(role === 'subject_teacher' || role === 'program_head') && (
-        <div className="ef-card rounded-xl shadow-sm p-5 mb-5">
-          <h2 className="text-xs font-semibold uppercase tracking-wide ef-muted mb-2">Assignment</h2>
-          {role === 'program_head' && (
-            <p className="text-sm" style={{ color: 'var(--card-foreground)' }}>
-              <span className="ef-muted">Department Program Head: </span>
-              <strong>{deptName ?? 'No department assigned'}</strong>
-            </p>
-          )}
-          {role === 'subject_teacher' && (
-            <>
-              {deptName && (
-                <p className="text-sm mb-1" style={{ color: 'var(--card-foreground)' }}>
-                  <span className="ef-muted">Department: </span><strong>{deptName}</strong>
-                </p>
-              )}
-              <p className="text-sm ef-muted mb-1">Dedicated subject{mySubjects.length === 1 ? '' : 's'}:</p>
-              {mySubjects.length ? (
-                <ul className="space-y-1">
-                  {mySubjects.map((s) => (
-                    <li key={s.subject_code} className="text-sm" style={{ color: 'var(--card-foreground)' }}>
-                      <strong>{s.subject_code}</strong> — {s.subject_name}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm ef-muted">No subject assigned yet.</p>
-              )}
-            </>
-          )}
-        </div>
-      )}
+      <h1 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>My Account</h1>
+      <p className="text-sm ef-muted mt-1 mb-5">Manage your personal information.</p>
 
       <ProfileForm
+        assignment={assignment}
         profile={{
           ...(profile as unknown as Profile),
           // Blank for school accounts until the student saves it — pre-fill it

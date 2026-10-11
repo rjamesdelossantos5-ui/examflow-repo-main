@@ -36,7 +36,7 @@ function Banner({ kind, text }: { kind: 'ok' | 'err'; text: string }) {
  * and role are read-only here; only the admin can change those. Note: edits
  * do NOT rewrite past requests — those keep the snapshot taken at submit time.
  */
-export default function ProfileForm({ profile }: { profile: Profile }) {
+export default function ProfileForm({ profile, assignment }: { profile: Profile; assignment?: React.ReactNode }) {
   const isStudent = profile.role === 'student'
   const [isPending, startTransition] = useTransition()
   const [profileMsg, setProfileMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
@@ -50,46 +50,48 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
     })
   }
 
+  // One card: who you are on top (name, role, email), the editable fields
+  // below. The fields sit side by side on wide screens instead of one tall
+  // column, so the page doesn't leave half the screen empty.
   return (
-    <div className="space-y-6">
-      {/* Identity card */}
-      <div className="ef-card rounded-xl shadow-sm p-6 flex items-center gap-4">
+    <form onSubmit={onProfileSubmit} className="ef-card rounded-xl shadow-sm">
+      <div className="px-5 sm:px-6 py-4 flex items-center gap-3.5 border-b ef-border">
         <div
-          className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-black shrink-0"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-black shrink-0"
           style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
         >
           {initials(profile.full_name)}
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-lg truncate" style={{ color: 'var(--card-foreground)' }}>{profile.full_name}</p>
+          <p className="font-semibold truncate flex items-center gap-2" style={{ color: 'var(--card-foreground)' }}>
+            <span className="truncate">{profile.full_name}</span>
+            <span className="shrink-0 px-2 py-0.5 rounded-full text-2xs font-semibold" style={{ background: 'color-mix(in srgb, var(--sti-gold) 22%, transparent)', color: 'var(--card-foreground)' }}>
+              {ROLE_LABELS[profile.role] ?? profile.role}
+            </span>
+          </p>
           <p className="text-sm ef-muted truncate">{profile.email}</p>
-          <span
-            className="inline-block mt-1 px-2 py-0.5 rounded-full text-2xs font-semibold"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-          >
-            {ROLE_LABELS[profile.role] ?? profile.role}
-          </span>
         </div>
       </div>
 
-      {/* Personal info */}
-      <form onSubmit={onProfileSubmit} className="ef-card rounded-xl shadow-sm p-6 space-y-4">
-        <h2 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Personal Information</h2>
+      {assignment && <div className="px-5 sm:px-6 py-4 border-b ef-border">{assignment}</div>}
+
+      <div className="p-5 sm:p-6 space-y-5">
         {profileMsg && <Banner kind={profileMsg.kind} text={profileMsg.text} />}
 
-        <div>
-          <label className="block text-sm font-medium ef-muted mb-1">Full name *</label>
-          <input name="full_name" required autoComplete="name" defaultValue={profile.full_name} className={inputClass} />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium ef-muted mb-1">Email</label>
-          <input value={profile.email} disabled className={`${inputClass} opacity-60 cursor-not-allowed`} />
-          <p className="text-xs ef-muted mt-1">Email is managed by your administrator.</p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium ef-muted mb-1">Full name *</label>
+            <input name="full_name" required autoComplete="name" defaultValue={profile.full_name} className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium ef-muted mb-1">Email</label>
+            <input value={profile.email} disabled className={`${inputClass} opacity-60 cursor-not-allowed`} />
+            <p className="text-xs ef-muted mt-1">Email is managed by your administrator.</p>
+          </div>
         </div>
 
         {isStudent && (
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">
                 Student number <span className="font-normal text-2xs">(optional)</span>
@@ -111,17 +113,15 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
           </div>
         )}
 
-        <div className="pt-1">
-          <button
-            type="submit"
-            disabled={isPending}
-            className="px-5 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-          >
-            {isPending ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
-      </form>
-    </div>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
+          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+        >
+          {isPending ? 'Saving…' : 'Save Changes'}
+        </button>
+      </div>
+    </form>
   )
 }
