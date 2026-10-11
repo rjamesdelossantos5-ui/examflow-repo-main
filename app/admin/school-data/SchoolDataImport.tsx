@@ -128,12 +128,12 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
   }
 
   const counts = [
-    ['Departments', current.departments],
-    ['Programs', current.programs],
-    ['Staff', current.staff],
-    ['Students', current.students],
-    ['Subjects', current.subjects],
-    ['Classes', current.classes],
+    ['Departments', current.departments, 'building'],
+    ['Programs', current.programs, 'layers'],
+    ['Staff', current.staff, 'users'],
+    ['Students', current.students, 'cap'],
+    ['Subjects', current.subjects, 'book'],
+    ['Classes', current.classes, 'list'],
   ] as const
   const canUpload = !!data && !!grids && !data.errors.length && !isPending && !migrationMissing
   const pct = progress ? Math.round((progress.done / Math.max(progress.total, 1)) * 100) : 0
@@ -143,9 +143,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
       <div className="max-w-3xl">
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>School Data</h2>
         <p className="text-sm ef-muted mt-1">
-          Upload one Excel file with the school&apos;s departments, programs, staff, students and classes. Students then
-          sign in to find their details, section and subjects already there — the teacher for each subject is filled in
-          for them.
+          Upload one Excel file with the school&apos;s departments, programs, staff, students and classes.
         </p>
       </div>
 
@@ -191,11 +189,22 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
 
         <aside className={card} aria-label="Currently in the system">
           <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>In the system now</h3>
-          <dl className="divide-y ef-border">
-            {counts.map(([label, n]) => (
-              <div key={label} className="flex items-baseline justify-between py-2">
-                <dt className="text-sm ef-muted">{label}</dt>
-                <dd className="text-sm font-semibold tabular-nums" style={{ color: 'var(--card-foreground)' }}>{n}</dd>
+          {/* One row per sheet of the file, with that sheet's icon, so the
+              list reads as "what the last import put in". */}
+          <dl className="divide-y divide-[var(--border)]">
+            {counts.map(([label, n, icon]) => (
+              <div key={label} className="flex items-center gap-3 py-2.5">
+                <span
+                  aria-hidden
+                  className="w-8 h-8 shrink-0 rounded-lg grid place-items-center"
+                  style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)' }}
+                >
+                  <Icon name={icon} className="w-4 h-4" style={{ color: 'var(--card-foreground)' }} />
+                </span>
+                <dt className="flex-1 text-sm" style={{ color: 'var(--card-foreground)' }}>{label}</dt>
+                <dd className={`text-base font-bold tabular-nums ${n === 0 ? 'ef-muted' : ''}`} style={n === 0 ? undefined : { color: 'var(--card-foreground)' }}>
+                  {n}
+                </dd>
               </div>
             ))}
           </dl>
