@@ -141,16 +141,21 @@ export default function PHQueue({
         <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">{emptyText}</div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-4 items-start">
-        <div className="space-y-2.5">
+      {/* A narrow list and a wide review, the same as the Registrar's and
+          Teacher's pages. */}
+      <div className="grid md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)] gap-5 items-start">
+        <div className={`ef-card rounded-xl shadow-sm overflow-hidden divide-y ef-border ${groups.length === 0 ? 'hidden' : ''}`}>
           {groups.map((g) => {
             const anyResub = g.forms.some((f) => f.resubmitted)
             const anyReverified = g.forms.some((f) => f.reverifyReason)
+            const selected = selectedKey === g.key
             return (
               <button
                 key={g.key}
                 onClick={() => setSelectedKey(g.key === selectedKey ? null : g.key)}
-                className={`ef-card w-full text-left rounded-xl shadow-sm p-4 transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${selectedKey === g.key ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
+                aria-current={selected ? 'true' : undefined}
+                className="w-full text-left px-4 py-3.5 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                style={selected ? { background: 'color-mix(in srgb, var(--sti-gold) 14%, transparent)' } : undefined}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -186,10 +191,7 @@ export default function PHQueue({
                   </button>
                 )}
                 {active.forms.map((f) => (
-                  <div key={f.id} className="ef-card rounded-xl shadow-sm p-6">
-                    <p className="text-xs font-semibold uppercase tracking-wide ef-muted mb-2">
-                      {f.subject.subject_code} — {f.subject.subject_name}
-                    </p>
+                  <div key={f.id} className="ef-card rounded-xl shadow-sm p-5 sm:p-6">
                     <PHDetail request={f} onDone={() => dropForm(f.id)} />
                   </div>
                 ))}
@@ -281,70 +283,171 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     })
   }
 
+  const firstApproval = r.status === 'approved_by_teacher' && !rejectMode
+  const receiptCheck = r.status === 'receipt_uploaded' && !rejectMode
+  const outlineBtn = 'ef-press px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06] inline-flex items-center gap-2'
+  const primaryBtn = 'ef-press px-4 py-2.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-2'
+  const dangerBorder = { color: 'var(--status-danger)', border: '1px solid color-mix(in srgb, var(--status-danger) 40%, transparent)' }
+
   return (
-    <div className="space-y-4 text-sm">
-      {error && (
-        <div className="rounded bg-red-50 border border-red-200 px-3 py-2 text-red-700 text-xs">
-          {error} <button className="underline ml-1" onClick={() => setError(null)}>Dismiss</button>
-        </div>
-      )}
-
-      {/* Header — subject-code chip + student identity */}
-      <div className="flex items-start gap-3">
-        <span
-          className="w-11 h-11 rounded-xl grid place-items-center font-bold text-sm shrink-0"
-          style={{ background: 'var(--sti-navy)', color: 'var(--sti-gold)' }}
-        >
-          {r.subject.subject_code.slice(0, 3).toUpperCase()}
-        </span>
+    <div className="text-sm">
+      {/* ── Header: who and what, with the decision at the right ── */}
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div className="min-w-0">
-          {/* Subject title is shown by the queue card above — not repeated here. */}
-          <h3 className="font-bold text-base leading-tight break-words" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
-          {r.student.student_number && <p className="ef-muted text-xs break-words">#{r.student.student_number}</p>}
-          <p className="ef-muted text-xs break-words">{r.student.course} · {ordinalYear(r.student.year_level)} · {r.student.section}</p>
-          {r.subject.teacher && <p className="ef-muted text-xs mt-0.5 break-words">Teacher: {r.subject.teacher.full_name}</p>}
+          <h3 className="text-lg font-bold leading-tight break-words" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
+          <p className="mt-1 ef-muted">
+            <span className="font-semibold" style={{ color: 'var(--card-foreground)' }}>{r.subject.subject_code}</span> {r.subject.subject_name}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span
+              className="px-2 py-0.5 rounded-full text-xs font-semibold"
+              style={{
+                background: `color-mix(in srgb, ${isExcused ? 'var(--status-info)' : 'var(--status-warning)'} 14%, transparent)`,
+                color: isExcused ? 'var(--status-info)' : 'var(--status-warning)',
+              }}
+            >
+              {isExcused ? 'Excused' : 'Paid'}
+            </span>
+            {/* The two signatures already on it */}
+            <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--status-success)' }}>
+              <Icon name="check" className="w-3.5 h-3.5" /> Registrar verified
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--status-success)' }}>
+              <Icon name="check" className="w-3.5 h-3.5" /> Teacher approved
+            </span>
+          </div>
         </div>
+
+        {(firstApproval || receiptCheck) && (
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              {firstApproval && (
+                <>
+                  <button onClick={() => setRejectMode('request')} className={outlineBtn} style={dangerBorder}>Reject</button>
+                  {r.verification && (
+                    <button onClick={() => setRejectMode('reverify')} className={outlineBtn}
+                      style={{ color: 'var(--status-warning)', border: '1px solid color-mix(in srgb, var(--status-warning) 40%, transparent)' }}>
+                      Return for re-verification
+                    </button>
+                  )}
+                  <button onClick={handleAccept} disabled={isPending} className={primaryBtn}
+                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                    <Icon name="check" className="w-4 h-4" />
+                    {isPending ? 'Processing…' : isExcused ? 'Mark scheduled' : 'Accept'}
+                  </button>
+                </>
+              )}
+              {receiptCheck && (
+                <>
+                  <button onClick={() => setRejectMode('receipt')} className={outlineBtn} style={dangerBorder}>Reject receipt</button>
+                  <button onClick={handleConfirmReceipt} disabled={isPending} className={primaryBtn}
+                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                    <Icon name="check" className="w-4 h-4" />
+                    {isPending ? 'Confirming…' : 'Confirm receipt and schedule'}
+                  </button>
+                </>
+              )}
+            </div>
+            {firstApproval && (!isExcused || r.verification) && (
+              <p className="text-xs ef-muted text-right max-w-[46ch]">
+                {!isExcused && 'The student uploads the cashier receipt after this. '}
+                {r.verification && 'The parent’s ID and selfie photos are deleted when you accept.'}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Approval chain badges */}
-      <div className="flex gap-2 flex-wrap">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300">✓ Registrar verified</span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">✓ Teacher approved</span>
-      </div>
+      {error && (
+        <p role="alert" className="mt-4 text-sm" style={{ color: 'var(--status-danger)' }}>
+          {error} <button className="underline ml-1" onClick={() => setError(null)}>Dismiss</button>
+        </p>
+      )}
 
-      {/* Back after a return for re-verification — say what to look at again. */}
+      {/* Back after a return for re-verification: say what to look at again. */}
       {r.status === 'approved_by_teacher' && r.reverifyReason && (
-        <div className="rounded-lg px-3 py-2.5 text-xs bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
-          <strong>Re-verified.</strong> You returned this before: “{r.reverifyReason}”. The parent has verified again — check the new photos.
+        <p className="mt-4 flex gap-2.5">
+          <Icon name="alert" className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--status-warning)' }} />
+          <span style={{ color: 'var(--card-foreground)' }}>
+            <strong>Re-verified.</strong> You returned this before: &ldquo;{r.reverifyReason}&rdquo;. The parent has verified again, so check the new photos.
+          </span>
+        </p>
+      )}
+
+      {r.status === 'receipt_uploaded' && (
+        <p className="mt-4 flex gap-2.5" style={{ color: 'var(--card-foreground)' }}>
+          <Icon name="receipt" className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--status-warning)' }} />
+          The student uploaded a payment receipt. Check it below.
+        </p>
+      )}
+
+      {rejectMode && (
+        <div className="mt-4 space-y-3 rounded-lg p-4" style={{ border: '1px solid var(--border)' }}>
+          {rejectMode === 'reverify' && (
+            <p className="text-xs ef-muted">
+              The parent or guardian verifies again, and the request comes straight back to you — not to the Registrar
+              or the Teacher. These photos are deleted.
+            </p>
+          )}
+          <RejectReasonPicker
+            presets={rejectMode === 'reverify' ? PH_REVERIFY : rejectMode === 'receipt' ? PH_RECEIPT_REJECT : isExcused ? PH_REJECT_EXCUSED : PH_REJECT_PAID}
+            onChange={setReason}
+            label={rejectMode === 'reverify' ? 'Reason for returning' : undefined}
+          />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => { setRejectMode(null); setReason('') }}
+              className="px-4 py-2 rounded-lg border ef-border text-sm hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
+            <button
+              onClick={rejectMode === 'reverify' ? handleReturn : rejectMode === 'receipt' ? handleRejectReceipt : handleRejectRequest}
+              disabled={isPending || !reason.trim()}
+              className="ef-press px-4 py-2 rounded-lg font-semibold text-sm text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: rejectMode === 'reverify' ? '#b45309' : 'var(--status-danger)' }}
+            >
+              {rejectMode === 'reverify'
+                ? (isPending ? 'Returning…' : 'Return to student')
+                : (isPending ? 'Rejecting…' : 'Confirm reject')}
+            </button>
+          </div>
         </div>
       )}
+
+      {/* ── Form details ── */}
+      <PHSection title="Form details">
+        <dl className="grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+          {[
+            ['Student no.', r.student.student_number],
+            ['Course', r.student.course],
+            ['Year', r.student.year_level ? ordinalYear(r.student.year_level) : null],
+            ['Section', r.student.section],
+            ['Teacher', r.subject.teacher?.full_name],
+            ...(r.excused_reason ? [['Reason', `${r.excused_reason}${r.other_reason ? `: ${r.other_reason}` : ''}`]] : []),
+          ].map(([label, value]) => (
+            <div key={label as string} className="min-w-0">
+              <dt className="text-xs ef-muted">{label}</dt>
+              <dd className="font-medium break-words tabular-nums first-letter:uppercase" style={{ color: 'var(--card-foreground)' }}>{value ?? '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      </PHSection>
 
       {/* The parent's ID and selfie — the Program Head's manual check at first approval. */}
       {r.status === 'approved_by_teacher' && <ParentPhotos requestId={r.id} verification={r.verification ?? null} />}
 
       {/* Documents — left out when there are none (only an excused request
-          has a supporting document). */}
+          has a supporting document; a paid one gets its receipt here). */}
       {viewerMedia.length > 0 && (
-        <div>
-          <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
-            <Icon name="file" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> Documents
-          </h4>
-          {/* All docs shown inline as clickable thumbnails (click to zoom) */}
+        <PHSection title="Documents">
           <DocumentViewer media={viewerMedia} />
-        </div>
+        </PHSection>
       )}
 
-      {/* History — mini timeline with role-colored dots, collapsed until
-          opened so the review stays focused on the decision. */}
-      <details className="group border-t ef-border pt-3">
-        <summary className="list-none cursor-pointer select-none [&::-webkit-details-marker]:hidden">
-          <h4 className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ef-muted">
-            <Icon name="history" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} />
-            History ({shownLogs.length})
-            <Icon name="chevron-down" className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
-          </h4>
+      {/* History — collapsed until opened, so the review stays on the decision. */}
+      <details className="group pt-5 mt-5 border-t ef-border">
+        <summary className="list-none cursor-pointer select-none inline-flex items-center gap-1.5 font-semibold [&::-webkit-details-marker]:hidden" style={{ color: 'var(--card-foreground)' }}>
+          History <span className="font-normal ef-muted">({shownLogs.length})</span>
+          <Icon name="chevron-down" className="w-4 h-4 ef-muted transition-transform group-open:rotate-180" />
         </summary>
-        <ol className="space-y-2.5 mt-2.5">
+        <ol className="space-y-2.5 mt-3">
           {shownLogs.map((l) => (
             <li key={l.id} className="flex gap-2.5 text-xs">
               <span className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ background: ROLE_DOT[l.actor_role] ?? '#64748b' }} />
@@ -357,81 +460,18 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
           {shownLogs.length === 0 && <li className="text-xs ef-muted">No activity yet.</li>}
         </ol>
       </details>
-
-      {/* Actions */}
-      {r.status === 'approved_by_teacher' && !rejectMode && (
-        <div className="space-y-3 border-t ef-border pt-3">
-          <button onClick={handleAccept} disabled={isPending}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-            {isPending ? 'Processing…' : (<><Icon name="check" className="w-4 h-4" /> {isExcused ? 'Mark scheduled' : 'Accept'}</>)}
-          </button>
-          {(!isExcused || r.verification) && (
-            <p className="text-2xs ef-muted text-center -mt-1">
-              {!isExcused && 'Student uploads the cashier receipt after this. '}
-              {r.verification && 'The parent’s ID and selfie photos are deleted when you accept.'}
-            </p>
-          )}
-          {r.verification && (
-            <button onClick={() => setRejectMode('reverify')}
-              className="w-full py-2.5 rounded-lg font-semibold text-sm border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-300 dark:hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-2">
-              <Icon name="user" className="w-4 h-4" /> Return for re-verification
-            </button>
-          )}
-          <button onClick={() => setRejectMode('request')}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
-            <Icon name="x" className="w-4 h-4" /> Reject
-          </button>
-        </div>
-      )}
-
-      {r.status === 'receipt_uploaded' && !rejectMode && (
-        <div className="space-y-3 border-t ef-border pt-3">
-          <div className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs" style={{ background: 'color-mix(in srgb, #f59e0b 12%, transparent)', border: '1px solid color-mix(in srgb, #f59e0b 30%, transparent)', color: 'var(--card-foreground)' }}>
-            <Icon name="receipt" className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#b45309' }} />
-            Student has uploaded a payment receipt. Please verify it.
-          </div>
-          <button onClick={handleConfirmReceipt} disabled={isPending}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
-            {isPending ? 'Confirming…' : (<><Icon name="check" className="w-4 h-4" /> Confirm Receipt → Mark Scheduled</>)}
-          </button>
-          <button onClick={() => setRejectMode('receipt')}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
-            <Icon name="x" className="w-4 h-4" /> Reject Receipt
-          </button>
-        </div>
-      )}
-
-      {rejectMode && (
-        <div className="space-y-3 border-t ef-border pt-3">
-          {rejectMode === 'reverify' && (
-            <p className="text-xs ef-muted">
-              The parent or guardian verifies again, and the request comes straight back to you — not to the Registrar
-              or the Teacher. These photos are deleted.
-            </p>
-          )}
-          <RejectReasonPicker
-            presets={rejectMode === 'reverify' ? PH_REVERIFY : rejectMode === 'receipt' ? PH_RECEIPT_REJECT : isExcused ? PH_REJECT_EXCUSED : PH_REJECT_PAID}
-            onChange={setReason}
-            label={rejectMode === 'reverify' ? 'Reason for returning' : undefined}
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={rejectMode === 'reverify' ? handleReturn : rejectMode === 'receipt' ? handleRejectReceipt : handleRejectRequest}
-              disabled={isPending || !reason.trim()}
-              className={`flex-1 py-2 rounded-lg font-semibold text-sm text-white transition-colors disabled:opacity-50 ${rejectMode === 'reverify' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-red-600 hover:bg-red-700'}`}
-            >
-              {rejectMode === 'reverify'
-                ? (isPending ? 'Returning…' : 'Return to student')
-                : (isPending ? 'Rejecting…' : 'Confirm Reject')}
-            </button>
-            <button onClick={() => { setRejectMode(null); setReason('') }}
-              className="px-4 py-2 rounded-lg border ef-border text-sm hover:bg-black/[0.03] dark:hover:bg-white/[0.05] transition-colors" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
-          </div>
-        </div>
-      )}
     </div>
+  )
+}
+
+// A section's title: sentence case, quiet, with a hairline above the section.
+// Same as the Registrar/Teacher review panel's, so the three roles match.
+function PHSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="pt-5 mt-5 border-t ef-border">
+      <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>{title}</h4>
+      {children}
+    </section>
   )
 }
 
@@ -465,21 +505,18 @@ function ParentPhotos({ requestId, verification }: { requestId: string; verifica
     : ''
 
   return (
-    <div>
-      <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide mb-2.5 ef-muted">
-        <Icon name="user" className="w-3.5 h-3.5" style={{ color: 'var(--sti-gold)' }} /> Parent / guardian identity
-      </h4>
+    <PHSection title="Parent check">
       {!verification ? (
-        <p className="text-xs ef-muted">No photos — this request was submitted before parent verification existed.</p>
+        <p className="text-xs ef-muted">No photos: this request was submitted before parent verification existed.</p>
       ) : (
         <>
-          <p className="text-xs ef-muted mb-2.5">
+          <p className="mb-3" style={{ color: 'var(--card-foreground)' }}>
             Compare the face on the ID with the live selfie, and the name with the student&apos;s records.
-            {!verification.parentCheck && verification.idName && <> Name on the ID: <strong style={{ color: 'var(--card-foreground)' }}>{verification.idName}</strong>.</>}
-            {scores && <> Didit: {scores}.</>}
+            {!verification.parentCheck && verification.idName && <> Name on the ID: <strong>{verification.idName}</strong>.</>}
+            {scores && <span className="ef-muted"> Didit: {scores}.</span>}
           </p>
           {verification.parentCheck && (
-            <div className="mb-2.5">
+            <div className="mb-4">
               <ParentNameCheck check={verification.parentCheck} />
             </div>
           )}
@@ -502,6 +539,6 @@ function ParentPhotos({ requestId, verification }: { requestId: string; verifica
           )}
         </>
       )}
-    </div>
+    </PHSection>
   )
 }
