@@ -111,17 +111,22 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
         <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">No pending requests.</div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-4 items-start">
-        {/* Student list */}
-        <div className="space-y-2.5">
+      {/* A narrow list and a wide review: each list entry is only a name and
+          subject codes, so it never needed half the screen. */}
+      <div className="grid md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)] gap-5 items-start">
+        {/* Student list: one panel, one row per student */}
+        <div className={`ef-card rounded-xl shadow-sm overflow-hidden divide-y ef-border ${groups.length === 0 ? 'hidden' : ''}`}>
           {groups.map((g) => {
             const pending = g.forms.filter((f) => f.status === 'verified_by_registrar').length
             const anyResub = g.forms.some((f) => f.resubmitted)
+            const selected = selectedKey === g.key
             return (
               <button
                 key={g.key}
                 onClick={() => setSelectedKey(g.key === selectedKey ? null : g.key)}
-                className={`ef-card w-full text-left rounded-xl shadow-sm p-4 transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${selectedKey === g.key ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
+                aria-current={selected ? 'true' : undefined}
+                className="w-full text-left px-4 py-3.5 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                style={selected ? { background: 'color-mix(in srgb, var(--sti-gold) 14%, transparent)' } : undefined}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -156,10 +161,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                   </button>
                 )}
                 {active.forms.map((f) => (
-                  <div key={f.id} className="ef-card rounded-xl shadow-sm p-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide ef-muted mb-2">
-                      {f.subject.subject_code} — {f.subject.subject_name}
-                    </p>
+                  <div key={f.id} className="ef-card rounded-xl shadow-sm p-5 sm:p-6">
                     <RequestReviewPanel
                       requestId={f.id}
                       studentName={f.student.full_name}
