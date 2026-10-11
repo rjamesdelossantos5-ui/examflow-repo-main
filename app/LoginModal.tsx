@@ -73,7 +73,9 @@ export default function LoginModal() {
     'ef-press w-full py-3 rounded-[4px] text-base font-semibold transition-colors hover:bg-[#F2F5FA]'
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    // Pinned near the top (not vertically centred), so the popup opens where
+    // the eye already is: at the header's Log in button.
+    <div className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-14 pb-4">
       <div className="ef-overlay absolute inset-0" style={{ background: 'rgba(0, 18, 46, 0.6)' }} onClick={close} aria-hidden />
 
       <div
