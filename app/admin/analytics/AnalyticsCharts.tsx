@@ -5,17 +5,15 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { Icon, type IconName } from '@/components/Icon'
-import { TERM_LABEL, SEMESTER_LABEL, type Term, type Semester } from '@/lib/examSettings'
 import type { ExamStatRow } from '@/lib/examAnalytics'
 
-type Dimension = 'department' | 'subject' | 'examType' | 'term'
+type Dimension = 'department' | 'subject' | 'examType'
 type ChartKind = 'pie' | 'bar'
 
 const DIMENSIONS: { value: Dimension; label: string }[] = [
   { value: 'department', label: 'Department' },
   { value: 'subject', label: 'Subject' },
   { value: 'examType', label: 'Exam Type' },
-  { value: 'term', label: 'Term' },
 ]
 
 // Categorical palette for chart fills — brand colors first, then a curated set
@@ -37,11 +35,6 @@ function keyFor(row: ExamStatRow, dim: Dimension): string {
     case 'department': return row.departmentName
     case 'subject': return `${row.subjectCode} — ${row.subjectName}`
     case 'examType': return row.examType === 'paid' ? 'Paid' : 'Excused'
-    case 'term': {
-      const sem = row.semester ? (SEMESTER_LABEL[row.semester as Semester] ?? row.semester) : null
-      const term = row.term ? (TERM_LABEL[row.term as Term] ?? row.term) : null
-      return [sem, term].filter(Boolean).join(' · ') || 'Unknown term'
-    }
   }
 }
 
