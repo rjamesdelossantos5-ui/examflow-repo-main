@@ -65,20 +65,29 @@ export default async function PaymentAssessmentPage() {
   const activePeriod = await getActivePeriodCached()
   const list = keepActive(rows ?? [], activePeriod?.id ?? null)
 
-  // One card per student, not per request: the Registrar assesses a person's
-  // whole bill, and a student with three subjects is one trip to the Cashier.
-  const byStudent = new Map<string, StudentAssessment>()
+  // One row per bill, not per request: the Registrar assesses a person's
+  // subjects together, and a student with three subjects is one trip to the
+  // Cashier. Everything a student still has awaiting assessment is one bill;
+  // each past assessment is its own bill, with its own date and amount (the
+  // action stamps a bill's subjects with one timestamp). Subjects the Program
+  // Head accepted on different days can be assessed on different days, so a
+  // student may have a row in each tab — a later subject must never be hidden
+  // behind an earlier one that is already assessed.
+  const byBill = new Map<string, StudentAssessment>()
   for (const r of list) {
     const studentId = r.student_id as string
+    const stamped = (r.payment_assessed_at as string | null | undefined) ?? null
+    const key = `${studentId}:${stamped ?? 'pending'}`
     const prof = r.profiles as unknown as {
       full_name: string; student_number: string | null; course: string | null
       year_level: number | null; section: string | null
     } | null
     const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null
 
-    let entry = byStudent.get(studentId)
+    let entry = byBill.get(key)
     if (!entry) {
       entry = {
+        key,
         studentId,
         name: prof?.full_name ?? '—',
         studentNumber: prof?.student_number ?? null,
@@ -86,9 +95,9 @@ export default async function PaymentAssessmentPage() {
         yearLevel: prof?.year_level ?? null,
         section: prof?.section ?? null,
         subjects: [],
-        assessedAt: null,
+        assessedAt: stamped,
       }
-      byStudent.set(studentId, entry)
+      byBill.set(key, entry)
     }
     entry.subjects.push({
       id: r.id as string,
@@ -96,13 +105,13 @@ export default async function PaymentAssessmentPage() {
       name: subj?.subject_name ?? '—',
       assessedFee: (r.assessed_fee as number | null | undefined) ?? null,
     })
-    // A student is "assessed" once any of their rows carries the stamp — the
-    // action stamps them all together, so they never disagree.
-    const stamped = (r.payment_assessed_at as string | null) ?? null
-    if (stamped) entry.assessedAt = stamped
   }
 
-  const students = [...byStudent.values()].sort((a, b) => a.name.localeCompare(b.name))
+  // By name; one student's bills together, oldest assessment first.
+  const students = [...byBill.values()].sort((a, b) =>
+    a.name.localeCompare(b.name)
+    || a.studentId.localeCompare(b.studentId)
+    || (a.assessedAt ?? '').localeCompare(b.assessedAt ?? ''))
 
   return <AssessmentList students={students} migrated={migrated} fee={fee} />
 }

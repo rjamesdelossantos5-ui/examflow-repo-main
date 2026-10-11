@@ -6,7 +6,11 @@ import { totalFee, formatPeso } from '@/lib/fees'
 import { ordinalYear } from '@/lib/ordinal'
 import { Icon } from '@/components/Icon'
 
+/** One bill: a student's subjects assessed together, or all of their subjects
+ *  still awaiting assessment. A student can have several (see page.tsx). */
 export interface StudentAssessment {
+  /** Unique per bill: the student plus the assessment stamp (or "pending"). */
+  key: string
   studentId: string
   name: string
   studentNumber: string | null
@@ -16,9 +20,9 @@ export interface StudentAssessment {
   /** assessedFee: the fee locked in when this student was assessed; null if
    *  not assessed yet (or assessed before migration_fee_setting.sql). */
   subjects: { id: string; code: string; name: string; assessedFee: number | null }[]
-  /** Set once the Registrar has totalled this student's fees and told the
-   *  Cashier. Null = still awaiting assessment, and the student cannot upload a
-   *  receipt yet. */
+  /** When the Registrar totalled this bill and told the Cashier. Null = still
+   *  awaiting assessment, and the student cannot upload a receipt for these
+   *  subjects yet. */
   assessedAt: string | null
 }
 
@@ -32,27 +36,29 @@ export default function AssessmentList({
   /** The current fee per subject, set by the admin. */
   fee: number
 }) {
+  /** Request ids assessed from this page, before the server data catches up. */
   const [done, setDone] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [busyKey, setBusyKey] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [tab, setTab] = useState<'pending' | 'assessed'>('pending')
   const [query, setQuery] = useState('')
 
-  function assess(studentId: string) {
+  function assess(bill: StudentAssessment) {
     setError(null)
-    setBusyId(studentId)
+    setBusyKey(bill.key)
     startTransition(async () => {
-      const res = await markPaymentAssessed(studentId, fee)
-      setBusyId(null)
+      const res = await markPaymentAssessed(bill.studentId, fee)
+      setBusyKey(null)
       if (res.error) { setError(res.error); return }
       // Move the row locally so it drops out of the pending tab immediately,
-      // rather than waiting for a revalidate round-trip.
-      setDone((s) => new Set(s).add(studentId))
+      // rather than waiting for a revalidate round-trip. Tracked by request,
+      // not by student, so a subject accepted later still shows as awaiting.
+      setDone((s) => new Set([...s, ...bill.subjects.map((sub) => sub.id)]))
     })
   }
 
-  const isAssessed = (s: StudentAssessment) => !!s.assessedAt || done.has(s.studentId)
+  const isAssessed = (s: StudentAssessment) => !!s.assessedAt || s.subjects.every((sub) => done.has(sub.id))
   const pending = students.filter((s) => !isAssessed(s))
   const assessed = students.filter(isAssessed)
 
@@ -149,7 +155,7 @@ export default function AssessmentList({
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {list.map((s) => (
-                <tr key={s.studentId} className="align-top">
+                <tr key={s.key} className="align-top">
                   <td className="px-4 py-3">
                     <div className="font-medium" style={{ color: 'var(--card-foreground)' }}>{s.name}</div>
                     <div className="text-xs ef-muted tabular-nums">{s.studentNumber ?? '—'}</div>
@@ -178,12 +184,12 @@ export default function AssessmentList({
                     {tab === 'pending' ? (
                       <button
                         type="button"
-                        onClick={() => assess(s.studentId)}
+                        onClick={() => assess(s)}
                         disabled={!migrated || isPending}
                         className="ef-press px-3.5 py-2 rounded-lg font-semibold text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                       >
-                        {busyId === s.studentId ? 'Recording…' : 'Mark assessed'}
+                        {busyKey === s.key ? 'Recording…' : 'Mark assessed'}
                       </button>
                     ) : (
                       <span className="ef-muted tabular-nums">

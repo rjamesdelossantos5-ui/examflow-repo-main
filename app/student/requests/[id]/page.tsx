@@ -94,9 +94,14 @@ export default async function RequestDetailPage({
   const reverifyRequested = req.status === 'approved_by_teacher' && unconfirmed
   const pendingSubmission = unconfirmed && !reverifyRequested
 
-  // Paid requests only: the Cashier bills for every accepted subject at once, so
-  // the student needs the TOTAL, not this one request's fee. Counted here rather
-  // than in ReceiptUpload because that is a client component.
+  // Paid requests only: the Cashier bills the subjects the Registrar assessed
+  // together, so the student needs that bill's TOTAL, not this one request's
+  // fee. The bill is every subject carrying the same assessment stamp as this
+  // one — or, before this one is assessed, every subject still awaiting
+  // assessment (the Registrar assesses those together). Subjects accepted on
+  // different days can be on different bills, so a subject assessed on its own
+  // later is never counted into an earlier bill. Counted here rather than in
+  // ReceiptUpload because that is a client component.
   //
   // `assessed` defaults to TRUE when payment_assessed_at is absent — an
   // unmigrated database must not lock every student out of paying. The server
@@ -121,9 +126,11 @@ export default async function RequestDetailPage({
     amountDue = fee
     if (!paidErr) {
       const rows = (paidRows ?? []) as unknown as { payment_assessed_at: string | null; assessed_fee?: number | null }[]
-      paidSubjectCount = Math.max(1, rows.length)
-      assessed = !!(req.payment_assessed_at as string | null)
-      if (rows.length) amountDue = rows.reduce((sum, r) => sum + (r.assessed_fee ?? fee), 0)
+      const stamp = (req.payment_assessed_at as string | null) ?? null
+      const bill = rows.filter((r) => (r.payment_assessed_at ?? null) === stamp)
+      paidSubjectCount = Math.max(1, bill.length)
+      assessed = !!stamp
+      if (bill.length) amountDue = bill.reduce((sum, r) => sum + (r.assessed_fee ?? fee), 0)
     }
   }
 

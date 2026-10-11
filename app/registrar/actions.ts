@@ -129,9 +129,11 @@ export async function rejectRequest(requestId: string, reason: string) {
  *
  * This is the Registrar's SECOND touch of a paid request. The Program Head has
  * already accepted it; the Registrar now totals every accepted paid subject that
- * student has, passes the figure to the Cashier, and stamps them here. Until
- * that happens the student cannot upload a receipt — which is what stops them
- * paying for one subject when they owe for three.
+ * student has not been assessed for yet, passes the figure to the Cashier, and
+ * stamps them here with one timestamp — that is one bill. A subject the Program
+ * Head accepts later becomes a bill of its own. Until a subject is stamped the
+ * student cannot upload a receipt for it — which is what stops them paying for
+ * one subject when they owe for three.
  *
  * Deliberately takes a STUDENT, not a request. The Registrar assesses a person's
  * whole bill in one go; stamping subjects one at a time would let half a
