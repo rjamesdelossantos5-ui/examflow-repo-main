@@ -7,6 +7,7 @@ import SubmitButton from '@/components/SubmitButton'
 import { Icon } from '@/components/Icon'
 import { compressImage } from '@/lib/compressImage'
 import Select from '@/components/Select'
+import PrivacyNoticeSheet from '@/components/PrivacyNoticeSheet'
 import { withoutAccountTag } from '@/lib/initials'
 
 // One (subject + section → teacher) row. The student picks a subject, then a
@@ -109,6 +110,14 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const [attachError, setAttachError] = useState<string | null>(null)
   const closeConfirm = useCallback(() => setConfirming(false), [setConfirming])
   useEscapeKey(closeConfirm, confirming)
+
+  const consentRef = useRef<HTMLInputElement>(null)
+  const privacyLinkRef = useRef<HTMLAnchorElement>(null)
+  const [showPrivacy, setShowPrivacy] = useState(false)
+  const closePrivacy = useCallback(() => {
+    setShowPrivacy(false)
+    privacyLinkRef.current?.focus()
+  }, [setShowPrivacy])
 
   function openConfirm() {
     if (!submissionOpen) return
@@ -376,6 +385,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           <span className="flex gap-3 items-start">
             <span className="relative mt-0.5 w-6 h-6 shrink-0">
               <input
+                ref={consentRef}
                 type="checkbox"
                 name="privacy_consent"
                 value="yes"
@@ -407,12 +417,35 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               my parent or guardian&apos;s live ID and face check through Didit, and any medical document — for
               reviewing and scheduling this special exam, as described in the Privacy Notice. I may withdraw consent by
               removing this request while it is pending or rejected.{' '}
-              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 font-medium" style={{ color: 'var(--status-info)' }}>
+              {/* Opens the notice as a pop-up over the form. The href is the
+                  fallback if JavaScript hasn't loaded yet. */}
+              <a
+                ref={privacyLinkRef}
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-haspopup="dialog"
+                onClick={(e) => { e.preventDefault(); setShowPrivacy(true) }}
+                className="underline underline-offset-2 font-medium"
+                style={{ color: 'var(--status-info)' }}
+              >
                 Read the Privacy Notice
               </a>
             </span>
           </span>
         </label>
+
+        {/* Outside the <label>, so clicks inside the pop-up never toggle the box. */}
+        {showPrivacy && (
+          <PrivacyNoticeSheet
+            onClose={closePrivacy}
+            onAgree={() => {
+              if (consentRef.current) consentRef.current.checked = true
+              setShowPrivacy(false)
+              consentRef.current?.focus()
+            }}
+          />
+        )}
 
         <button
           type="button"

@@ -38,6 +38,8 @@
      same 200ms on the default curve. Pure timing — zero runtime cost. */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  /* iOS-like sheet curve (Ionic), for things that slide up from the bottom. */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .dark {
@@ -203,6 +205,28 @@ button:focus-visible,
   .ef-dialog { opacity: 0; transform: scale(0.96); }
 }
 
+/* ── Sheet (Privacy Notice on the submit form) ─────────────────
+   Phones: slides up from the bottom edge it is attached to, by its own
+   height (translateY 100%), on the drawer curve. From sm up it is a centred
+   dialog and enters like .ef-dialog. */
+.ef-sheet {
+  transform: translateY(0);
+  transition: transform 320ms var(--ease-drawer);
+}
+@starting-style {
+  .ef-sheet { transform: translateY(100%); }
+}
+@media (min-width: 40rem) {
+  .ef-sheet {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+  }
+  @starting-style {
+    .ef-sheet { opacity: 0; transform: scale(0.96); }
+  }
+}
+
 /* ── Row action menu (Users "⋯") ───────────────────────────────
    Grows out of the button it belongs to: from its top-right corner, or
    bottom-right when it opens upward. 0.96, never 0, and fast, because it is
@@ -238,6 +262,16 @@ button:focus-visible,
 
   /* The scroll cue is an arrow; it still reads as "scroll" standing still. */
   .ef-drift { animation: none; }
+
+  /* The sheet fades in place instead of sliding. */
+  .ef-sheet {
+    opacity: 1;
+    transform: none;
+    transition: opacity 150ms ease-out;
+  }
+  @starting-style {
+    .ef-sheet { opacity: 0; transform: none; }
+  }
 
   /* Tailwind gates `hover:` behind (hover: hover) on its own, but not behind
      reduced motion — so the lift/scale on cards still needs cancelling. */
