@@ -1,236 +1,143 @@
+/*
+ * Landing page — direction (impeccable, seed d4bfd451, revised by the user to
+ * text only)
+ * THESIS: Words do the work. No illustrations, cards or mock-ups; the page is
+ *   a short, plain notice a student reads in under a minute.
+ * OWN-WORLD: Flat STI navy field for the first screen, white ruled paper
+ *   below, navy ink, gold only for the Log in button. Archivo: wide for
+ *   headings, normal width for reading.
+ * STORY: A student who missed an exam learns what to prepare (parent with ID,
+ *   document, paper form) and the order of the steps, then logs in.
+ * FIRST VIEWPORT: Navy field; the headline, one sentence and the gold Log in
+ *   button, left-aligned.
+ */
+import { Archivo } from 'next/font/google'
 import LoginModal from './LoginModal'
-import { Icon, type IconName } from './../components/Icon'
+
+const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo' })
 
 const NAVY = '#002F6C'
 const GOLD = '#FDB913'
-const WHITE = '#ffffff'
-const SOFT = '#f4f7fb' // gentle tint so it's "not full white"
-// Matches the dashboard's content width + padding exactly.
+const ON_NAVY_SOFT = '#C9D6EA' // secondary text on navy, tinted from the hue
+const INK_SOFT = '#3D4F6E' // secondary text on paper
+const RULE = '#D5DCE6'
+// Matches the dashboard's content width + padding.
 const CONTAINER = 'max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8'
 
+const PREPARE = [
+  { title: 'Your STI Microsoft account', note: 'You log in to EXAMFLOW with it.' },
+  { title: 'Your parent or guardian, with a valid ID', note: 'They verify with a live face check and a photo of their ID, on your phone.' },
+  { title: 'For an excused exam: your document', note: 'Medical certificate, death certificate, or another supporting document. JPG, PNG or PDF, up to 5 MB.' },
+  { title: 'Time for one visit to the Registrar', note: 'The printed special exam form is collected there to finish your application.' },
+]
+
+const STEPS = [
+  { title: 'Fill the form', body: 'Pick the subject, then excused or paid. Attach your document if it is excused.' },
+  { title: 'Your parent or guardian verifies', body: 'They do the face and ID check. Then you press Submit.' },
+  { title: 'Three signatures, in order', body: 'The Registrar verifies, your teacher approves, the Program Head accepts. You can follow each one from your dashboard.' },
+  { title: 'Your exam is scheduled', body: 'Excused: right after the Program Head accepts. Paid: after you pay at the Cashier and your uploaded receipt is checked.' },
+  { title: 'Collect the printed form', body: 'Get it at the Registrar’s office.' },
+]
+
 export default function LandingPage() {
-  // Inline backgrounds (not Tailwind bg-* classes) so the app's dark-mode
-  // overrides never touch this public page — it always renders light.
+  // Inline colours (not bg-white / border / text-gray-* classes) so the app's
+  // dark-mode overrides never touch this public page; it always renders light.
   return (
-    <div style={{ background: WHITE, color: '#1e293b' }}>
-      {/* ───────── Nav ───────── */}
-      <header className="sticky top-0 z-50" style={{ background: NAVY, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
-        <div className={`${CONTAINER} h-16 flex items-center justify-between`}>
-          <span className="font-black text-xl tracking-tight text-white">
-            EXAM<span style={{ color: GOLD }}>FLOW</span>
-          </span>
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-blue-100/80">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#flow" className="hover:text-white transition-colors">How it works</a>
-            <a href="#reviewers" className="hover:text-white transition-colors">Who reviews</a>
+    <div className={`${archivo.variable} ef-landing`} style={{ background: '#FFFFFF', color: NAVY, fontFamily: 'var(--font-archivo), Arial, sans-serif' }}>
+      {/* ───────── First viewport: navy field + the slip ───────── */}
+      <section style={{ background: NAVY, color: '#FFFFFF' }}>
+        <header className={`${CONTAINER} h-16 flex items-center justify-between gap-4`}>
+          <div className="leading-none">
+            <span className="font-black text-lg" style={{ fontStretch: '115%' }}>
+              EXAM<span style={{ color: GOLD }}>FLOW</span>
+            </span>
+          </div>
+          <nav className="flex items-center gap-6 text-sm font-medium">
+            <a href="#prepare" className="hidden md:inline ef-landing-link" style={{ color: ON_NAVY_SOFT }}>Before you start</a>
+            <a href="#steps" className="hidden md:inline ef-landing-link" style={{ color: ON_NAVY_SOFT }}>How it works</a>
+            <a href="#login" className="ef-press px-4 py-2 rounded-[4px] font-semibold" style={{ background: GOLD, color: NAVY }}>
+              Log in
+            </a>
           </nav>
-          <a
-            href="#login"
-            className="px-5 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow transition-shadow duration-200 ease-[var(--ease-out)]"
-            style={{ background: GOLD, color: NAVY }}
-          >
-            Log In
-          </a>
+        </header>
+
+        <div className={`${CONTAINER} pt-16 pb-20 lg:pt-28 lg:pb-32`}>
+          <h1 className="font-extrabold leading-[0.98] text-balance" style={{ fontStretch: '125%', fontSize: 'clamp(2.6rem, 7vw, 5.5rem)', letterSpacing: '-0.03em' }}>
+            Missed an exam?
+          </h1>
+          <p className="mt-6 text-lg sm:text-xl leading-relaxed max-w-[44ch]" style={{ color: ON_NAVY_SOFT }}>
+            Request your special exam here. It goes to the Registrar, your teacher and your Program Head in order,
+            and you can follow every step from your phone.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+            <a href="#login" className="ef-press px-6 py-3.5 rounded-[4px] text-base font-bold" style={{ background: GOLD, color: NAVY }}>
+              Log in to start a request
+            </a>
+            <a href="#prepare" className="ef-landing-link text-base font-semibold" style={{ color: '#FFFFFF' }}>
+              What you need first
+            </a>
+          </div>
         </div>
-      </header>
+      </section>
 
-      {/* ───────── Hero (fills the whole first screen in navy) ───────── */}
-      <section
-        className="relative overflow-hidden flex items-center min-h-[calc(100vh-4rem)]"
-        style={{ background: `linear-gradient(160deg, ${NAVY} 0%, #013a85 55%, #024aa6 100%)` }}
-      >
-        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full blur-3xl opacity-30" style={{ background: GOLD }} />
-        <div className="absolute -bottom-32 -left-20 w-96 h-96 rounded-full blur-3xl opacity-20 bg-blue-400" />
-
-        <div className={`${CONTAINER} relative py-16 grid lg:grid-cols-2 gap-12 items-center w-full`}>
+      {/* ───────── Before you start ───────── */}
+      <section id="prepare" className="scroll-mt-4">
+        <div className={`${CONTAINER} py-20 lg:py-28 grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16`}>
           <div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-[1.1] mb-6">
-              Missed an exam?<br />
-              <span style={{ color: GOLD }}>Request it online.</span>
-            </h1>
-
-            <p className="text-lg text-blue-100/90 leading-relaxed mb-9 max-w-lg">
-              File your special exam request in minutes, upload your documents, and watch it move through your
-              registrar, teacher, and program head — all in real time. No lines, no lost forms.
+            <h2 className="font-extrabold leading-tight text-balance" style={{ fontStretch: '125%', fontSize: 'clamp(1.9rem, 3.6vw, 2.75rem)', letterSpacing: '-0.02em' }}>
+              Before you start
+            </h2>
+            <p className="mt-4 text-base leading-relaxed max-w-[40ch]" style={{ color: INK_SOFT }}>
+              Have these ready. The request can&apos;t be sent without your parent or guardian&apos;s check.
             </p>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <a
-                href="#login"
-                className="px-7 py-3.5 rounded-xl text-base font-bold shadow-lg hover:scale-[1.03] active:scale-95 transition-transform"
-                style={{ background: GOLD, color: NAVY }}
-              >
-                Log In to Request
-              </a>
-              <a href="#flow" className="px-6 py-3.5 rounded-xl text-base font-semibold text-white border border-white/25 hover:bg-white/10 transition-colors">
-                See how it works
-              </a>
-            </div>
           </div>
-
-          {/* Mock request card */}
-          <div className="relative">
-            <div className="rounded-2xl shadow-2xl p-6 max-w-sm mx-auto rotate-1 hover:rotate-0 transition-transform duration-300" style={{ background: WHITE }}>
-              <div className="flex items-center justify-between mb-4">
+          <ul style={{ borderTop: `2px solid ${NAVY}` }}>
+            {PREPARE.map((p) => (
+              <li key={p.title} className="flex gap-4 py-5" style={{ borderBottom: `1px solid ${RULE}` }}>
+                {/* An empty form checkbox: drawn, not a glyph */}
+                <span aria-hidden className="mt-1 w-5 h-5 shrink-0 rounded-[2px]" style={{ border: `2px solid ${NAVY}` }} />
                 <div>
-                  <p className="font-bold" style={{ color: NAVY }}>IT101 — Special Exam</p>
-                  <p className="text-xs text-slate-400">Submitted today</p>
+                  <p className="font-bold text-lg leading-snug">{p.title}</p>
+                  <p className="mt-1 text-base leading-relaxed max-w-[60ch]" style={{ color: INK_SOFT }}>{p.note}</p>
                 </div>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600">In review</span>
-              </div>
-              <div className="space-y-3">
-                {[
-                  ['Submitted', true],
-                  ['Verified by Registrar', true],
-                  ['Approved by Teacher', false],
-                  ['Accepted & Scheduled', false],
-                ].map(([label, done]) => (
-                  <div key={label as string} className="flex items-center gap-3">
-                    <span
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-2xs font-bold shrink-0"
-                      style={done ? { background: GOLD, color: NAVY } : { background: '#eef1f5', color: '#94a3b8' }}
-                    >
-                      {done ? '✓' : '•'}
-                    </span>
-                    <span className={`text-sm ${done ? 'font-medium text-slate-700' : 'text-slate-400'}`}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="hidden sm:block absolute -bottom-5 -left-3 rounded-xl shadow-xl px-4 py-3 -rotate-3" style={{ background: WHITE }}>
-              <p className="text-xs text-slate-400">Requirements</p>
-              <p className="text-sm font-semibold" style={{ color: NAVY }}>3 forms verified ✓</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll cue */}
-        <a href="#features" className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/60 hover:text-white transition-colors" aria-label="Scroll down">
-          <svg className="w-6 h-6 ef-drift" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
-        </a>
-      </section>
-
-      {/* ───────── Stat band ───────── */}
-      <section className="border-b border-slate-100" style={{ background: WHITE }}>
-        {/* Gold accent hairline bridges the navy hero into the white below */}
-        <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
-        <div className={`${CONTAINER} py-10 grid grid-cols-2 md:grid-cols-4 gap-6 text-center`}>
-          {[
-            ['Minutes', 'To submit a request'],
-            ['Real-time', 'Track every stage'],
-            ['Paperless', 'Upload, no printing'],
-            ['One place', 'All your requests'],
-          ].map(([big, small]) => (
-            <div key={big}>
-              <p className="text-2xl sm:text-3xl font-extrabold" style={{ color: NAVY }}>{big}</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">{small}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ───────── Features (soft tint) ───────── */}
-      <section id="features" className="scroll-mt-16" style={{ background: `radial-gradient(1000px 360px at 50% -10%, rgba(0,47,108,0.06), transparent), ${SOFT}` }}>
-        <div className={`${CONTAINER} py-20 sm:py-24`}>
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-4" style={{ background: 'rgba(253,185,19,0.18)', color: '#92710a' }}>Features</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>Everything you need in one form</h2>
-            <p className="text-slate-500 text-lg">From the moment you submit to the day your exam is scheduled.</p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: 'pencil', title: 'Submit online', body: 'Pick your subject, choose paid or excused, and attach your documents — all in one guided form.' },
-              { icon: 'chart', title: 'Track in real time', body: 'A clear progress tracker shows exactly which stage you’re at and what happens next.' },
-              { icon: 'upload', title: 'Upload your documents', body: 'Add your ID and certificates. Reviewers verify each file right in their dashboard.' },
-              { icon: 'list', title: 'Reviewed in order', body: 'Your request goes Registrar → Teacher → Program Head — nothing skipped, nothing lost.' },
-              { icon: 'receipt', title: 'Receipts & schedule', body: 'For paid exams, upload your payment receipt and get your final exam schedule once approved.' },
-              { icon: 'bell', title: 'Always know the status', body: 'See approvals, rejections, and the reason for each — no more chasing people for updates.' },
-            ].map((f) => (
-              <div key={f.title} className="rounded-2xl border border-slate-200/80 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-[box-shadow,translate] duration-200 ease-[var(--ease-out)]" style={{ background: WHITE }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,47,108,0.06)' }}>
-                  <Icon name={f.icon as IconName} className="w-6 h-6" style={{ color: NAVY }} />
-                </div>
-                <h3 className="font-bold text-lg mb-2" style={{ color: NAVY }}>{f.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{f.body}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
       {/* ───────── How it works ───────── */}
-      <section id="flow" className="scroll-mt-16" style={{ background: `radial-gradient(900px 320px at 50% 0%, rgba(0,47,108,0.04), transparent), ${WHITE}` }}>
-        <div className={`${CONTAINER} py-20 sm:py-24`}>
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-4" style={{ background: 'rgba(253,185,19,0.18)', color: '#92710a' }}>The process</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>What happens after you submit</h2>
-            <p className="text-slate-500 text-lg">Four clear steps from your request to a scheduled exam.</p>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { n: '1', t: 'You submit', d: 'Fill the form and upload your documents.' },
-              { n: '2', t: 'Registrar verifies', d: 'Checks your request and paperwork.' },
-              { n: '3', t: 'Teacher approves', d: 'Confirms the subject and your absence.' },
-              { n: '4', t: 'Program Head schedules', d: 'Accepts and sets your exam date.' },
-            ].map((s) => (
-              <div key={s.n} className="rounded-2xl border border-slate-200 shadow-sm p-6 text-center" style={{ background: WHITE }}>
-                <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center font-black text-lg" style={{ background: GOLD, color: NAVY }}>{s.n}</div>
-                <h3 className="font-bold mb-2" style={{ color: NAVY }}>{s.t}</h3>
-                <p className="text-sm text-slate-500">{s.d}</p>
-              </div>
+      <section id="steps" className="scroll-mt-4">
+        <div className={`${CONTAINER} pb-20 lg:pb-28`}>
+          <h2 className="font-extrabold leading-tight text-balance max-w-[18ch]" style={{ fontStretch: '125%', fontSize: 'clamp(1.9rem, 3.6vw, 2.75rem)', letterSpacing: '-0.02em' }}>
+            How your request moves
+          </h2>
+          {/* A real sequence, so the numbers carry information */}
+          <ol className="mt-12 grid gap-x-10 lg:grid-cols-5" style={{ borderTop: `2px solid ${NAVY}` }}>
+            {STEPS.map((s, i) => (
+              <li key={s.title} className="py-6 lg:pr-2" style={{ borderBottom: `1px solid ${RULE}` }}>
+                <span className="font-extrabold text-3xl tabular-nums" style={{ fontStretch: '125%', color: NAVY }}>{i + 1}</span>
+                <p className="mt-3 font-bold text-lg leading-snug">{s.title}</p>
+                <p className="mt-2 text-base leading-relaxed" style={{ color: INK_SOFT }}>{s.body}</p>
+              </li>
             ))}
-          </div>
-
-          {/* Required offline step — the online request doesn't replace the paper form */}
-          <div className="mt-8 rounded-2xl p-6 flex items-start gap-4" style={{ background: 'rgba(253,185,19,0.12)', border: '1px solid rgba(253,185,19,0.45)' }}>
-            <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ background: GOLD, color: NAVY }}>
-              <Icon name="building" className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold mb-1" style={{ color: NAVY }}>One more step at the Registrar</h3>
-              <p className="text-sm text-slate-600">
-                Submitting online doesn&apos;t replace the paper form. You still need to get the printed special-exam form from the <strong>Registrar&apos;s office</strong> and fill it out to complete your application — the same as the school&apos;s standard process.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ───────── Who reviews (soft tint) ───────── */}
-      <section id="reviewers" className="scroll-mt-16" style={{ background: `radial-gradient(1000px 360px at 50% -10%, rgba(0,47,108,0.06), transparent), ${SOFT}` }}>
-        <div className={`${CONTAINER} py-20 sm:py-24`}>
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-4" style={{ background: 'rgba(253,185,19,0.18)', color: '#92710a' }}>Who reviews</span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4" style={{ color: NAVY }}>Who reviews your request</h2>
-            <p className="text-slate-500 text-lg">Each reviewer has their own dashboard — you just track the progress.</p>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-            {[
-              { icon: 'building', role: 'Registrar', note: 'Verifies your submission' },
-              { icon: 'check', role: 'Teacher', note: 'Approves the subject exam' },
-              { icon: 'user', role: 'Program Head', note: 'Accepts & schedules it' },
-            ].map((r) => (
-              <div key={r.role} className="rounded-2xl border border-slate-200 shadow-sm p-6 text-center" style={{ background: WHITE }}>
-                <div className="w-11 h-11 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: 'rgba(0,47,108,0.06)' }}>
-                  <Icon name={r.icon as IconName} className="w-5 h-5" style={{ color: NAVY }} />
-                </div>
-                <p className="font-bold" style={{ color: NAVY }}>{r.role}</p>
-                <p className="text-xs text-slate-500 mt-1">{r.note}</p>
-              </div>
-            ))}
+          </ol>
+          <div className="mt-12">
+            <a href="#login" className="ef-press inline-block px-6 py-3.5 rounded-[4px] text-base font-bold" style={{ background: NAVY, color: '#FFFFFF' }}>
+              Log in to start a request
+            </a>
           </div>
         </div>
       </section>
 
       {/* ───────── Footer ───────── */}
-      <footer className="border-t border-slate-100" style={{ background: WHITE }}>
-        <div className={`${CONTAINER} py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-400`}>
-          <span className="font-black" style={{ color: NAVY }}>EXAM<span style={{ color: GOLD }}>FLOW</span></span>
-          <span>&copy; {new Date().getFullYear()} EXAMFLOW · Special Exam Request System</span>
+      <footer style={{ borderTop: `1px solid ${RULE}` }}>
+        <div className={`${CONTAINER} py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm`} style={{ color: INK_SOFT }}>
+          <span>
+            <span className="font-black" style={{ color: NAVY, fontStretch: '115%' }}>EXAM<span style={{ color: '#8A6500' }}>FLOW</span></span>
+            <span className="ml-3">Special exam requests, STI College Sta. Maria</span>
+          </span>
+          <a href="/privacy" className="ef-landing-link" style={{ color: NAVY }}>Privacy notice</a>
         </div>
       </footer>
 

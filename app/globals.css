@@ -260,6 +260,27 @@ button:focus-visible,
 }
 .ef-toast { animation: ef-toast-in 0.25s var(--ease-out); }
 
+/* ── Landing page (app/page.tsx, app/RoutingSlip.tsx) ─────────
+   Scoped to .ef-landing so nothing here reaches the dashboards. */
+.ef-landing ::selection { background: var(--sti-gold); color: var(--sti-navy); }
+
+/* Links underline like ink on a form; offset keeps descenders clear. */
+.ef-landing-link {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: text-decoration-thickness 150ms var(--ease-out);
+}
+.ef-landing-link:hover { text-decoration-thickness: 2px; }
+
+/* The global gold focus ring is invisible on white paper; navy there. */
+.ef-landing #prepare a:focus-visible,
+.ef-landing #steps a:focus-visible,
+.ef-landing footer a:focus-visible {
+  outline: 2px solid var(--sti-navy);
+  outline-offset: 2px;
+}
+
 /* Scroll cue drift. Replaces Tailwind's `animate-bounce`, whose squash-and-
    stretch keyframes read as dated and toy-like. This travels a short distance
    on the strong in-out curve, so it decelerates at both ends the way a real
