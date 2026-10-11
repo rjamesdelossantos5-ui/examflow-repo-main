@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import { readSchoolData, PEOPLE_CHUNK_SIZE, type SchoolData, type Issue } from '@/lib/schoolData'
 import { importStructure, importPeopleChunk, importClasses, stageImport, discardStagedImport, type PersonInput } from './actions'
 import type { ImportReview, ReviewItem } from './review'
+import { Icon } from '@/components/Icon'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const card = 'ef-card rounded-xl shadow-sm p-5 sm:p-6 space-y-4'
@@ -138,8 +139,8 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
   const pct = progress ? Math.round((progress.done / Math.max(progress.total, 1)) * 100) : 0
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
+    <div className="space-y-6">
+      <div className="max-w-3xl">
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>School Data</h2>
         <p className="text-sm ef-muted mt-1">
           Upload one Excel file with the school&apos;s departments, programs, staff, students and classes. Students then
@@ -154,34 +155,52 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
         </div>
       )}
 
-      <section className={card}>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
-          {counts.map(([label, n]) => (
-            <div key={label} className="rounded-lg border ef-border px-2 py-2.5">
-              <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--card-foreground)' }}>{n}</p>
-              <p className="text-2xs ef-muted">{label}</p>
-            </div>
-          ))}
-        </div>
-        <div>
-          <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Upload the school data file</h3>
-          <p className="text-2xs sm:text-xs ef-muted mt-1">
-            Five sheets: <code>Departments</code>, <code>Programs</code>, <code>Staff</code>, <code>Students</code>,{' '}
-            <code>Classes</code>. Every sheet is checked against the others, then you review what would change before
-            anything is saved.
-          </p>
-        </div>
-        <input
-          key={inputKey}
-          type="file"
-          accept=".xlsx"
-          onChange={handleFile}
-          disabled={isPending}
-          aria-label="Choose the school data Excel file"
-          className="block w-full text-sm ef-muted file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:cursor-pointer file:bg-[var(--sti-gold)] file:text-[var(--sti-navy)]"
-        />
-        {fileError && <p role="alert" className="text-xs" style={{ color: 'var(--status-danger)' }}>{fileError}</p>}
-      </section>
+      {/* Upload on the left (the task), what's in the system now on the right. */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+        <section className={card}>
+          <div>
+            <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Upload the school data file</h3>
+            <p className="text-sm ef-muted mt-1">
+              Five sheets: <code>Departments</code>, <code>Programs</code>, <code>Staff</code>, <code>Students</code>,{' '}
+              <code>Classes</code>. Every sheet is checked against the others, then you review what would change before
+              anything is saved.
+            </p>
+          </div>
+          {/* The whole area is the file picker: a bigger target than the bare
+              "Choose File" button, and it shows which file is loaded. */}
+          <label
+            className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed ef-border px-6 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-[var(--sti-gold)] ${isPending ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'}`}
+          >
+            <Icon name="upload" className="w-7 h-7" style={{ color: 'var(--sti-gold)' }} />
+            <span className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>
+              {fileName ? fileName : 'Choose the Excel file'}
+            </span>
+            <span className="text-xs ef-muted">{fileName ? 'Click to choose a different file' : '.xlsx only'}</span>
+            <input
+              key={inputKey}
+              type="file"
+              accept=".xlsx"
+              onChange={handleFile}
+              disabled={isPending}
+              aria-label="Choose the school data Excel file"
+              className="sr-only"
+            />
+          </label>
+          {fileError && <p role="alert" className="text-xs" style={{ color: 'var(--status-danger)' }}>{fileError}</p>}
+        </section>
+
+        <aside className={card} aria-label="Currently in the system">
+          <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>In the system now</h3>
+          <dl className="divide-y ef-border">
+            {counts.map(([label, n]) => (
+              <div key={label} className="flex items-baseline justify-between py-2">
+                <dt className="text-sm ef-muted">{label}</dt>
+                <dd className="text-sm font-semibold tabular-nums" style={{ color: 'var(--card-foreground)' }}>{n}</dd>
+              </div>
+            ))}
+          </dl>
+        </aside>
+      </div>
 
       {data && (
         <section className={card}>
