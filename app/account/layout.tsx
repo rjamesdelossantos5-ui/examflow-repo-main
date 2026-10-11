@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
-import { NAV_BY_ROLE } from '@/lib/nav'
 import { getNotifications } from '@/lib/notifications'
 import type { UserRole } from '@/lib/supabase/types'
 
@@ -20,8 +19,10 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const role = profile.role as UserRole
   const notifications = await getNotifications(supabase, user.id, role)
 
+  // No tabs: My Account is a personal page (it has "Back to dashboard" and
+  // the name menu), and a copy of each role's menu here went out of date.
   return (
-    <DashboardLayout role={role} userName={profile.full_name} email={profile.email} navItems={NAV_BY_ROLE[role] ?? []} notifications={notifications}>
+    <DashboardLayout role={role} userName={profile.full_name} email={profile.email} navItems={[]} notifications={notifications}>
       {children}
     </DashboardLayout>
   )
