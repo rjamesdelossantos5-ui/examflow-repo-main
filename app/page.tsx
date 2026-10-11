@@ -1,15 +1,15 @@
 /*
  * Landing page — direction (impeccable, seed d4bfd451, revised by the user to
- * text only)
+ * text only, light)
  * THESIS: Words do the work. No illustrations, cards or mock-ups; the page is
  *   a short, plain notice a student reads in under a minute.
- * OWN-WORLD: Flat STI navy field for the first screen, white ruled paper
- *   below, navy ink, gold only for the Log in button. Archivo: wide for
- *   headings, normal width for reading.
+ * OWN-WORLD: Navy nav bar (the same bar the dashboards use) over cool
+ *   off-white and white paper, navy ink, hairline rules; gold only on the
+ *   nav's Log in. Archivo: wide for headings, normal width for reading.
  * STORY: A student who missed an exam learns what to prepare (parent with ID,
  *   document, paper form) and the order of the steps, then logs in.
- * FIRST VIEWPORT: Navy field; the headline, one sentence and the gold Log in
- *   button, left-aligned.
+ * FIRST VIEWPORT: Navy nav bar; on cool off-white the headline, one sentence
+ *   and the navy Log in button, left-aligned, revealed once on load.
  */
 import { Archivo } from 'next/font/google'
 import LoginModal from './LoginModal'
@@ -21,6 +21,9 @@ const GOLD = '#FDB913'
 const ON_NAVY_SOFT = '#C9D6EA' // secondary text on navy, tinted from the hue
 const INK_SOFT = '#3D4F6E' // secondary text on paper
 const RULE = '#D5DCE6'
+// Cool off-white (blue-grey, never cream) for the first screen and the steps;
+// pure white between them.
+const PAPER_COOL = '#F5F7FA'
 // Matches the dashboard's content width + padding.
 const CONTAINER = 'max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8'
 
@@ -39,41 +42,49 @@ const STEPS = [
   { title: 'Collect the printed form', body: 'Get it at the Registrar’s office.' },
 ]
 
+const H2_STYLE = { fontStretch: '125%', fontSize: 'clamp(1.9rem, 3.6vw, 2.75rem)', letterSpacing: '-0.02em' } as const
+
 export default function LandingPage() {
   // Inline colours (not bg-white / border / text-gray-* classes) so the app's
   // dark-mode overrides never touch this public page; it always renders light.
   return (
     <div className={`${archivo.variable} ef-landing`} style={{ background: '#FFFFFF', color: NAVY, fontFamily: 'var(--font-archivo), Arial, sans-serif' }}>
-      {/* ───────── First viewport: navy field + the slip ───────── */}
-      <section style={{ background: NAVY, color: '#FFFFFF' }}>
-        <header className={`${CONTAINER} h-16 flex items-center justify-between gap-4`}>
-          <div className="leading-none">
-            <span className="font-black text-lg" style={{ fontStretch: '115%' }}>
-              EXAM<span style={{ color: GOLD }}>FLOW</span>
-            </span>
-          </div>
-          <nav className="flex items-center gap-6 text-sm font-medium">
+      {/* ───────── Nav: the dashboards' navy bar ───────── */}
+      <header className="sticky top-0 z-50" style={{ background: NAVY, color: '#FFFFFF' }}>
+        <div className={`${CONTAINER} h-16 flex items-center justify-between gap-4`}>
+          <span className="font-black text-lg leading-none" style={{ fontStretch: '115%' }}>
+            EXAM<span style={{ color: GOLD }}>FLOW</span>
+          </span>
+          <nav className="flex items-center gap-8 lg:gap-10 text-sm font-medium">
             <a href="#prepare" className="hidden md:inline ef-landing-link" style={{ color: ON_NAVY_SOFT }}>Before you start</a>
             <a href="#steps" className="hidden md:inline ef-landing-link" style={{ color: ON_NAVY_SOFT }}>How it works</a>
             <a href="#login" className="ef-press px-4 py-2 rounded-[4px] font-semibold" style={{ background: GOLD, color: NAVY }}>
               Log in
             </a>
           </nav>
-        </header>
+        </div>
+      </header>
 
-        <div className={`${CONTAINER} pt-16 pb-20 lg:pt-28 lg:pb-32`}>
-          <h1 className="font-extrabold leading-[0.98] text-balance" style={{ fontStretch: '125%', fontSize: 'clamp(2.6rem, 7vw, 5.5rem)', letterSpacing: '-0.03em' }}>
+      {/* ───────── First viewport ───────── */}
+      <section style={{ background: PAPER_COOL }}>
+        <div className={`${CONTAINER} pt-20 pb-24 lg:pt-32 lg:pb-36`}>
+          <h1
+            className="ef-reveal font-extrabold leading-[0.98] text-balance"
+            // marginLeft: optical alignment. At this size the M's built-in side
+            // space pushes it visibly right of the text below; pull it back.
+            style={{ fontStretch: '125%', fontSize: 'clamp(2.6rem, 7vw, 5.5rem)', letterSpacing: '-0.03em', marginLeft: '-0.04em' }}
+          >
             Missed an exam?
           </h1>
-          <p className="mt-6 text-lg sm:text-xl leading-relaxed max-w-[44ch]" style={{ color: ON_NAVY_SOFT }}>
+          <p className="ef-reveal mt-6 text-lg sm:text-xl leading-relaxed max-w-[44ch]" style={{ color: INK_SOFT, animationDelay: '90ms' }}>
             Request your special exam here. It goes to the Registrar, your teacher and your Program Head in order,
             and you can follow every step from your phone.
           </p>
-          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <a href="#login" className="ef-press px-6 py-3.5 rounded-[4px] text-base font-bold" style={{ background: GOLD, color: NAVY }}>
+          <div className="ef-reveal mt-10 flex flex-wrap items-center gap-x-6 gap-y-4" style={{ animationDelay: '180ms' }}>
+            <a href="#login" className="ef-press px-6 py-3.5 rounded-[4px] text-base font-bold" style={{ background: NAVY, color: '#FFFFFF' }}>
               Log in to start a request
             </a>
-            <a href="#prepare" className="ef-landing-link text-base font-semibold" style={{ color: '#FFFFFF' }}>
+            <a href="#prepare" className="ef-landing-link text-base font-semibold" style={{ color: NAVY }}>
               What you need first
             </a>
           </div>
@@ -81,10 +92,10 @@ export default function LandingPage() {
       </section>
 
       {/* ───────── Before you start ───────── */}
-      <section id="prepare" className="scroll-mt-4">
+      <section id="prepare" className="scroll-mt-16" style={{ borderTop: `1px solid ${RULE}` }}>
         <div className={`${CONTAINER} py-20 lg:py-28 grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16`}>
           <div>
-            <h2 className="font-extrabold leading-tight text-balance" style={{ fontStretch: '125%', fontSize: 'clamp(1.9rem, 3.6vw, 2.75rem)', letterSpacing: '-0.02em' }}>
+            <h2 className="font-extrabold leading-tight text-balance" style={H2_STYLE}>
               Before you start
             </h2>
             <p className="mt-4 text-base leading-relaxed max-w-[40ch]" style={{ color: INK_SOFT }}>
@@ -107,9 +118,9 @@ export default function LandingPage() {
       </section>
 
       {/* ───────── How it works ───────── */}
-      <section id="steps" className="scroll-mt-4">
-        <div className={`${CONTAINER} pb-20 lg:pb-28`}>
-          <h2 className="font-extrabold leading-tight text-balance max-w-[18ch]" style={{ fontStretch: '125%', fontSize: 'clamp(1.9rem, 3.6vw, 2.75rem)', letterSpacing: '-0.02em' }}>
+      <section id="steps" className="scroll-mt-16" style={{ background: PAPER_COOL, borderTop: `1px solid ${RULE}` }}>
+        <div className={`${CONTAINER} py-20 lg:py-28`}>
+          <h2 className="font-extrabold leading-tight text-balance max-w-[18ch]" style={H2_STYLE}>
             How your request moves
           </h2>
           {/* A real sequence, so the numbers carry information */}

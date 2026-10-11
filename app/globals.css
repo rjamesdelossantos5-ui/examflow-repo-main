@@ -274,12 +274,26 @@ button:focus-visible,
 .ef-landing-link:hover { text-decoration-thickness: 2px; }
 
 /* The global gold focus ring is invisible on white paper; navy there. */
-.ef-landing #prepare a:focus-visible,
-.ef-landing #steps a:focus-visible,
+.ef-landing section a:focus-visible,
 .ef-landing footer a:focus-visible,
 .ef-landing [role='dialog'] button:focus-visible {
   outline: 2px solid var(--sti-navy);
   outline-offset: 2px;
+}
+
+/* The landing page's one authored moment: the first screen's headline,
+   sentence and button rise into place once, on load. A clip from the bottom
+   plus a 4px blur that clears as it settles reads as text coming into focus.
+   Explanatory motion, so a little longer than UI motion; strong ease-out so
+   the movement is visible at once. Fill mode is backwards, not both, so the
+   clip is dropped when the animation ends and never crops a focus ring. */
+.ef-reveal { animation: ef-reveal 640ms var(--ease-out) backwards; }
+@keyframes ef-reveal {
+  from { opacity: 0; transform: translateY(14px); clip-path: inset(0 0 100% 0); filter: blur(4px); }
+  to   { opacity: 1; transform: none; clip-path: inset(0 0 0 0); filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ef-reveal { animation: ef-fade-in 0.3s ease-out both; }
 }
 
 /* Scroll cue drift. Replaces Tailwind's `animate-bounce`, whose squash-and-
