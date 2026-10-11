@@ -7,6 +7,7 @@ import Select from '@/components/Select'
 import SearchInput from '@/components/SearchInput'
 import { Icon } from '@/components/Icon'
 import { useEscapeKey } from '@/lib/useEscapeKey'
+import { initials } from '@/lib/initials'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
@@ -16,8 +17,22 @@ const ROLE_LABELS: Record<string, string> = {
   student: 'Student',
 }
 
-/** The order the per-role tables appear in on the Users page. */
+/** The order roles are listed in: the filter menu, and the table's sort. */
 const ROLE_ORDER: string[] = ['admin', 'registrar', 'program_head', 'subject_teacher', 'student']
+
+/**
+ * One hue per role, used only as a light tint (avatar and role pill) with the
+ * normal text colour on top, so it reads in light and dark mode alike. The
+ * colour is a second cue; the role is always written out too.
+ */
+const ROLE_HUE: Record<string, string> = {
+  admin: '#FDB913',
+  registrar: '#3B82F6',
+  program_head: '#8B5CF6',
+  subject_teacher: '#10B981',
+  student: '#64748B',
+}
+const tint = (role: string, pct: number) => `color-mix(in srgb, ${ROLE_HUE[role] ?? '#64748B'} ${pct}%, transparent)`
 
 /** One class a teacher teaches: a subject in a section. */
 export interface TeacherClass {
@@ -31,7 +46,18 @@ export interface TeacherClass {
  * too, since touch screens have no hover. Kept here rather than changing the
  * shared Select, which every other dropdown uses.
  */
-function RoleFilterMenu({ value, onChange }: { value: string; onChange: (role: string) => void }) {
+function RoleFilterMenu({
+  value,
+  onChange,
+  counts,
+  total,
+}: {
+  value: string
+  onChange: (role: string) => void
+  /** How many accounts each role has, shown beside its name. */
+  counts: Record<string, number>
+  total: number
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const close = useCallback(() => setOpen(false), [])
@@ -46,7 +72,10 @@ function RoleFilterMenu({ value, onChange }: { value: string; onChange: (role: s
     return () => document.removeEventListener('mousedown', onDown)
   }, [])
 
-  const options = [{ value: '', label: 'All roles' }, ...ROLE_ORDER.map((r) => ({ value: r, label: ROLE_LABELS[r] }))]
+  const options = [
+    { value: '', label: `All roles (${total})` },
+    ...ROLE_ORDER.map((r) => ({ value: r, label: `${ROLE_LABELS[r]} (${counts[r] ?? 0})` })),
+  ]
   const selected = options.find((o) => o.value === value) ?? options[0]
 
   return (
@@ -57,7 +86,7 @@ function RoleFilterMenu({ value, onChange }: { value: string; onChange: (role: s
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Filter by role"
-        className="w-44 rounded-lg px-3 py-2 text-sm border ef-border flex items-center justify-between text-left"
+        className="w-52 rounded-lg px-3 py-2 text-sm border ef-border flex items-center justify-between text-left"
         style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
       >
         <span>{selected.label}</span>
@@ -66,7 +95,7 @@ function RoleFilterMenu({ value, onChange }: { value: string; onChange: (role: s
       {open && (
         // pt-1 (not mt-1) so the gap under the button is still part of this
         // element — moving the mouse down to the list doesn't close it.
-        <div className="absolute z-30 top-full left-0 w-44 pt-1">
+        <div className="absolute z-30 top-full left-0 w-52 pt-1">
           <ul role="listbox" className="rounded-lg shadow-lg ef-card overflow-hidden" style={{ border: '1px solid var(--border)' }}>
             {options.map((o) => (
               <li key={o.value}>
@@ -90,6 +119,96 @@ function RoleFilterMenu({ value, onChange }: { value: string; onChange: (role: s
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * A row's actions behind one "⋯" button. The list is position: fixed (placed
+ * from the button's on-screen box) so the table's horizontal-scroll wrapper
+ * can't clip it, and it opens upward when the row is near the bottom.
+ */
+function RowMenu({
+  label,
+  items,
+}: {
+  label: string
+  items: { label: string; onSelect: () => void; danger?: boolean; disabled?: boolean; title?: string }[]
+}) {
+  const [pos, setPos] = useState<{ right: number; top?: number; bottom?: number } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const close = useCallback(() => setPos(null), [])
+  useEscapeKey(close, !!pos)
+
+  useEffect(() => {
+    if (!pos) return
+    function onDown(e: MouseEvent) {
+      const t = e.target as Node
+      if (!menuRef.current?.contains(t) && !btnRef.current?.contains(t)) setPos(null)
+    }
+    // The menu is pinned to where the button was; a scroll or resize would
+    // leave it floating in the wrong place, so close it instead.
+    document.addEventListener('mousedown', onDown)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [pos, close])
+
+  function toggle() {
+    if (pos) return setPos(null)
+    const r = btnRef.current?.getBoundingClientRect()
+    if (!r) return
+    const right = window.innerWidth - r.right
+    const roomBelow = window.innerHeight - r.bottom
+    setPos(roomBelow < 180 ? { right, bottom: window.innerHeight - r.top + 4 } : { right, top: r.bottom + 4 })
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={!!pos}
+        aria-label={`Actions for ${label}`}
+        className="w-8 h-8 grid place-items-center rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+        style={{ color: 'var(--card-foreground)' }}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+          <circle cx="3" cy="8" r="1.5" />
+          <circle cx="8" cy="8" r="1.5" />
+          <circle cx="13" cy="8" r="1.5" />
+        </svg>
+      </button>
+      {pos && (
+        <div
+          ref={menuRef}
+          role="menu"
+          className={`ef-menu fixed z-40 w-44 rounded-lg ef-card py-1 shadow-lg ${pos.bottom !== undefined ? 'ef-menu-up' : ''}`}
+          style={{ top: pos.top, bottom: pos.bottom, right: pos.right }}
+        >
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              role="menuitem"
+              disabled={it.disabled}
+              title={it.title}
+              onClick={() => { setPos(null); it.onSelect() }}
+              className="w-full text-left px-3 py-2 text-sm transition-colors hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-45 disabled:cursor-not-allowed"
+              style={{ color: it.danger ? 'var(--status-danger)' : 'var(--card-foreground)' }}
+            >
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
   )
 }
 
@@ -215,14 +334,17 @@ export default function UserTable({
       (!q || [u.full_name, u.email, u.student_number, u.section].some((v) => (v ?? '').toLowerCase().includes(q))),
     )
   }, [users, query, roleFilter])
-  // The visible users split into one table per role. A role not in ROLE_ORDER
-  // still gets its own table at the end, so no account is ever hidden.
-  const groups = useMemo(() => {
-    const roles = [...ROLE_ORDER, ...new Set(visible.map((u) => u.role).filter((r) => !ROLE_ORDER.includes(r)))]
-    return roles
-      .map((role) => ({ role, label: ROLE_LABELS[role] ?? role, rows: visible.filter((u) => u.role === role) }))
-      .filter((g) => g.rows.length > 0)
+  // One table, sorted by role (ROLE_ORDER) and then by name, which the page
+  // already orders by. A role not in ROLE_ORDER sorts last; nobody is hidden.
+  const rows = useMemo(() => {
+    const rank = (r: string) => (ROLE_ORDER.includes(r) ? ROLE_ORDER.indexOf(r) : ROLE_ORDER.length)
+    return [...visible].sort((a, b) => rank(a.role) - rank(b.role))
   }, [visible])
+  const roleCounts = useMemo(() => {
+    const c: Record<string, number> = {}
+    for (const u of users) c[u.role] = (c[u.role] ?? 0) + 1
+    return c
+  }, [users])
   const [isPending, startTransition] = useTransition()
 
   const [newRole, setNewRole] = useState('')
@@ -507,101 +629,114 @@ export default function UserTable({
 
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <SearchInput value={query} onChange={setQuery} placeholder="Search name, email, student no. or section…" label="Search users" />
-        <RoleFilterMenu value={roleFilter} onChange={setRoleFilter} />
+        <RoleFilterMenu value={roleFilter} onChange={setRoleFilter} counts={roleCounts} total={users.length} />
         <span className="text-xs ef-muted tabular-nums">{visible.length} of {users.length}</span>
       </div>
 
-      {/* One table per role, in ROLE_ORDER; a role with no matching user is left out. */}
-      {visible.length === 0 && (
-        <div className="bg-white rounded-xl shadow px-4 py-8 text-center text-sm text-gray-400">
+      {visible.length === 0 ? (
+        <div className="ef-card rounded-xl px-4 py-8 text-center text-sm ef-muted">
           {users.length ? 'No user matches your search.' : 'No users found.'}
         </div>
-      )}
-      <div className="space-y-6">
-        {groups.map(({ role, label, rows }) => (
-          <section key={role} aria-labelledby={`role-${role}`}>
-            <h3 id={`role-${role}`} className="text-sm font-semibold text-gray-700 mb-2">
-              {label} <span className="font-normal text-gray-500 tabular-nums">({rows.length})</span>
-            </h3>
-            <div className="bg-white rounded-xl shadow overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {rows.map((u) => {
-              const teaches = classesByTeacher[u.id]?.length ?? 0
-              return (
-                <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">
-                    {u.role === 'subject_teacher' ? (
-                      <button
-                        type="button"
-                        onClick={() => setViewing(u)}
-                        className="text-left hover:underline underline-offset-2"
-                        title="See the subjects and sections they teach"
-                      >
-                        {u.full_name}
-                        <span className="block text-xs font-normal text-gray-500">
-                          {teaches ? `${teaches} class${teaches === 1 ? '' : 'es'}` : 'No classes'}
+      ) : (
+        <div className="ef-card rounded-xl overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b ef-border text-left text-xs font-semibold ef-muted">
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3 hidden md:table-cell">Email</th>
+                <th className="px-4 py-3 w-12"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y ef-border">
+              {rows.map((u) => {
+                const teaches = classesByTeacher[u.id]?.length ?? 0
+                const isMe = u.id === currentUserId
+                const blocked = removalBlocked(u)
+                return (
+                  <tr key={u.id} className="transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
+                    <td className="px-4 py-3">
+                      <div className={`flex items-center gap-3 ${u.is_active ? '' : 'opacity-60'}`}>
+                        <span
+                          aria-hidden
+                          className="w-9 h-9 shrink-0 rounded-full grid place-items-center text-xs font-bold"
+                          style={{ background: tint(u.role, 22), color: 'var(--card-foreground)' }}
+                        >
+                          {initials(u.full_name)}
                         </span>
-                      </button>
-                    ) : (
-                      u.full_name
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">{u.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {u.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 flex flex-wrap gap-2">
-                    <button
-                      onClick={() => openEdit(u)}
-                      disabled={isPending}
-                      className="text-xs px-2 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
-                    >
-                      Edit
-                    </button>
-                    {u.id === currentUserId ? (
-                      <span className="text-xs text-gray-500 self-center">This is you</span>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => handleToggle(u.id, u.is_active)}
-                          // Activating is always allowed; deactivating may be blocked.
-                          disabled={isPending || (u.is_active && !!removalBlocked(u))}
-                          title={u.is_active ? removalBlocked(u) ?? undefined : undefined}
-                          className="text-xs px-2 py-1 border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {u.is_active ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button
-                          onClick={() => { setDeleteError(null); setToDelete(u) }}
-                          disabled={isPending || !!removalBlocked(u)}
-                          title={removalBlocked(u) ?? undefined}
-                          className="text-xs px-2 py-1 border border-red-200 text-red-600 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-            </div>
-          </section>
-        ))}
-      </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            {u.role === 'subject_teacher' ? (
+                              <button
+                                type="button"
+                                onClick={() => setViewing(u)}
+                                className="text-left font-medium hover:underline underline-offset-2"
+                                style={{ color: 'var(--card-foreground)' }}
+                                title="See the subjects and sections they teach"
+                              >
+                                {u.full_name}
+                              </button>
+                            ) : (
+                              <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{u.full_name}</span>
+                            )}
+                            {isMe && <span className="text-xs ef-muted">(you)</span>}
+                            {/* No Status column: only the exception is marked. */}
+                            {!u.is_active && (
+                              <span className="text-2xs font-semibold px-1.5 py-0.5 rounded ef-muted" style={{ border: '1px solid var(--border)' }}>
+                                Inactive
+                              </span>
+                            )}
+                          </div>
+                          {u.role === 'subject_teacher' && (
+                            <p className="text-xs ef-muted">{teaches ? `${teaches} class${teaches === 1 ? '' : 'es'}` : 'No classes'}</p>
+                          )}
+                          {/* The Email column is hidden on phones; show it here instead. */}
+                          <p className="text-xs ef-muted break-all md:hidden">{u.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span
+                        className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{ background: tint(u.role, 14), color: 'var(--card-foreground)' }}
+                      >
+                        {ROLE_LABELS[u.role] ?? u.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 ef-muted hidden md:table-cell">{u.email}</td>
+                    <td className="px-2 py-3 text-right">
+                      <RowMenu
+                        label={u.full_name}
+                        items={[
+                          { label: 'Edit', onSelect: () => openEdit(u), disabled: isPending },
+                          ...(isMe
+                            ? []
+                            : [
+                                {
+                                  label: u.is_active ? 'Deactivate' : 'Activate',
+                                  onSelect: () => handleToggle(u.id, u.is_active),
+                                  // Activating is always allowed; deactivating may be blocked.
+                                  disabled: isPending || (u.is_active && !!blocked),
+                                  title: u.is_active ? blocked ?? undefined : undefined,
+                                },
+                                {
+                                  label: 'Delete',
+                                  danger: true,
+                                  onSelect: () => { setDeleteError(null); setToDelete(u) },
+                                  disabled: isPending || !!blocked,
+                                  title: blocked ?? undefined,
+                                },
+                              ]),
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

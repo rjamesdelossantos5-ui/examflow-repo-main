@@ -182,6 +182,21 @@ button:focus-visible,
   .ef-dialog { opacity: 0; transform: scale(0.96); }
 }
 
+/* ── Row action menu (Users "⋯") ───────────────────────────────
+   Grows out of the button it belongs to: from its top-right corner, or
+   bottom-right when it opens upward. 0.96, never 0, and fast, because it is
+   frequent UI motion, not a reveal. */
+.ef-menu {
+  transform-origin: top right;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+.ef-menu-up { transform-origin: bottom right; }
+@starting-style {
+  .ef-menu { opacity: 0; transform: scale(0.96); }
+}
+
 /* ── Reduced motion ────────────────────────────────────────────
    "Reduced" means gentler, not none: opacity changes still explain what
    happened, so they stay. Everything that MOVES is removed — dialog scale,
