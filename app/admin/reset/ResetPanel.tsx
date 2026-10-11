@@ -116,8 +116,8 @@ export default function ResetPanel() {
   const armed = !!mode && typed.trim().toUpperCase() === CONFIRM_WORD[mode] && !!preview && !isPending
 
   return (
-    <div className="max-w-lg space-y-6">
-      <div>
+    <div className="space-y-6">
+      <div className="max-w-2xl">
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Reset test data</h2>
         <p className="text-sm ef-muted">
           Start a test or demo run from nothing. Pick how much to remove.
@@ -141,11 +141,13 @@ export default function ResetPanel() {
         </div>
       )}
 
-      <div className="ef-card rounded-xl shadow-sm p-6 space-y-4 border-2" style={{ borderColor: 'var(--status-danger)' }}>
+      {/* The two resets side by side on wide screens; buttons line up at the bottom. */}
+      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="ef-card rounded-xl shadow-sm p-6 flex flex-col gap-4 border-2" style={{ borderColor: 'var(--status-danger)' }}>
         <div>
           <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>Delete all requests</h3>
           <p className="text-sm ef-muted mt-1">
-            Removes every request, its activity log, and every file uploaded with it — receipts, signatures and supporting documents.
+            Removes every request, its activity log, and every file uploaded with it — receipts and supporting documents.
           </p>
         </div>
 
@@ -159,14 +161,14 @@ export default function ResetPanel() {
         <button
           type="button"
           onClick={() => openDialog('requests')}
-          className="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
+          className="ef-press mt-auto self-start px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
           style={{ backgroundColor: 'var(--status-danger)' }}
         >
           Reset test data…
         </button>
       </div>
 
-      <div className="ef-card rounded-xl shadow-sm p-6 space-y-4 border-2" style={{ borderColor: 'var(--status-danger)' }}>
+      <div className="ef-card rounded-xl shadow-sm p-6 flex flex-col gap-4 border-2" style={{ borderColor: 'var(--status-danger)' }}>
         <div>
           <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>Clear school data</h3>
           <p className="text-sm ef-muted mt-1">
@@ -187,11 +189,12 @@ export default function ResetPanel() {
         <button
           type="button"
           onClick={() => openDialog('school')}
-          className="px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
+          className="ef-press mt-auto self-start px-6 py-2.5 rounded-lg font-semibold text-sm text-white"
           style={{ backgroundColor: 'var(--status-danger)' }}
         >
           Clear school data…
         </button>
+      </div>
       </div>
 
       {mode && (
