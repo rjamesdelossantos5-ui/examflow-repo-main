@@ -21,14 +21,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ])
 
   if (!profile || profile.role !== 'admin') redirect('/login')
+  // Ordered by how often the admin uses each tab, most used first.
   const nav = [
+    // Every form at every step; each opens on the Registrar, Teacher or Program
+    // Head page where that step is done, which the admin may act on directly.
+    // First tab and the admin's home (app/admin/page.tsx).
+    { label: 'Requests', href: '/admin/requests', icon: 'inbox' as const, badge: waiting },
     { label: 'Analytics', href: '/admin/analytics', icon: 'chart' as const },
+    // The same Exam Periods form as the Program Head's: term, submission
+    // window and exam date. Checked every term.
+    { label: 'Exam Periods', href: '/admin/exam-periods', icon: 'calendar' as const },
     { label: 'Users', href: '/admin/users', icon: 'users' as const },
-    // Who signed in and when, last 90 days (supabase/migration_login_history.sql).
-    { label: 'Login History', href: '/admin/login-history', icon: 'history' as const },
     { label: 'Subjects', href: '/admin/subjects', icon: 'book' as const },
     // One workbook (departments, programs, staff, students, classes) that sets
-    // up everyone's accounts and routes each request to its teacher.
+    // up everyone's accounts and routes each request to its teacher. Once a
+    // semester.
     { label: 'School Data', href: '/admin/school-data', icon: 'upload' as const },
     // Departments is deliberately not listed. It's set up once and then never
     // touched, so it only added noise to a nav used every day. The page still
@@ -36,12 +43,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // be added, which the subject and user Excel imports both require (they
     // match departments by name and reject unknown ones). Department data also
     // still drives what a Program Head sees, via lib/deptFilter.ts.
-    // Every form at every step; each opens on the Registrar, Teacher or Program
-    // Head page where that step is done, which the admin may act on directly.
-    { label: 'Requests', href: '/admin/requests', icon: 'inbox' as const, badge: waiting },
-    // The same Exam Periods form as the Program Head's: term, submission
-    // window and exam date.
-    { label: 'Exam Periods', href: '/admin/exam-periods', icon: 'calendar' as const },
+    // Who signed in and when, last 90 days (supabase/migration_login_history.sql).
+    { label: 'Login History', href: '/admin/login-history', icon: 'history' as const },
     // School-wide settings, starting with the special-exam fee.
     { label: 'Settings', href: '/admin/settings', icon: 'settings' as const },
     // Testing tool, not a school workflow: wipes every request so a demo run
