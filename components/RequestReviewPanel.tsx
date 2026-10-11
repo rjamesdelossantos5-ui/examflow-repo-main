@@ -100,7 +100,7 @@ function VerificationLine({ status, livenessScore, faceMatchScore, documentType 
           {facts.length > 0 && <span style={{ color: 'var(--card-foreground)' }}>: {facts.join(', ')}</span>}
         </p>
         {s === 'approved' && (
-          <p className="text-xs ef-muted">The person present matched the ID they scanned. The ID image is not stored.</p>
+          <p className="text-xs ef-muted">The person present matched the ID they scanned.</p>
         )}
       </div>
     </div>
