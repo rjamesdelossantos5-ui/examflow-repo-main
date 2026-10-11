@@ -257,14 +257,19 @@ export async function rejectPHRequest(requestId: string, reason: string) {
   const sanitizedReason = String(reason).trim().slice(0, 1000)
   if (!sanitizedReason) return { error: 'Rejection reason is required' }
 
+  // rejected_by_role records the STAGE (an admin rejecting here rejects as the
+  // Program Head), so the resubmit comes back to the Program Head. Only a
+  // request at first approval can be rejected here; a receipt has its own
+  // rejectReceipt.
   const { data: updated, error } = await supabase
     .from('special_exam_requests')
-    .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: role })
+    .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: 'program_head' })
     .eq('id', requestId)
+    .eq('status', 'approved_by_teacher')
     .select('id')
 
   if (error) return { error: friendlyError('rejectPHRequest', error, `We couldn't save this rejection. ${RETRY_HINT}`) }
-  if (!updated?.length) return { error: 'Request not found or no longer editable.' }
+  if (!updated?.length) return { error: 'This request is no longer at the Program Head’s first approval, so it can’t be rejected here.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,

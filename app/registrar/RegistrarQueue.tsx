@@ -182,6 +182,10 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
                       onReject={rejectRequest}
                       onDone={() => dropForm(f.id)}
                       rejectPresets={REGISTRAR_REJECT}
+                      // The excuse certificate is for the Program Head only
+                      // (storage rule in migration_storage_privacy.sql), so the
+                      // Registrar gets no Documents section at all.
+                      showDocuments={false}
                       verifyLabel="Verify & Forward to Teacher"
                     />
                   </div>

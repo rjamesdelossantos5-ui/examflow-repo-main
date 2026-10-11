@@ -95,14 +95,21 @@ export async function rejectRequest(requestId: string, reason: string) {
   const sanitizedReason = String(reason).trim().slice(0, 1000)
   if (!sanitizedReason) return { error: 'Rejection reason is required' }
 
+  // rejected_by_role records the STAGE, not who pressed the button: an admin
+  // rejecting here is rejecting as the Registrar, so the student's resubmit
+  // must come back to the Registrar (resumeStatus in student/submit/actions.ts).
+  // The log below still says the admin did it (actor_role).
+  // .eq('status', 'submitted'): only a request at the Registrar's stage can be
+  // rejected here, never one that has already moved on.
   const { data: updated, error } = await supabase
     .from('special_exam_requests')
-    .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: role })
+    .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: 'registrar' })
     .eq('id', requestId)
+    .eq('status', 'submitted')
     .select('id')
 
   if (error) return { error: friendlyError('rejectRequest', error, `We couldn't save this rejection. ${RETRY_HINT}`) }
-  if (!updated?.length) return { error: 'Request not found or no longer editable.' }
+  if (!updated?.length) return { error: 'This request is no longer at the Registrar’s stage, so it can’t be rejected here.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,

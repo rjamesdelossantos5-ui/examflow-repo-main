@@ -106,14 +106,18 @@ export async function rejectTeacherRequest(requestId: string, reason: string) {
   const { data: owned } = await supabase.from('special_exam_requests').select('id').eq('id', requestId).maybeSingle()
   if (!owned) return { error: 'This request is not in your queue.' }
 
+  // rejected_by_role records the STAGE (an admin rejecting here rejects as the
+  // Teacher), so the resubmit comes back to the Teacher. Only a request at the
+  // Teacher's stage can be rejected here.
   const { data: updated, error } = await supabase
     .from('special_exam_requests')
-    .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: role })
+    .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: 'subject_teacher' })
     .eq('id', requestId)
+    .eq('status', 'verified_by_registrar')
     .select('id')
 
   if (error) return { error: friendlyError('rejectTeacherRequest', error, `We couldn't save this rejection. ${RETRY_HINT}`) }
-  if (!updated?.length) return { error: 'Request not found or no longer editable.' }
+  if (!updated?.length) return { error: 'This request is no longer at the Teacher’s stage, so it can’t be rejected here.' }
 
   await supabase.from('progress_logs').insert({
     request_id: requestId,

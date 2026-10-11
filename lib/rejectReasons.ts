@@ -4,14 +4,15 @@
 
 export const OTHER = 'Other'
 
-// Registrar verifies identity documents and the form details. They do NOT see
-// the medical/death certificate, so their reasons are not about the excuse
-// certificate.
+// Registrar checks the student's details against school records. Only reasons
+// the student can fix on "Edit & Resubmit": no ID reasons (the parent's ID comes
+// from the face check, which only the Program Head can send back — see
+// PH_REVERIFY) and no document reasons (only the Program Head sees the
+// certificate).
 export const REGISTRAR_REJECT = [
-  'Blurred or unreadable ID',
-  'Invalid or expired ID',
-  'Incomplete or wrong student details',
-  'Wrong document uploaded',
+  'Wrong or incomplete student details',
+  'Student number does not match school records',
+  'Wrong subject or section selected',
   OTHER,
 ]
 
@@ -27,15 +28,13 @@ export const TEACHER_REJECT = [
 // Program Head reviews the excuse certificate (medical / death cert) for an
 // excused request, so certificate-related reasons live here.
 export const PH_REJECT_EXCUSED = [
-  'Blurred or unreadable certificate (medical / death)',
-  'Invalid or fake certificate',
+  'Blurred or unreadable certificate',
   'Certificate does not match the reason',
-  'Wrong document uploaded',
+  'Invalid or fake certificate',
   OTHER,
 ]
 
 export const PH_REJECT_PAID = [
-  'Incomplete requirements',
   'Not eligible for a special exam',
   'Details do not match records',
   OTHER,
