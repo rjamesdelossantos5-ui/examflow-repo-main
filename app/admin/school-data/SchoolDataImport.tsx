@@ -153,9 +153,10 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
         </div>
       )}
 
-      {/* Upload on the left (the task), what's in the system now on the right. */}
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
-        <section className={card}>
+      {/* Upload on the left (the task), what's in the system now on the right.
+          Both cards stretch to the same height; the drop area grows to fill. */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6">
+        <section className={`${card} flex flex-col`}>
           <div>
             <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Upload the school data file</h3>
             <p className="text-sm ef-muted mt-1">
@@ -167,7 +168,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
           {/* The whole area is the file picker: a bigger target than the bare
               "Choose File" button, and it shows which file is loaded. */}
           <label
-            className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed ef-border px-6 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-[var(--sti-gold)] ${isPending ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'}`}
+            className={`flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed ef-border px-6 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-[var(--sti-gold)] ${isPending ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'}`}
           >
             <Icon name="upload" className="w-7 h-7" style={{ color: 'var(--sti-gold)' }} />
             <span className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>
