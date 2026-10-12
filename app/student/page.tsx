@@ -24,14 +24,27 @@ export default async function StudentPage() {
   // from even starting until it came back.
   const profile = await getMyProfileMeta()
 
-  const [{ data: requests }, activePeriod] = await Promise.all([
+  const [{ data: requests }, activePeriod, { data:details }] = await Promise.all([
     supabase
       .from('special_exam_requests')
       .select('*, subjects(subject_code, subject_name)')
       .eq('student_id', user.id)
       .order('submitted_at', { ascending: false }),
     getActivePeriodCached(),
+    supabase
+    .from('profiles')
+    .select('student_number, department_id, course, year_level, section')
+    .eq('id', user.id)
+    .maybeSingle(),
   ])
+
+    const profileIncomplete =
+    !!details &&
+    (!details.student_number ||
+    !details.department_id ||
+    !details.course ||
+    !details.year_level ||
+    !details.section)
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const cookieStore = await cookies()
@@ -177,6 +190,15 @@ export default async function StudentPage() {
           </span>
         )}
       </div>
+      {profileIncomplete && (
+       <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+         Visit your profile settings to save your information. Open{' '}
+       <Link href="/account" className="font-semibold underline">
+          My Account
+       </Link>{' '}
+          and fill in your student number, department, course, year level and section.
+    </div>
+)}
 
       {/* Stat cards + request list — the cards double as status filters */}
       <RequestsPanel
