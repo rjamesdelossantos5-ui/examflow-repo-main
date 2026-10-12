@@ -376,7 +376,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             />
           </div>
 
-          {section && (
+          {subjectId && section && (
             <div className="rounded-lg px-3 py-2 text-sm border ef-border">
               <span className="ef-muted">Teacher: </span>
               <strong style={{ color: 'var(--card-foreground)' }}>{teacherName ?? 'Not assigned yet'}</strong>
