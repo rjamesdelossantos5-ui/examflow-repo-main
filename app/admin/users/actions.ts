@@ -74,14 +74,12 @@ export async function createUser(formData: FormData) {
   if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
 
   const email = sanitize(formData.get('email')).toLowerCase()
-  const password = sanitize(formData.get('password'))
   const fields = readProfileFields(formData)
   if (fields.error !== null) return { error: fields.error }
   const { fullName, role, departmentId, studentNumber, course, yearLevel, section } = fields
 
-  if (!email || !password) return { error: 'Missing or invalid fields' }
+  if (!email) return { error: 'Missing or invalid fields' }
   if (!isValidEmail(email)) return { error: 'Enter a valid email address.' }
-  if (password.length < 6) return { error: 'Password must be at least 6 characters.' }
 
   // auth.admin.* requires the SERVICE ROLE key — the anon key gets 403 "User
   // not allowed". This used to call it on the anon client, so account creation
@@ -90,9 +88,11 @@ export async function createUser(formData: FormData) {
   const admin = createAdminClient()
   if (!admin) return { error: SERVICE_KEY_MISSING }
 
+  // No password, like the School Data import: Supabase sets a random one nobody
+  // knows, and the person signs in with their Microsoft school account, which
+  // attaches to this account through the same verified email.
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email,
-    password,
     email_confirm: true,
     user_metadata: { full_name: fullName, role },
   })
@@ -121,6 +121,16 @@ export async function createUser(formData: FormData) {
   })
 
   if (profileError) return { error: friendlyError('createUser.profile', profileError, `The account was created but we couldn't save its profile details. ${RETRY_HINT}`) }
+
+  // A new teacher can take over existing classes straight away, so adding one
+  // needs no Excel import. Only classes that exist are touched (the update
+  // matches ids), and requests already sent keep the teacher they went to.
+  const classIds = role === 'subject_teacher' ? [...new Set(formData.getAll('class_ids').map(String))].slice(0, 500) : []
+  if (classIds.length) {
+    const { error: classErr } = await supabase.from('class_offerings').update({ teacher_id: authData.user.id }).in('id', classIds)
+    if (classErr) return { error: friendlyError('createUser.classes', classErr, `The account was created but its classes could not be saved. Set them on the Subjects page. ${RETRY_HINT}`) }
+    revalidatePath('/admin/subjects')
+  }
 
   revalidatePath('/admin/users')
   return { error: null }

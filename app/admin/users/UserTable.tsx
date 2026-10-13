@@ -8,6 +8,7 @@ import SearchInput from '@/components/SearchInput'
 import { Icon } from '@/components/Icon'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { initials } from '@/lib/initials'
+import { programOf, yearOf } from '@/lib/schoolData'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
@@ -39,6 +40,16 @@ export interface TeacherClass {
   section: string
   code: string
   name: string
+}
+
+/** One class (a subject in a section) a new teacher can be given. */
+export interface ClassOption {
+  id: string
+  section: string
+  code: string
+  name: string
+  /** Who teaches it now, or null when nobody does. */
+  teacher: string | null
 }
 
 /**
@@ -224,11 +235,20 @@ function RoleFields({
   role,
   onRoleChange,
   departments,
+  sections,
+  courseNames,
+  classOptions,
   initial,
 }: {
   role: string
   onRoleChange: (role: string) => void
   departments: Department[]
+  /** Every section that has classes, e.g. "BSIT 2-201". */
+  sections: string[]
+  /** Program code → full name, e.g. BSIT → Bachelor of Science in IT. */
+  courseNames: Record<string, string>
+  /** Classes a new teacher can be given. Only the Create form passes it. */
+  classOptions?: ClassOption[]
   initial?: Profile
 }) {
   const usesDepartment = role === 'subject_teacher' || role === 'program_head'
@@ -265,7 +285,8 @@ function RoleFields({
       {role === 'program_head' && (
         <p className="col-span-2 text-xs text-gray-500">They review the requests for subjects in this department.</p>
       )}
-      {role === 'subject_teacher' && (
+      {role === 'subject_teacher' && classOptions && classOptions.length > 0 && <TeacherClassPicker classes={classOptions} />}
+      {role === 'subject_teacher' && !(classOptions && classOptions.length > 0) && (
         <p className="col-span-2 text-xs text-gray-500">
           Their sections and subjects come from the Classes sheet of the School Data file — one row per class with this
           email as the Teacher Email. A section&apos;s teacher can also be changed on the Subjects page.
@@ -277,20 +298,150 @@ function RoleFields({
             <label className={labelClass}>Student Number *</label>
             <input name="student_number" required defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
           </div>
-          <div>
-            <label className={labelClass}>Course *</label>
-            <input name="course" required defaultValue={initial?.course ?? ''} placeholder="BSIT" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Year Level *</label>
-            <input name="year_level" required type="number" min={1} max={6} defaultValue={initial?.year_level ?? ''} placeholder="2" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Section *</label>
-            <input name="section" required defaultValue={initial?.section ?? ''} placeholder="BSIT 2-201" className={inputClass} />
-          </div>
+          <StudentClassFields sections={sections} courseNames={courseNames} initial={initial} />
         </>
       )}
+    </>
+  )
+}
+
+/**
+ * The classes a NEW teacher takes over, picked from the classes that already
+ * exist (from the School Data file), so adding a teacher needs no Excel import.
+ * The picked ids are sent as `class_ids`. Taking a class over replaces its
+ * current teacher; requests already sent keep the teacher they were sent to.
+ */
+function TeacherClassPicker({ classes }: { classes: ClassOption[] }) {
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const shown = q ? classes.filter((c) => [c.code, c.name, c.section].some((v) => v.toLowerCase().includes(q))) : classes
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  return (
+    <div className="col-span-2">
+      <label className={labelClass}>Classes they teach (optional) — {picked.size} selected</label>
+      {/* Enter in the search box must not submit the whole form. */}
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+        placeholder="Search subject code, name or section…"
+        className={inputClass}
+      />
+      <div className="mt-2 max-h-48 overflow-y-auto rounded border divide-y">
+        {shown.map((c) => (
+          <label key={c.id} className="flex items-start gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50">
+            <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} className="mt-1" />
+            <span className="min-w-0">
+              <span className="font-mono text-xs">{c.code}</span> {c.name} · {c.section}
+              <span className="block text-xs text-gray-500">{c.teacher ? `Now taught by ${c.teacher} — picking it takes it over` : 'No teacher yet'}</span>
+            </span>
+          </label>
+        ))}
+        {shown.length === 0 && <p className="px-3 py-4 text-center text-xs text-gray-500">No class matches your search.</p>}
+      </div>
+      {[...picked].map((id) => <input key={id} type="hidden" name="class_ids" value={id} />)}
+      <p className="mt-1 text-xs text-gray-500">Requests already sent keep their current teacher. Classes can also be changed later on the Subjects page.</p>
+    </div>
+  )
+}
+
+/**
+ * A student's course, year and section, picked from the sections that already
+ * exist (the classes from the School Data file) instead of typed. Course, then
+ * year, then section — each list narrows the next, the same as the student's
+ * own submit form. With no sections yet (nothing imported) it falls back to
+ * typing, so an account can still be made.
+ */
+function StudentClassFields({
+  sections,
+  courseNames,
+  initial,
+}: {
+  sections: string[]
+  courseNames: Record<string, string>
+  initial?: Profile
+}) {
+  const [course, setCourse] = useState(initial?.course ?? '')
+  const [year, setYear] = useState(initial?.year_level ? String(initial.year_level) : '')
+  const [section, setSection] = useState(initial?.section ?? '')
+
+  if (!sections.length) {
+    return (
+      <>
+        <div>
+          <label className={labelClass}>Course *</label>
+          <input name="course" required defaultValue={initial?.course ?? ''} placeholder="BSIT" className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>Year Level *</label>
+          <input name="year_level" required type="number" min={1} max={6} defaultValue={initial?.year_level ?? ''} placeholder="2" className={inputClass} />
+        </div>
+        <div className="col-span-2">
+          <label className={labelClass}>Section *</label>
+          <input name="section" required defaultValue={initial?.section ?? ''} placeholder="BSIT 2-201" className={inputClass} />
+        </div>
+      </>
+    )
+  }
+
+  // A value already saved on the account stays selectable even if no class uses
+  // it any more, so editing that person never silently blanks it.
+  const courses = [...new Set(sections.map(programOf).filter(Boolean))].sort()
+  if (course && !courses.includes(course)) courses.push(course)
+  const years = [...new Set(sections.filter((s) => programOf(s) === course).map(yearOf).filter((y): y is number => y !== null))].sort((a, b) => a - b)
+  if (year && !years.includes(Number(year))) years.push(Number(year))
+  const matching = sections.filter((s) => programOf(s) === course && String(yearOf(s)) === year)
+  const sectionList = !section || matching.includes(section) ? matching : [...matching, section]
+
+  return (
+    <>
+      <div>
+        <label className={labelClass}>Course *</label>
+        <Select
+          name="course"
+          required
+          value={course}
+          onChange={(v) => { setCourse(v); setYear(''); setSection('') }}
+          placeholder="— Select course —"
+          options={courses.map((c) => ({ value: c, label: courseNames[c] ? `${c} — ${courseNames[c]}` : c }))}
+          className={inputClass}
+        />
+      </div>
+      <div>
+        <label className={labelClass}>Year Level *</label>
+        <Select
+          name="year_level"
+          required
+          value={year}
+          onChange={(v) => { setYear(v); setSection('') }}
+          disabled={!course}
+          placeholder={course ? '— Select year —' : 'Select a course first'}
+          options={years.map((y) => ({ value: String(y), label: `Year ${y}` }))}
+          className={inputClass}
+        />
+      </div>
+      <div className="col-span-2">
+        <label className={labelClass}>Section *</label>
+        <Select
+          name="section"
+          required
+          value={section}
+          onChange={setSection}
+          disabled={!year}
+          placeholder={!year ? 'Select a year first' : sectionList.length ? '— Select section —' : 'No sections for that year'}
+          options={sectionList.map((s) => ({ value: s, label: s }))}
+          className={inputClass}
+        />
+      </div>
     </>
   )
 }
@@ -307,9 +458,18 @@ export default function UserTable({
   classesByTeacher,
   currentUserId,
   adminRemovalOn,
+  sections,
+  courseNames,
+  classOptions,
 }: {
   users: Profile[]
   departments: Department[]
+  /** Every section that has classes — the choices for a student's section. */
+  sections: string[]
+  /** Program code → full name, for the course list. */
+  courseNames: Record<string, string>
+  /** Every class, for giving a new teacher their classes. */
+  classOptions: ClassOption[]
   classesByTeacher: Record<string, TeacherClass[]>
   /** The signed-in admin — their own row gets no Deactivate/Delete. */
   currentUserId: string | null
@@ -455,15 +615,12 @@ export default function UserTable({
               </div>
               {/* autoComplete stops the browser filling in the admin's own
                   saved login here — this form creates someone else's. */}
-              <div>
+              <div className="col-span-2">
                 <label className={labelClass}>Email *</label>
                 <input name="email" type="email" required autoComplete="off" className={inputClass} />
+                <p className="mt-1 text-xs text-gray-500">No password: they sign in with their Microsoft school account.</p>
               </div>
-              <div>
-                <label className={labelClass}>Password *</label>
-                <input name="password" type="password" required minLength={8} autoComplete="new-password" className={inputClass} />
-              </div>
-              <RoleFields role={newRole} onRoleChange={setNewRole} departments={departments} />
+              <RoleFields role={newRole} onRoleChange={setNewRole} departments={departments} sections={sections} courseNames={courseNames} classOptions={classOptions} />
               <div className="col-span-2 flex justify-end gap-2 mt-2">
                 <button type="button" onClick={() => { closeCreate(); setError(null) }}
                   className="px-4 py-2 text-sm rounded border">Cancel</button>
@@ -499,7 +656,7 @@ export default function UserTable({
                 <label className={labelClass}>Full Name *</label>
                 <input name="full_name" required defaultValue={toEdit.full_name} className={inputClass} />
               </div>
-              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} initial={toEdit} />
+              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} initial={toEdit} />
               {toEdit.role === 'subject_teacher' && editRole !== 'subject_teacher' && editTeaches > 0 && (
                 <p className="col-span-2 rounded-md px-3 py-2 text-xs bg-amber-50 border border-amber-200 text-amber-800">
                   They teach {editTeaches} class{editTeaches === 1 ? '' : 'es'}. Those stay assigned to them — and new requests
