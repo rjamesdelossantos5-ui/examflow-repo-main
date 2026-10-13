@@ -274,8 +274,8 @@ function RoleFields({
       {role === 'student' && (
         <>
           <div>
-            <label className={labelClass}>Student Number</label>
-            <input name="student_number" defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
+            <label className={labelClass}>Student Number *</label>
+            <input name="student_number" required defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
           </div>
           <div>
             <label className={labelClass}>Course *</label>
