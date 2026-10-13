@@ -66,20 +66,29 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // section are filled in and only that section's classes are offered.
   const enrolled = enrolledSection && offerings.some((o) => o.section === enrolledSection) ? enrolledSection : null
   const enrolledYear = enrolled?.match(/^[A-Za-z]+\s+(\d)-/)?.[1] ?? null
-  // Effective values: a resubmit's saved snapshot overrides the profile defaults.
+  // Effective values: the student's account wins, then a resubmit's saved snapshot.
   const eff = {
     // Without the Microsoft account's "(Student)" tag.
     full_name: withoutAccountTag(prefill?.fullName ?? profile.full_name),
-    student_number: prefill?.studentNumber ?? profile.student_number,
-    course: prefill?.course ?? profile.course,
-    year_level: prefill?.yearLevel ?? profile.year_level,
+    student_number: profile.student_number || prefill?.studentNumber || '',
+    course: profile.course || prefill?.course || '',
+    year_level: profile.year_level ?? prefill?.yearLevel ?? null,
     section: prefill?.section ?? profile.section,
   }
+  const initialCourse = enrolled
+    ? coursePrefix(enrolled)
+    : courses.includes(normalizeCourse(eff.course)) ? normalizeCourse(eff.course) : ''
+  const initialYear = eff.year_level ? String(eff.year_level) : enrolledYear ?? ''
+  // Locked (read-only, like the full name) when the value comes from the
+  // student's account; left editable when the account has nothing saved yet.
+  const numberLocked = !!profile.student_number
+  const courseLocked = initialCourse !== '' && (!!enrolled || !!profile.course)
+  const yearLocked = initialYear !== '' && (!!enrolled || !!profile.year_level)
 
   const [examType, setExamType] = useState<'paid' | 'excused'>(prefill?.examType ?? 'paid')
   const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>(prefill?.excusedReason ?? '')
-  const [course, setCourse] = useState(enrolled ? coursePrefix(enrolled) : courses.includes(normalizeCourse(eff.course ?? '')) ? normalizeCourse(eff.course) : '')
-  const [yearLevel, setYearLevel] = useState(eff.year_level ? String(eff.year_level) : enrolledYear ?? '')
+  const [course, setCourse] = useState(initialCourse)
+  const [yearLevel, setYearLevel] = useState(initialYear)
   const [subjectId, setSubjectId] = useState(prefill?.subjectId ?? '')
   const [section, setSection] = useState(enrolled ?? eff.section ?? '')
   const [confirming, setConfirming] = useState(false)
@@ -265,8 +274,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               </label>
               <input
                 name="student_number"
-                defaultValue={eff.student_number}
-                className={inputClass}
+                readOnly={numberLocked}
+                value={numberLocked ? eff.student_number : undefined}
+                defaultValue={numberLocked ? undefined : eff.student_number}
+                className={numberLocked ? `${inputClass} cursor-not-allowed opacity-70` : inputClass}
                 placeholder="2024-00001"
                 inputMode="numeric"
                 maxLength={40}
@@ -276,31 +287,58 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Course / Program *</label>
-              <Select
-                name="course"
-                required
-                value={course}
-                onChange={(v) => { setCourse(v); setSubjectId(''); setSection('') }}
-                placeholder="— Select course —"
-                options={courses.map((c) => ({ value: c, label: courseNames[c] ? `${c} — ${courseNames[c]}` : c }))}
-                className={selectClass}
-                style={selectStyle}
-              />
+              {courseLocked ? (
+                <>
+                  <input type="hidden" name="course" value={course} />
+                  <input
+                    readOnly
+                    value={courseNames[course] ? `${course} — ${courseNames[course]}` : course}
+                    className={`${inputClass} cursor-not-allowed opacity-70`}
+                  />
+                </>
+              ) : (
+                <Select
+                  name="course"
+                  required
+                  value={course}
+                  onChange={(v) => { setCourse(v); setSubjectId(''); setSection('') }}
+                  placeholder="— Select course —"
+                  options={courses.map((c) => ({ value: c, label: courseNames[c] ? `${c} — ${courseNames[c]}` : c }))}
+                  className={selectClass}
+                  style={selectStyle}
+                />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Year level *</label>
-              <Select
-                name="year_level"
-                required
-                value={yearLevel}
-                onChange={(v) => { setYearLevel(v); setSection('') }}
-                placeholder="— Select year —"
-                options={YEARS.map((y) => ({ value: String(y), label: `Year ${y}` }))}
-                className={selectClass}
-                style={selectStyle}
-              />
+              {yearLocked ? (
+                <>
+                  <input type="hidden" name="year_level" value={yearLevel} />
+                  <input
+                    readOnly
+                    value={`Year ${yearLevel}`}
+                    className={`${inputClass} cursor-not-allowed opacity-70`}
+                  />
+                </>
+              ) : (
+                <Select
+                  name="year_level"
+                  required
+                  value={yearLevel}
+                  onChange={(v) => { setYearLevel(v); setSection('') }}
+                  placeholder="— Select year —"
+                  options={YEARS.map((y) => ({ value: String(y), label: `Year ${y}` }))}
+                  className={selectClass}
+                  style={selectStyle}
+                />
+              )}
             </div>
           </div>
+          {(numberLocked || courseLocked || yearLocked) && (
+            <p className="text-xs ef-muted">
+              Locked fields come from your account. To change them, open My Account from the menu at the top right.
+            </p>
+          )}
         </div>
 
         {/* Subject → Section → Teacher (dynamic from the class offerings, scoped to the chosen course) */}
@@ -338,7 +376,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             />
           </div>
 
-          {section && (
+          {subjectId && section && (
             <div className="rounded-lg px-3 py-2 text-sm border ef-border">
               <span className="ef-muted">Teacher: </span>
               <strong style={{ color: 'var(--card-foreground)' }}>{teacherName ?? 'Not assigned yet'}</strong>
