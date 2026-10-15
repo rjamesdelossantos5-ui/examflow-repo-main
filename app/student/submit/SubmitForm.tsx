@@ -75,23 +75,56 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
     year_level: profile.year_level ?? prefill?.yearLevel ?? null,
     section: prefill?.section ?? profile.section,
   }
-  const initialCourse = enrolled
+  const baseCourse = enrolled
     ? coursePrefix(enrolled)
     : courses.includes(normalizeCourse(eff.course)) ? normalizeCourse(eff.course) : ''
-  const initialYear = eff.year_level ? String(eff.year_level) : enrolledYear ?? ''
+  const baseYear = eff.year_level ? String(eff.year_level) : enrolledYear ?? ''
   // Locked (read-only, like the full name) when the value comes from the
   // student's account; left editable when the account has nothing saved yet.
   const numberLocked = !!profile.student_number
-  const courseLocked = initialCourse !== '' && (!!enrolled || !!profile.course)
-  const yearLocked = initialYear !== '' && (!!enrolled || !!profile.year_level)
+  const baseCourseLocked = baseCourse !== '' && (!!enrolled || !!profile.course)
+  const baseYearLocked = baseYear !== '' && (!!enrolled || !!profile.year_level)
+
+  // Irregular students (back subjects, or a subject taken with another
+  // program's section) unlock course / year and see every section of the chosen
+  // course. A resubmit whose saved details differ from the account starts
+  // unlocked, so the saved values show instead of being replaced by the account's.
+  const prefillCourse = prefill?.course && courses.includes(normalizeCourse(prefill.course)) ? normalizeCourse(prefill.course) : ''
+  const initialOverride =
+    !!prefill && (baseCourseLocked || baseYearLocked) && (
+      (prefillCourse !== '' && prefillCourse !== baseCourse) ||
+      (prefill.yearLevel != null && String(prefill.yearLevel) !== baseYear) ||
+      (!!enrolled && !!prefill.section && prefill.section !== enrolled)
+    )
+  const initialCourse = initialOverride && prefillCourse ? prefillCourse : baseCourse
+  const initialYear = initialOverride && prefill?.yearLevel != null ? String(prefill.yearLevel) : baseYear
+
+  const [override, setOverride] = useState(initialOverride)
+  const courseLocked = baseCourseLocked && !override
+  const yearLocked = baseYearLocked && !override
 
   const [examType, setExamType] = useState<'paid' | 'excused'>(prefill?.examType ?? 'paid')
   const [reason, setReason] = useState<'medical' | 'bereavement' | 'other' | ''>(prefill?.excusedReason ?? '')
   const [course, setCourse] = useState(initialCourse)
   const [yearLevel, setYearLevel] = useState(initialYear)
   const [subjectId, setSubjectId] = useState(prefill?.subjectId ?? '')
-  const [section, setSection] = useState(enrolled ?? eff.section ?? '')
+  const [section, setSection] = useState(initialOverride ? prefill?.section ?? '' : enrolled ?? eff.section ?? '')
   const [confirming, setConfirming] = useState(false)
+
+  function toggleOverride() {
+    if (override) {
+      // Back to the account's own course / year / section.
+      setOverride(false)
+      setCourse(baseCourse)
+      setYearLevel(baseYear)
+      setSubjectId('')
+      setSection(enrolled ?? profile.section ?? '')
+    } else {
+      // The enrolled section may not offer the subject, so the section is re-picked.
+      setOverride(true)
+      setSection('')
+    }
+  }
 
   // A section name like "BSIT 2-201" or "STEM1101" leads with the course /
   // strand code. Comparing that prefix to the chosen course is how "BSIT"
@@ -101,7 +134,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // enrollment, only the student's own section). Nothing shows until a course
   // is picked, so a subject never leaks in from another program.
   const courseOfferings = course
-    ? offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course) && (!enrolled || o.section === enrolled))
+    ? offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course) && (!enrolled || override || o.section === enrolled))
     : []
 
   const subjectOptions = Array.from(
@@ -111,7 +144,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // specifies one).
   const yearNum = yearLevel ? Number(yearLevel) : null
   const sectionOptions = courseOfferings.filter(
-    (o) => o.subjectId === subjectId && (yearNum == null || o.yearLevel == null || o.yearLevel === yearNum),
+    (o) => o.subjectId === subjectId && (override || yearNum == null || o.yearLevel == null || o.yearLevel === yearNum),
   )
   const teacherName = courseOfferings.find((o) => o.subjectId === subjectId && o.section === section)?.teacherName ?? null
 
@@ -334,6 +367,26 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               )}
             </div>
           </div>
+          {(baseCourseLocked || baseYearLocked) && (
+            <div className="rounded-lg border ef-border px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs ef-muted flex-1 min-w-[12rem]">
+                {override
+                  ? 'Irregular student mode is on — pick the course and year of the subject you are taking. Sections of every year are shown.'
+                  : 'Irregular student, or taking a subject outside your own section (e.g. a back subject or another program)?'}
+              </p>
+              <button
+                type="button"
+                onClick={toggleOverride}
+                aria-pressed={override}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-colors hover:border-[var(--sti-gold)]/70"
+                style={override
+                  ? { borderColor: 'var(--sti-gold)', background: 'color-mix(in srgb, var(--sti-gold) 15%, transparent)', color: 'var(--card-foreground)' }
+                  : { borderColor: 'var(--border)', color: 'var(--card-foreground)' }}
+              >
+                {override ? 'Use my own section' : 'My subject is in a different section'}
+              </button>
+            </div>
+          )}
           {(numberLocked || courseLocked || yearLocked) && (
             <p className="text-xs ef-muted">
               Locked fields come from your account. To change them, open My Account from the menu at the top right.
