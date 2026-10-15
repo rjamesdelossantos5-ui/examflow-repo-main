@@ -118,7 +118,9 @@ export default async function RequestDetailPage({
       .from('special_exam_requests')
       .select(select)
       .eq('student_id', user.id)
-      .eq('status', 'accepted')
+      // A subject whose receipt is already in (or confirmed) is still on the same
+      // bill. Counting only 'accepted' made the total drop by one fee per upload.
+      .in('status', ['accepted', 'receipt_uploaded', 'scheduled'])
       .eq('exam_type', 'paid')
     const [first, fee] = await Promise.all([loadPaid('id, payment_assessed_at, assessed_fee'), getSpecialExamFee(supabase)])
     // migration_fee_setting.sql not applied yet — no assessed_fee column.
