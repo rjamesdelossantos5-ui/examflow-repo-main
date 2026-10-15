@@ -31,12 +31,12 @@ function Banner({ kind, text }: { kind: 'ok' | 'err'; text: string }) {
 }
 
 /**
- * My Account page: edit your own name (and, for students, the details that
- * pre-fill the submit form — student number, course, year, section). Email
- * and role are read-only here; only the admin can change those. Note: edits
+ * My Account page: for students, edit the details that pre-fill the submit
+ * form — student number, course, year, section. Name (from the Microsoft 365
+ * account), email and role are read-only here. Note: edits
  * do NOT rewrite past requests — those keep the snapshot taken at submit time.
  */
-export default function ProfileForm({ profile, assignment }: { profile: Profile; assignment?: React.ReactNode }) {
+export default function ProfileForm({ profile, assignment, studentNumberLocked = false }: { profile: Profile; assignment?: React.ReactNode; studentNumberLocked?: boolean }) {
   const isStudent = profile.role === 'student'
   const [isPending, startTransition] = useTransition()
   const [profileMsg, setProfileMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
@@ -81,7 +81,8 @@ export default function ProfileForm({ profile, assignment }: { profile: Profile;
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Full name *</label>
-            <input name="full_name" required autoComplete="name" defaultValue={profile.full_name} className={inputClass} />
+            <input value={profile.full_name} disabled className={`${inputClass} opacity-60 cursor-not-allowed`} />
+            <p className="text-xs ef-muted mt-1">Name comes from your Microsoft 365 account and can't be changed here.</p>
           </div>
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Email</label>
@@ -94,9 +95,16 @@ export default function ProfileForm({ profile, assignment }: { profile: Profile;
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">
-                Student number <span className="font-normal text-2xs">(optional)</span>
+                Student number {!studentNumberLocked && <span className="font-normal text-2xs">(optional)</span>}
               </label>
-              <input name="student_number" defaultValue={profile.student_number ?? ''} className={inputClass} placeholder="e.g. 2024-00001" inputMode="numeric" maxLength={40} pattern="[0-9-]{4,20}" title="Digits only (with optional dashes), e.g. 2024-00001" />
+              {studentNumberLocked ? (
+                <>
+                  <input value={profile.student_number ?? ''} disabled className={`${inputClass} opacity-60 cursor-not-allowed`} />
+                  <p className="text-xs ef-muted mt-1">From your school email.</p>
+                </>
+              ) : (
+                <input name="student_number" defaultValue={profile.student_number ?? ''} className={inputClass} placeholder="e.g. 2024-00001" inputMode="numeric" maxLength={40} pattern="[0-9-]{4,20}" title="Digits only (with optional dashes), e.g. 2024-00001" />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Course</label>

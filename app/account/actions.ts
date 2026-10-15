@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { isValidName, isValidStudentNumber, isValidCode } from '@/lib/validation'
+import { isValidStudentNumber, isValidCode } from '@/lib/validation'
+import { studentNumberFromEmail } from '@/lib/studentNumber'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 function clean(v: FormDataEntryValue | null, max = 120) {
@@ -14,11 +15,8 @@ export async function updateProfile(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  const fullName = clean(formData.get('full_name'))
-  if (!fullName) return { error: 'Full name is required' }
-  if (!isValidName(fullName)) return { error: 'Enter a valid full name (letters only).' }
-
-  // Only ever touch safe, self-editable fields — never role / is_active.
+  // Only ever touch safe, self-editable fields — never role / is_active, and
+  // never full_name (it comes from the Microsoft 365 account).
   const yearRaw = clean(formData.get('year_level'), 4)
   const yearLevel = yearRaw ? Number(yearRaw) : null
   if (yearLevel !== null && (!Number.isInteger(yearLevel) || yearLevel < 1 || yearLevel > 6)) {
@@ -26,8 +24,14 @@ export async function updateProfile(formData: FormData) {
   }
 
   // Validate the free-text identity fields so they can't hold junk.
-  const studentNumber = clean(formData.get('student_number'), 40)
-  if (studentNumber && !isValidStudentNumber(studentNumber)) {
+  // A student whose school email carries their number gets it from the email,
+  // whatever the form sent. Everyone else keeps the editable field.
+  // Once saved it is never sent again: a database guard refuses changes to it.
+  const { data: me } = await supabase.from('profiles').select('role, email, student_number').eq('id', user.id).single()
+  const fromEmail = me?.role === 'student' ? studentNumberFromEmail(me.email) : null
+  const studentNumber = fromEmail ?? clean(formData.get('student_number'), 40)
+  const numberAlreadySaved = !!me?.student_number
+  if (!numberAlreadySaved && studentNumber && !isValidStudentNumber(studentNumber)) {
     return { error: 'Enter a valid student number (digits only, e.g. 2024-00001).' }
   }
   const course = clean(formData.get('course'), 60)
@@ -38,8 +42,7 @@ export async function updateProfile(formData: FormData) {
   const { error } = await supabase
     .from('profiles')
     .update({
-      full_name: fullName,
-      student_number: studentNumber || null,
+      ...(numberAlreadySaved ? {} : { student_number: studentNumber || null }),
       course: course || null,
       year_level: yearLevel,
       section: section || null,

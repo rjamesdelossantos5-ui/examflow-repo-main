@@ -87,8 +87,9 @@ export default async function AccountPage() {
           ...(profile as unknown as Profile),
           // Blank for school accounts until the student saves it — pre-fill it
           // from their school email (lib/studentNumber.ts).
-          student_number: profile.student_number ?? (role === 'student' ? studentNumberFromEmail(profile.email) : null),
+          student_number: (role === 'student' ? studentNumberFromEmail(profile.email) : null) ?? profile.student_number,
         }}
+        studentNumberLocked={role === 'student' && studentNumberFromEmail(profile.email) !== null}
       />
     </div>
   )

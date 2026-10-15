@@ -95,8 +95,13 @@ export async function GET(request: Request) {
   const current = String(profile.full_name ?? '').trim().toLowerCase()
   const isPlaceholder = current === email || current === email.split('@')[0]
   if (msName && isPlaceholder && msName.toLowerCase() !== current) {
-    const { error: nameError } = await supabase.from('profiles').update({ full_name: msName }).eq('id', data.user.id)
-    if (nameError) console.error('[auth/callback] name update failed', nameError)
+    // Service role: a database guard stops users changing their own full_name.
+    // The row is the one just authenticated above.
+    const admin = createAdminClient()
+    if (admin) {
+      const { error: nameError } = await admin.from('profiles').update({ full_name: msName }).eq('id', data.user.id)
+      if (nameError) console.error('[auth/callback] name update failed', nameError)
+    }
   }
 
   await recordLogin(supabase, 'microsoft')
