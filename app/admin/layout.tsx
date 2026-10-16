@@ -47,6 +47,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // still drives what a Program Head sees, via lib/deptFilter.ts.
     // Who signed in and when, last 90 days (supabase/migration_login_history.sql).
     { label: 'Login History', href: '/admin/login-history', icon: 'history' as const },
+    // What users did on requests (progress_logs), all roles.
+    { label: 'User Activity', href: '/admin/activity', icon: 'list' as const },
     // School-wide settings, starting with the special-exam fee.
     { label: 'Settings', href: '/admin/settings', icon: 'settings' as const },
     // Testing tool, not a school workflow: wipes every request so a demo run
