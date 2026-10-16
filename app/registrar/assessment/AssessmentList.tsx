@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import { markPaymentAssessed } from '../actions'
 import { totalFee, formatPeso } from '@/lib/fees'
@@ -39,6 +40,7 @@ export default function AssessmentList({
   /** Request ids assessed from this page, before the server data catches up. */
   const [done, setDone] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [tab, setTab] = useState<'pending' | 'assessed'>('pending')

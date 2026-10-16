@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import UserMenu from './UserMenu'
 import NotificationBell, { type NotificationItem } from './NotificationBell'
 import LiveRefresh from './LiveRefresh'
+import Toaster from './Toaster'
 import { Icon, type IconName } from './Icon'
 import { ROLE_HOME } from '@/lib/nav'
 import type { UserRole } from '@/lib/supabase/types'
@@ -44,6 +45,7 @@ export default function DashboardLayout({ role, userId, userName, email, navItem
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       <LiveRefresh filter={liveFilter} />
+      <Toaster />
       {/* Brand bar */}
       <header className="relative z-50" style={{ backgroundColor: 'var(--header)' }}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">

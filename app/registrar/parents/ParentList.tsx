@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useMemo, useState, useTransition } from 'react'
 import * as XLSX from 'xlsx'
 import SearchInput from '@/components/SearchInput'
@@ -23,8 +24,10 @@ const card = 'ef-card rounded-xl shadow-sm p-5 sm:p-6 space-y-4'
 export default function ParentList({ students, migrationMissing }: { students: ListedStudent[]; migrationMissing: boolean }) {
   const [file, setFile] = useState<{ name: string; grids: Record<string, unknown[][]>; data: ParentListData } | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  useErrorToast(fileError)
   const [inputKey, setInputKey] = useState(0)
   const [saveError, setSaveError] = useState<string | null>(null)
+  useErrorToast(saveError)
   const [saved, setSaved] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [query, setQuery] = useState('')

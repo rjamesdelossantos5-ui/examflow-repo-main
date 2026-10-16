@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useCallback, useRef, useState } from 'react'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { submitRequest } from './actions'
@@ -63,6 +64,7 @@ interface Prefill {
 }
 
 export default function SubmitForm({ offerings, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [], enrolledSection = null, courseNames = {} }: { offerings: Offering[]; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[]; enrolledSection?: string | null; courseNames?: Record<string, string> }) {
+  useErrorToast(error ? decodeURIComponent(error) : null)
   const kept = new Set(existingDocs)
   const courses = Array.from(new Set(offerings.map((o) => coursePrefix(o.section)).filter(Boolean))).sort()
   // The student's section from the School Data import: course, year and
@@ -153,6 +155,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
   const formRef = useRef<HTMLFormElement>(null)
   const [attachError, setAttachError] = useState<string | null>(null)
+  useErrorToast(attachError)
   const closeConfirm = useCallback(() => setConfirming(false), [setConfirming])
   useEscapeKey(closeConfirm, confirming)
 
@@ -614,6 +617,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 function FileField({ name, label, hint, inputClass, kept = false }: { name: string; label: string; hint: string; inputClass: string; kept?: boolean }) {
   const [fileName, setFileName] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  useErrorToast(fileError)
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 

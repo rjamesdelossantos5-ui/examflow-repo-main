@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useCallback, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import Select from '@/components/Select'
@@ -68,6 +69,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
   const [name, setName] = useState('')
   const [picked, setPicked] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [isPending, startTransition] = useTransition()
   const open = subjects.find((s) => s.id === openId) ?? null
 

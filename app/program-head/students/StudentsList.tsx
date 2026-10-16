@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon } from '@/components/Icon'
+import { toastError } from '@/components/Toaster'
 import { exportSchoolFormat, type ExportHeader } from './exportExcel'
 import { deleteFinishedRequest } from '../actions'
 import { ordinalYear } from '@/lib/ordinal'
@@ -74,7 +75,7 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
     startTransition(async () => {
       const res = await deleteFinishedRequest(id)
       setPendingDelete(null)
-      if (res.error) alert(res.error)
+      if (res.error) toastError(res.error)
       else setRows((rs) => rs.filter((r) => r.id !== id))
     })
   }

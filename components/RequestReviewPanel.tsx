@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useState, useEffect, useTransition } from 'react'
 import DocumentViewer from '@/components/DocumentViewer'
 import { getSignedUrl } from '@/app/media-actions'
@@ -154,6 +155,7 @@ export default function RequestReviewPanel({
   const [rejectMode, setRejectMode] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
 

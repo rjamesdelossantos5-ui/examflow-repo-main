@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DocumentViewer from '@/components/DocumentViewer'
@@ -96,6 +97,7 @@ export default function PHQueue({
   const detailRef = useRef<HTMLDivElement>(null)
 
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -215,6 +217,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
   const [reason, setReason] = useState('')
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [isPending, startTransition] = useTransition()
 
   const isExcused = r.exam_type === 'excused'
@@ -484,6 +487,7 @@ function PHSection({ title, children }: { title: string; children: React.ReactNo
 function ParentPhotos({ requestId, verification }: { requestId: string; verification: RequestRow['verification'] | null }) {
   const [photos, setPhotos] = useState<VerificationPhoto[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const hasVerification = !!verification
 
   useEffect(() => {
