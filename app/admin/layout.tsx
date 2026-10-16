@@ -27,6 +27,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // Head page where that step is done, which the admin may act on directly.
     // First tab and the admin's home (app/admin/page.tsx).
     { label: 'Requests', href: '/admin/requests', icon: 'inbox' as const, badge: waiting },
+    // Same list and Excel export as the Program Head's Accepted Students.
+    { label: 'Accepted Students', href: '/admin/students', icon: 'cap' as const },
     { label: 'Analytics', href: '/admin/analytics', icon: 'chart' as const },
     // The same Exam Periods form as the Program Head's: term, submission
     // window and exam date. Checked every term.
