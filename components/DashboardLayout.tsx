@@ -67,7 +67,10 @@ export default function DashboardLayout({ role, userId, userName, email, navItem
           className="sticky top-0 z-40"
           style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}
         >
-          <nav className="max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 flex gap-1.5 overflow-x-auto py-2.5 items-center no-scrollbar">
+          {/* The scrollbar stays visible (thin): when the window is narrow or the
+              browser is zoomed in, the tabs overflow, and with the bar hidden
+              a mouse user had no way to tell they could scroll or how. */}
+          <nav className="max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 flex gap-1.5 overflow-x-auto py-2.5 items-center [scrollbar-width:thin]">
             {navItems.map((item) => {
               const active = item.href === activeHref
               return (

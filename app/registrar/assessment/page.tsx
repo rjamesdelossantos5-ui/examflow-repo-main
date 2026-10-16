@@ -27,6 +27,7 @@ export default async function PaymentAssessmentPage() {
   const SELECT = `
     id, student_id, status, exam_type, submitted_at, period_id,
     payment_assessed_at, assessed_fee,
+    snap_name, snap_student_number, snap_course, snap_year_level, snap_section,
     profiles!student_id(full_name, student_number, course, year_level, section),
     subjects(subject_code, subject_name)
   `
@@ -84,16 +85,24 @@ export default async function PaymentAssessmentPage() {
     } | null
     const subj = r.subjects as unknown as { subject_code: string; subject_name: string } | null
 
+    // What the student entered on this request wins over the account, like the
+    // other staff queues — a student who never saved a course or section on
+    // their account fills them in on the form, and only the request holds them.
+    const snap = r as {
+      snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null
+      snap_year_level?: number | null; snap_section?: string | null
+    }
+
     let entry = byBill.get(key)
     if (!entry) {
       entry = {
         key,
         studentId,
-        name: prof?.full_name ?? '—',
-        studentNumber: prof?.student_number ?? null,
-        course: prof?.course ?? null,
-        yearLevel: prof?.year_level ?? null,
-        section: prof?.section ?? null,
+        name: snap.snap_name ?? prof?.full_name ?? '—',
+        studentNumber: snap.snap_student_number ?? prof?.student_number ?? null,
+        course: snap.snap_course ?? prof?.course ?? null,
+        yearLevel: snap.snap_year_level ?? prof?.year_level ?? null,
+        section: snap.snap_section ?? prof?.section ?? null,
         subjects: [],
         assessedAt: stamped,
       }

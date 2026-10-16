@@ -386,6 +386,25 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     return redirect('/student/submit?error=' + encodeURIComponent('This request can no longer be resubmitted.'))
   }
 
+  // One request per subject per term applies here too. Switching a rejected
+  // request to a subject the student already filed this term would create the
+  // duplicate the new-submission path refuses. The row being edited is excluded,
+  // and an unchanged subject is not re-checked (it was valid when first filed).
+  if (fields.subjectId !== oldRow.subject_id) {
+    const { data: dupes, error: dupeErr } = await supabase
+      .from('special_exam_requests')
+      .select('id')
+      .eq('student_id', userId)
+      .eq('subject_id', fields.subjectId)
+      .eq('period_id', fields.periodId)
+      .neq('id', oldId)
+      .limit(1)
+    // Fails open if period_id isn't migrated, same as the new-submission check.
+    if (!dupeErr && dupes?.[0]) {
+      return redirect(`/student/submit?from=${oldId}&error=${encodeURIComponent('You already have a request for that subject this term. Pick a different subject, or keep this request’s original one.')}`)
+    }
+  }
+
   // A resubmit must actually differ from the rejected request — either a new
   // document is uploaded OR some field is edited. Re-submitting the exact same
   // thing is blocked, since the reviewer rejected it for a reason.
