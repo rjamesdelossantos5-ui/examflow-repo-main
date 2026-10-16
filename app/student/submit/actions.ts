@@ -119,6 +119,12 @@ export async function submitRequest(formData: FormData) {
     fieldErrors.push('You must agree to the data privacy notice before submitting.')
   }
 
+  // "Other" needs an actual reason; the form's `required` accepts spaces and a
+  // crafted POST can skip it, and the value is trimmed above, so empty = blank.
+  if (examType === 'excused' && excusedReason === 'other' && !otherReason) {
+    fieldErrors.push('Please describe your reason.')
+  }
+
   if (fieldErrors.length) {
     const back = resubmitFrom ? `&from=${resubmitFrom}` : ''
     return redirect(`/student/submit?error=${encodeURIComponent(fieldErrors.join(' '))}${back}`)

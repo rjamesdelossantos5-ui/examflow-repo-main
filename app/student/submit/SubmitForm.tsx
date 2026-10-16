@@ -9,6 +9,9 @@ import { compressImage } from '@/lib/compressImage'
 import Select from '@/components/Select'
 import PrivacyNoticeSheet from '@/components/PrivacyNoticeSheet'
 import { withoutAccountTag } from '@/lib/initials'
+import { isValidPhone } from '@/lib/validation'
+
+const PHONE_MSG = 'Enter a valid mobile number — 11 digits starting with 09, e.g. 09171234567'
 
 // One (subject + section → teacher) row. The student picks a subject, then a
 // section available for it, and the teacher for that section fills in.
@@ -259,7 +262,17 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
         {examType === 'excused' && reason === 'other' && (
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Please specify *</label>
-            <input name="other_reason" required maxLength={500} defaultValue={prefill?.otherReason ?? ''} className={inputClass} placeholder="Briefly describe the reason" />
+            <input
+              name="other_reason"
+              required
+              maxLength={500}
+              // At least one non-space character — `required` alone accepts "   ".
+              pattern=".*\S.*"
+              title="Please describe the reason — spaces alone are not accepted."
+              defaultValue={prefill?.otherReason ?? ''}
+              className={inputClass}
+              placeholder="Briefly describe the reason"
+            />
           </div>
         )}
 
@@ -295,8 +308,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 inputMode="tel"
                 autoComplete="tel"
                 maxLength={40}
-                pattern="[0-9+ ()-]{10,15}"
-                title="Enter a valid contact number — digits only, e.g. 09171234567"
+                // Same rule as the server (isValidPhone): the old pattern counted
+                // spaces as characters, so blanks or a 10-digit number passed.
+                onInput={(e) => e.currentTarget.setCustomValidity(isValidPhone(e.currentTarget.value) ? '' : PHONE_MSG)}
+                title={PHONE_MSG}
               />
             </div>
             <div>
