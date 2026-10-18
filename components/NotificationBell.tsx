@@ -20,6 +20,12 @@ export interface NotificationItem {
    * staff, whose items are pending work and always count.
    */
   unread?: boolean
+  /**
+   * Staff: true = this person has opened the request since it last changed
+   * (listed, not counted); false = not opened yet (counted). Left out for items
+   * that aren't tied to one request, which always count.
+   */
+  read?: boolean
 }
 
 const keyOf = (n: NotificationItem) => `${n.id}|${n.text}`
@@ -45,8 +51,10 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
   const pending = useRef<Promise<void> | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const count = items.filter((n) => n.unread === undefined || (n.unread && !seenKeys.has(keyOf(n)))).length
-  const newInList = items.filter((n) => n.unread !== false).length
+  const isUnread = (n: NotificationItem) =>
+    n.read !== undefined ? !n.read : n.unread === undefined || (n.unread && !seenKeys.has(keyOf(n)))
+  const count = items.filter(isUnread).length
+  const newInList = items.filter((n) => (n.read !== undefined ? !n.read : n.unread !== false)).length
 
   // The list is only reloaded after the dropdown closes, so what the person is
   // reading never disappears under them (it used to refresh ~a second after
@@ -129,7 +137,7 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
             <ul className="max-h-[22rem] overflow-y-auto divide-y ef-border">
               {items.map((n) => {
                 const color = TONE[n.tone ?? 'info']
-                const isNew = n.unread === true
+                const isNew = n.read !== undefined ? !n.read : n.unread === true
                 return (
                   <li key={n.id}>
                     <Link

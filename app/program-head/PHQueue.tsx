@@ -4,6 +4,7 @@ import { useErrorToast } from '@/components/Toaster'
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DocumentViewer from '@/components/DocumentViewer'
+import MarkViewed from '@/components/MarkViewed'
 import type { RequestStatus } from '@/lib/supabase/types'
 import type { ParentCheck } from '@/lib/didit'
 import ParentNameCheck from '@/components/ParentNameCheck'
@@ -131,6 +132,8 @@ export default function PHQueue({
 
   return (
     <div>
+      {/* Opening a student shows all their forms, so all count as viewed. */}
+      <MarkViewed ids={active?.forms.map((f) => f.id) ?? []} />
       <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>{title}</h2>
 
       {error && (

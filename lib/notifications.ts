@@ -116,6 +116,7 @@ const MAX_ITEMS = 50
 
 interface QueueRow {
   id: string
+  updated_at: string | null
   snap_name: string | null
   profiles: { full_name: string } | null
   subjects: { subject_code: string } | null
@@ -133,6 +134,23 @@ export async function getNotifications(
   // drop off the bell too (keeps the bell in step with the queue + badge).
   const activeId = role === 'student' ? null : await activePeriodIdCached()
 
+  // When this person last opened each request (request_views, written by
+  // markRequestsViewed). A request is "read" for them while that is at or after
+  // the request's updated_at, so anything new on it counts again. Without the
+  // table (migration_request_views.sql not run) the query fails, the map stays
+  // empty and every item counts, as before.
+  const viewedAtMap = async (ids: string[]): Promise<Map<string, string>> => {
+    const map = new Map<string, string>()
+    if (!ids.length) return map
+    const { data } = await supabase.from('request_views').select('request_id, viewed_at').eq('user_id', userId).in('request_id', ids)
+    for (const v of (data ?? []) as { request_id: string; viewed_at: string }[]) map.set(v.request_id, v.viewed_at)
+    return map
+  }
+  const isRead = (viewed: Map<string, string>, id: string, updatedAt: string | null | undefined) => {
+    const v = viewed.get(id)
+    return !!v && !!updatedAt && new Date(v).getTime() >= new Date(updatedAt).getTime()
+  }
+
   const queueItems = async (
     status: string,
     basePath: string,
@@ -148,7 +166,7 @@ export async function getNotifications(
     const run = (gate: string | null) => {
       let q = supabase
         .from('special_exam_requests')
-        .select('id, snap_name, profiles!student_id(full_name), subjects(subject_code)')
+        .select('id, updated_at, snap_name, profiles!student_id(full_name), subjects(subject_code)')
         .eq('status', status)
         .order('submitted_at', { ascending: false })
         .limit(MAX_ITEMS)
@@ -159,12 +177,15 @@ export async function getNotifications(
     }
     const { data } = gated ? await withRegistrarGate(run) : await run(null)
 
-    return ((data ?? []) as unknown as QueueRow[]).map((r) => ({
+    const rows = (data ?? []) as unknown as QueueRow[]
+    const viewed = await viewedAtMap(rows.map((r) => r.id))
+    return rows.map((r) => ({
       id: r.id,
       text: text(r.snap_name ?? r.profiles?.full_name ?? 'A student', r.subjects?.subject_code ?? 'a subject'),
       href: `${basePath}?req=${r.id}`,
       tone,
       icon,
+      read: isRead(viewed, r.id, r.updated_at),
     }))
   }
 
@@ -240,6 +261,8 @@ export async function getNotifications(
       .limit(MAX_ITEMS)
     const data = allData ?? []
     const isNew = (iso: string | null | undefined) => !!iso && new Date(iso).getTime() > seenMs
+    // A request the student has opened since it last changed is not new.
+    const viewed = await viewedAtMap(data.map((r) => r.id as string))
 
     const items: NotificationItem[] = []
 
@@ -288,7 +311,7 @@ export async function getNotifications(
     for (const r of data) {
       const code = (r.subjects as unknown as { subject_code: string } | null)?.subject_code ?? 'your subject'
       const href = `/student/requests/${r.id}`
-      const unread = isNew(r.updated_at)
+      const unread = isNew(r.updated_at) && !isRead(viewed, r.id as string, r.updated_at as string)
       if (r.status === 'accepted' && r.exam_type === 'paid')
         items.push({ unread, id: r.id, text: `Action needed: upload your payment receipt for ${code}.`, href, tone: 'warning', icon: 'receipt' })
       else if (r.status === 'accepted')

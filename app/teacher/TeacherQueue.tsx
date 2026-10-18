@@ -4,6 +4,7 @@ import { useErrorToast } from '@/components/Toaster'
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
+import MarkViewed from '@/components/MarkViewed'
 import { Icon } from '@/components/Icon'
 import { approveRequest, approveAll } from './actions'
 import type { RequestStatus } from '@/lib/supabase/types'
@@ -104,6 +105,8 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
 
   return (
     <div>
+      {/* Opening a student shows all their forms, so all count as viewed. */}
+      <MarkViewed ids={active?.forms.map((f) => f.id) ?? []} />
       <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
 
       {error && (
