@@ -7,6 +7,10 @@ import { recordLogin } from '@/lib/loginHistory'
 
 // 🔧 Same domain used everywhere else in the app.
 const ALLOWED_DOMAIN = process.env.SCHOOL_EMAIL_DOMAIN ?? '@yourschool.edu.ph'
+// Faculty sign in with this domain (students use ALLOWED_DOMAIN, @stamaria.sti.edu.ph).
+// endsWith on the "@…" form keeps the two apart: the student domain does not end
+// with the faculty one.
+const FACULTY_DOMAIN = process.env.FACULTY_EMAIL_DOMAIN ?? '@stamaria.sti.edu'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -61,8 +65,10 @@ export async function GET(request: Request) {
 
   const email = (data.user.email ?? '').toLowerCase()
 
-  // Reject any Microsoft account that isn't a school account.
-  if (!email.endsWith(ALLOWED_DOMAIN)) {
+  const isFacultyEmail = email.endsWith(FACULTY_DOMAIN)
+
+  // Reject any Microsoft account that isn't a school account (student or faculty).
+  if (!email.endsWith(ALLOWED_DOMAIN) && !isFacultyEmail) {
     await supabase.auth.signOut()
     try {
       const admin = createAdminClient()
@@ -71,7 +77,7 @@ export async function GET(request: Request) {
       // Even if cleanup fails, still block them from proceeding below.
     }
     return respond(
-      '/login?error=' + encodeURIComponent(`Please sign in with your school Microsoft account (${ALLOWED_DOMAIN}).`)
+      '/login?error=' + encodeURIComponent(`Please sign in with your school Microsoft account (${ALLOWED_DOMAIN} or ${FACULTY_DOMAIN}).`)
     )
   }
 
@@ -84,6 +90,26 @@ export async function GET(request: Request) {
   if (!profile || !profile.is_active) {
     await supabase.auth.signOut()
     return respond('/login?error=' + encodeURIComponent('This account is inactive. Please contact the registrar.'))
+  }
+
+  // New accounts are always created as 'student' (handle_new_user, see
+  // migration_role_escalation.sql). A faculty email that is still a bare student
+  // account becomes a Subject Teacher; a Program Head is promoted afterwards by
+  // the admin or the School Data import — the email can't tell them apart.
+  // Accounts that already have a staff role are left alone. Service role: a
+  // database guard stops everyone but an admin changing a role.
+  let role = profile.role
+  if (isFacultyEmail && role === 'student') {
+    const admin = createAdminClient()
+    const { error: roleError } = admin
+      ? await admin.from('profiles').update({ role: 'subject_teacher' }).eq('id', data.user.id)
+      : { error: new Error('SUPABASE_SERVICE_ROLE_KEY is not configured') }
+    if (roleError) {
+      console.error('[auth/callback] faculty role update failed', roleError)
+      await supabase.auth.signOut()
+      return respond('/login?error=' + encodeURIComponent('Your faculty account could not be set up. Please contact the admin.'))
+    }
+    role = 'subject_teacher'
   }
 
   // Accounts created before the login asked Microsoft for `profile` got their
@@ -106,5 +132,5 @@ export async function GET(request: Request) {
 
   await recordLogin(supabase, 'microsoft')
 
-  return respond(ROLE_HOME[profile.role] ?? '/login')
+  return respond(ROLE_HOME[role] ?? '/login')
 }
