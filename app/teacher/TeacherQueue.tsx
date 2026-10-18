@@ -5,8 +5,7 @@ import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
 import { Icon } from '@/components/Icon'
-import { approveRequest, rejectTeacherRequest, approveAll } from './actions'
-import { TEACHER_REJECT } from '@/lib/rejectReasons'
+import { approveRequest, approveAll } from './actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface RequestRow {
@@ -46,9 +45,13 @@ function groupByStudent(rows: RequestRow[]): Group[] {
 
 /**
  * Teacher's pending queue: master list of students on the left, the selected
- * student's forms (approve / reject panels) on the right. Approving or
- * rejecting removes the form from the list immediately (optimistic) — the
- * server round trip happens in the background via the actions in ./actions.
+ * student's forms (approve panels) on the right. Approving removes the form
+ * from the list immediately (optimistic) — the server round trip happens in
+ * the background via the actions in ./actions.
+ *
+ * Rejecting is not offered at this stage: the review panel is rendered without
+ * onReject, and RequestReviewPanel only shows its Reject button when that
+ * function is passed. (This also applies to the Admin viewing this page.)
  */
 export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const reqParam = useSearchParams().get('req')
@@ -178,9 +181,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                       media={f.media}
                       logs={f.logs}
                       onVerify={approveRequest}
-                      onReject={rejectTeacherRequest}
                       onDone={() => dropForm(f.id)}
-                      rejectPresets={TEACHER_REJECT}
                       verifyLabel="Approve & Forward to Program Head"
                       actionableStatus="verified_by_registrar"
                       showDocuments={false}
