@@ -166,7 +166,7 @@ export default function PHQueue({
                       {anyResub && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                       {anyReverified && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-amber-100 text-amber-800">Re-verified</span>}
                     </p>
-                    <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_code).join(', ')}</p>
+                    <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_name).join(', ')}</p>
                   </div>
                   <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
                     {g.forms.length} form{g.forms.length === 1 ? '' : 's'}
@@ -299,7 +299,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
         <div className="min-w-0">
           <h3 className="text-lg font-bold leading-tight break-words" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</h3>
           <p className="mt-1 ef-muted">
-            <span className="font-semibold" style={{ color: 'var(--card-foreground)' }}>{r.subject.subject_code}</span> {r.subject.subject_name}
+            {r.subject.subject_name}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span

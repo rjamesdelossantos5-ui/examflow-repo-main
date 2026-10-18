@@ -211,7 +211,6 @@ export default async function RequestDetailPage({
             <h1 className="text-xl font-bold truncate" style={{ color: 'var(--card-foreground)' }}>
               {subj?.subject_name}
             </h1>
-            <p className="text-sm ef-muted">{subj?.subject_code}</p>
           </div>
           {/* The row's status is 'submitted' from the moment it is created, so
               StatusBadge would read "Submitted" before it actually is. */}

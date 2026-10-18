@@ -61,19 +61,12 @@ export default async function StudentHistoryPage() {
                 href={`/student/requests/${r.id}`}
                 className="ef-card group flex items-center gap-4 rounded-xl shadow-sm p-4 hover:shadow-md hover:-translate-y-0.5 transition-[box-shadow,translate] duration-200 ease-[var(--ease-out)]"
               >
-                <div
-                  className="w-11 h-11 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"
-                  style={{ background: 'var(--sti-navy)', color: 'var(--sti-gold)' }}
-                >
-                  {subj?.subject_code?.slice(0, 3).toUpperCase() ?? '—'}
-                </div>
-
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold truncate" style={{ color: 'var(--card-foreground)' }}>
                     {subj?.subject_name ?? 'Unknown subject'}
                   </p>
                   <p className="text-xs ef-muted">
-                    {subj?.subject_code}{termName(r.period_id) ? ` · ${termName(r.period_id)}` : ''} · Submitted {new Date(r.submitted_at).toLocaleDateString()}
+                    {termName(r.period_id) ? `${termName(r.period_id)} · ` : ''}Submitted {new Date(r.submitted_at).toLocaleDateString()}
                   </p>
                 </div>
 

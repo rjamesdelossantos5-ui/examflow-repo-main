@@ -136,7 +136,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                       {g.name}
                       {anyResub && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                     </p>
-                    <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_code).join(', ')}</p>
+                    <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_name).join(', ')}</p>
                   </div>
                   <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
                     {pending} form{pending === 1 ? '' : 's'}
