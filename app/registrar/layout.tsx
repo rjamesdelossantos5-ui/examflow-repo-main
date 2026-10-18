@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import AdminActingBanner from '@/components/AdminActingBanner'
-import { getNotifications, countRegistrarPending } from '@/lib/notifications'
+import { getNotifications, countRegistrarPending, countAwaitingAssessment } from '@/lib/notifications'
 
 export default async function RegistrarLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -13,11 +13,12 @@ export default async function RegistrarLayout({ children }: { children: React.Re
 
   // One parallel wave — nothing below depends on the profile row, so it must
   // not wait behind it (the header can't paint until this layout resolves).
-  const [profile, notifications, pending] = await Promise.all([
+  const [profile, notifications, pending, toAssess] = await Promise.all([
     getMyProfileMeta(),
     getNotifications(supabase, user.id, 'registrar'),
     // Same gate as the queue — see lib/registrarGate.ts.
     countRegistrarPending(supabase),
+    countAwaitingAssessment(supabase),
   ])
 
   if (!profile || !['registrar', 'admin'].includes(profile.role)) redirect('/login')
@@ -29,7 +30,7 @@ export default async function RegistrarLayout({ children }: { children: React.Re
     // The Registrar's SECOND touch of a paid request: after the Program Head
     // accepts, total the student's special-exam subjects and pass the amount to
     // the Cashier. See app/registrar/assessment/page.tsx.
-    { label: 'Payment Assessment', href: '/registrar/assessment', icon: 'receipt' as const },
+    { label: 'Payment Assessment', href: '/registrar/assessment', icon: 'receipt' as const, badge: toAssess },
     { label: 'Verified History', href: '/registrar/history', icon: 'history' as const },
     // Each student's father, mother and/or guardian — compared with the name
     // on the parent's ID on the queue (lib/parentList.ts).
