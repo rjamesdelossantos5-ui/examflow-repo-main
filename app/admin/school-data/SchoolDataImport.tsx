@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import * as XLSX from 'xlsx'
 import { readSchoolData, PEOPLE_CHUNK_SIZE, type SchoolData, type Issue } from '@/lib/schoolData'
@@ -34,11 +35,13 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
   const [grids, setGrids] = useState<Record<string, unknown[][]> | null>(null)
   const [fileName, setFileName] = useState('')
   const [fileError, setFileError] = useState<string | null>(null)
+  useErrorToast(fileError)
   // Bumped to clear the file picker once the file has been uploaded.
   const [inputKey, setInputKey] = useState(0)
   const [progress, setProgress] = useState<{ step: string; done: number; total: number } | null>(null)
   const [result, setResult] = useState<Result | null>(null)
   const [runError, setRunError] = useState<string | null>(null)
+  useErrorToast(runError)
   const [isPending, startTransition] = useTransition()
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {

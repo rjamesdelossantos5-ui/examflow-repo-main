@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon } from '@/components/Icon'
-import { exportSchoolFormat } from './exportExcel'
+import { toastError } from '@/components/Toaster'
+import { exportSchoolFormat, type ExportHeader } from './exportExcel'
 import { deleteFinishedRequest } from '../actions'
 import { ordinalYear } from '@/lib/ordinal'
 import type { RequestStatus } from '@/lib/supabase/types'
@@ -48,7 +49,7 @@ interface StudentRow {
   department_name: string | null
 }
 
-export default function StudentsList({ initial }: { initial: StudentRow[] }) {
+export default function StudentsList({ initial, exportHeader }: { initial: StudentRow[]; exportHeader: ExportHeader }) {
   const [rows, setRows] = useState<StudentRow[]>(initial)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -74,7 +75,7 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
     startTransition(async () => {
       const res = await deleteFinishedRequest(id)
       setPendingDelete(null)
-      if (res.error) alert(res.error)
+      if (res.error) toastError(res.error)
       else setRows((rs) => rs.filter((r) => r.id !== id))
     })
   }
@@ -117,7 +118,7 @@ export default function StudentsList({ initial }: { initial: StudentRow[] }) {
       section: r.section,
       subject_code: r.subject_code,
       subject_name: r.subject_name,
-    })))
+    })), exportHeader)
   }
 
   return (

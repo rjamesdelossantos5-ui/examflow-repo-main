@@ -119,6 +119,12 @@ export async function submitRequest(formData: FormData) {
     fieldErrors.push('You must agree to the data privacy notice before submitting.')
   }
 
+  // "Other" needs an actual reason; the form's `required` accepts spaces and a
+  // crafted POST can skip it, and the value is trimmed above, so empty = blank.
+  if (examType === 'excused' && excusedReason === 'other' && !otherReason) {
+    fieldErrors.push('Please describe your reason.')
+  }
+
   if (fieldErrors.length) {
     const back = resubmitFrom ? `&from=${resubmitFrom}` : ''
     return redirect(`/student/submit?error=${encodeURIComponent(fieldErrors.join(' '))}${back}`)
@@ -384,6 +390,25 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
   }
   if (!oldRow || oldRow.status !== 'rejected') {
     return redirect('/student/submit?error=' + encodeURIComponent('This request can no longer be resubmitted.'))
+  }
+
+  // One request per subject per term applies here too. Switching a rejected
+  // request to a subject the student already filed this term would create the
+  // duplicate the new-submission path refuses. The row being edited is excluded,
+  // and an unchanged subject is not re-checked (it was valid when first filed).
+  if (fields.subjectId !== oldRow.subject_id) {
+    const { data: dupes, error: dupeErr } = await supabase
+      .from('special_exam_requests')
+      .select('id')
+      .eq('student_id', userId)
+      .eq('subject_id', fields.subjectId)
+      .eq('period_id', fields.periodId)
+      .neq('id', oldId)
+      .limit(1)
+    // Fails open if period_id isn't migrated, same as the new-submission check.
+    if (!dupeErr && dupes?.[0]) {
+      return redirect(`/student/submit?from=${oldId}&error=${encodeURIComponent('You already have a request for that subject this term. Pick a different subject, or keep this request’s original one.')}`)
+    }
   }
 
   // A resubmit must actually differ from the rejected request — either a new

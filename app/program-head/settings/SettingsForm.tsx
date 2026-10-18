@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useCallback, useState, useTransition } from 'react'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { savePeriod, saveExamSchedule } from '../actions'
@@ -32,6 +33,7 @@ function windowSummary(p: { submissionStart: string | null; windowDays: number }
 
 export default function SettingsForm({ active, periods }: { active: ExamPeriod | null; periods: ExamPeriod[] }) {
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [isPending, startTransition] = useTransition()
 
   // The special exam in one phrase for the status strip.

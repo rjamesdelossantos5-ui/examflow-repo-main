@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { startParentVerification, refreshParentVerification, confirmSubmission } from './actions'
 
@@ -51,6 +52,7 @@ export default function VerifyParent({
   sendsTo = 'Registrar',
 }: Props) {
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [isPending, startTransition] = useTransition()
   const [leaving, setLeaving] = useState(false)
   const phase = phaseOf(status)

@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
@@ -62,6 +63,7 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
   const detailRef = useRef<HTMLDivElement>(null)
 
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [isPending, startTransition] = useTransition()
 
   // Open a student from a notification deep-link (?req=<form id>).

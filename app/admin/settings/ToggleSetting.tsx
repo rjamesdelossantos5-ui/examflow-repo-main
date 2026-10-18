@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import { updateToggleSetting } from './actions'
 
@@ -17,6 +18,7 @@ export default function ToggleSetting({
 }) {
   const [on, setOn] = useState(initialOn)
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [isPending, startTransition] = useTransition()
 
   function flip() {

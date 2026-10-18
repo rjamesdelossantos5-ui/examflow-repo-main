@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useCallback, useState, useTransition } from 'react'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { getResetPreview, resetRequests, getSchoolDataPreview, clearUnusedAccounts, clearSchoolStructure } from './actions'
@@ -50,6 +51,7 @@ export default function ResetPanel() {
   const [loading, setLoading] = useState(false)
   const [typed, setTyped] = useState('')
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [progress, setProgress] = useState<string | null>(null)
   const [done, setDone] = useState<Done | null>(null)
   const [isPending, startTransition] = useTransition()

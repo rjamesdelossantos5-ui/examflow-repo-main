@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
 import { toggleUserActive, deleteUser, createUser, updateUser } from './actions'
@@ -483,6 +484,7 @@ export default function UserTable({
       : null
   const [showCreate, setShowCreate] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   // After a School Data import this list runs to hundreds — find by name,
   // email, student number or section, and narrow by role.
   const [query, setQuery] = useState('')
@@ -515,6 +517,7 @@ export default function UserTable({
   const [toEdit, setToEdit] = useState<Profile | null>(null)
   const [editRole, setEditRole] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
+  useErrorToast(editError)
   const closeEdit = useCallback(() => { setToEdit(null); setEditError(null) }, [])
   useEscapeKey(closeEdit, !!toEdit && !isPending)
 
@@ -526,6 +529,7 @@ export default function UserTable({
   // The account waiting for a Delete confirmation (null = dialog closed).
   const [toDelete, setToDelete] = useState<Profile | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  useErrorToast(deleteError)
   const closeDelete = useCallback(() => { setToDelete(null); setDeleteError(null) }, [])
   useEscapeKey(closeDelete, !!toDelete && !isPending)
 

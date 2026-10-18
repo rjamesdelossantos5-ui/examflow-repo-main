@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import UserMenu from './UserMenu'
 import NotificationBell, { type NotificationItem } from './NotificationBell'
 import LiveRefresh from './LiveRefresh'
+import Toaster from './Toaster'
 import { Icon, type IconName } from './Icon'
 import { ROLE_HOME } from '@/lib/nav'
 import type { UserRole } from '@/lib/supabase/types'
@@ -44,6 +45,7 @@ export default function DashboardLayout({ role, userId, userName, email, navItem
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       <LiveRefresh filter={liveFilter} />
+      <Toaster />
       {/* Brand bar */}
       <header className="relative z-50" style={{ backgroundColor: 'var(--header)' }}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -67,7 +69,10 @@ export default function DashboardLayout({ role, userId, userName, email, navItem
           className="sticky top-0 z-40"
           style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }}
         >
-          <nav className="max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 flex gap-1.5 overflow-x-auto py-2.5 items-center no-scrollbar">
+          {/* The scrollbar stays visible (thin): when the window is narrow or the
+              browser is zoomed in, the tabs overflow, and with the bar hidden
+              a mouse user had no way to tell they could scroll or how. */}
+          <nav className="max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-8 flex gap-1.5 overflow-x-auto py-2.5 items-center [scrollbar-width:thin]">
             {navItems.map((item) => {
               const active = item.href === activeHref
               return (

@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import { formatPeso, MAX_SPECIAL_EXAM_FEE } from '@/lib/fees'
 import { updateSpecialExamFee } from './actions'
@@ -9,6 +10,7 @@ export default function FeeForm({ fee }: { fee: number }) {
   const [value, setValue] = useState(String(fee))
   const [saved, setSaved] = useState(fee)
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [message, setMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 

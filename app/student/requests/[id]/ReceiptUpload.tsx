@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useRef, useState, useTransition } from 'react'
 import { uploadReceipt } from './actions'
 import { compressImage } from '@/lib/compressImage'
@@ -34,7 +35,9 @@ export default function ReceiptUpload({
   amountDue: number
 }) {
   const [serverError, setServerError] = useState<string | null>(null)
+  useErrorToast(serverError)
   const [fileError, setFileError] = useState<string | null>(null)
+  useErrorToast(fileError)
   const [fileName, setFileName] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [success, setSuccess] = useState(false)

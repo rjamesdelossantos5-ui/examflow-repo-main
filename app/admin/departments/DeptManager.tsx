@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import type { Department } from '@/lib/supabase/types'
 import { createDepartment, updateDepartment, deleteDepartment } from './actions'
@@ -9,6 +10,7 @@ import { createDepartment, updateDepartment, deleteDepartment } from './actions'
 export default function DeptManager({ departments }: { departments: Department[] }) {
   const [editing, setEditing] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  useErrorToast(error)
   const [isPending, startTransition] = useTransition()
 
   function handleCreate(e: React.FormEvent<HTMLFormElement>) {

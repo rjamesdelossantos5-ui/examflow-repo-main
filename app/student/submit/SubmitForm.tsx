@@ -1,5 +1,6 @@
 'use client'
 
+import { useErrorToast } from '@/components/Toaster'
 import { useCallback, useRef, useState } from 'react'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { submitRequest } from './actions'
@@ -9,6 +10,9 @@ import { compressImage } from '@/lib/compressImage'
 import Select from '@/components/Select'
 import PrivacyNoticeSheet from '@/components/PrivacyNoticeSheet'
 import { withoutAccountTag } from '@/lib/initials'
+import { isValidPhone } from '@/lib/validation'
+
+const PHONE_MSG = 'Enter a valid mobile number — 11 digits starting with 09, e.g. 09171234567'
 
 // One (subject + section → teacher) row. The student picks a subject, then a
 // section available for it, and the teacher for that section fills in.
@@ -60,6 +64,7 @@ interface Prefill {
 }
 
 export default function SubmitForm({ offerings, termLabel, profile, error, submissionOpen = true, windowMessage, prefill, existingDocs = [], enrolledSection = null, courseNames = {} }: { offerings: Offering[]; termLabel?: string | null; profile: ProfileInfo; error?: string; submissionOpen?: boolean; windowMessage?: string | null; prefill?: Prefill | null; existingDocs?: string[]; enrolledSection?: string | null; courseNames?: Record<string, string> }) {
+  useErrorToast(error ? decodeURIComponent(error) : null)
   const kept = new Set(existingDocs)
   const courses = Array.from(new Set(offerings.map((o) => coursePrefix(o.section)).filter(Boolean))).sort()
   // The student's section from the School Data import: course, year and
@@ -150,6 +155,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
   const formRef = useRef<HTMLFormElement>(null)
   const [attachError, setAttachError] = useState<string | null>(null)
+  useErrorToast(attachError)
   const closeConfirm = useCallback(() => setConfirming(false), [setConfirming])
   useEscapeKey(closeConfirm, confirming)
 
@@ -259,7 +265,17 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
         {examType === 'excused' && reason === 'other' && (
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Please specify *</label>
-            <input name="other_reason" required maxLength={500} defaultValue={prefill?.otherReason ?? ''} className={inputClass} placeholder="Briefly describe the reason" />
+            <input
+              name="other_reason"
+              required
+              maxLength={500}
+              // At least one non-space character — `required` alone accepts "   ".
+              pattern=".*\S.*"
+              title="Please describe the reason — spaces alone are not accepted."
+              defaultValue={prefill?.otherReason ?? ''}
+              className={inputClass}
+              placeholder="Briefly describe the reason"
+            />
           </div>
         )}
 
@@ -295,8 +311,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 inputMode="tel"
                 autoComplete="tel"
                 maxLength={40}
-                pattern="[0-9+ ()-]{10,15}"
-                title="Enter a valid contact number — digits only, e.g. 09171234567"
+                // Same rule as the server (isValidPhone): the old pattern counted
+                // spaces as characters, so blanks or a 10-digit number passed.
+                onInput={(e) => e.currentTarget.setCustomValidity(isValidPhone(e.currentTarget.value) ? '' : PHONE_MSG)}
+                title={PHONE_MSG}
               />
             </div>
             <div>
@@ -599,6 +617,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 function FileField({ name, label, hint, inputClass, kept = false }: { name: string; label: string; hint: string; inputClass: string; kept?: boolean }) {
   const [fileName, setFileName] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  useErrorToast(fileError)
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 

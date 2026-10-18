@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { keepActive } from '@/lib/examSettings'
-import { activePeriodIdCached } from '@/lib/activePeriod'
+import { keepActive, computeWindow, SEMESTER_LABEL, TERM_LABEL } from '@/lib/examSettings'
+import { getActivePeriodCached } from '@/lib/activePeriod'
 import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
 import { getCurrentUser } from '@/lib/currentUser'
 import StudentsList from './StudentsList'
@@ -36,7 +36,19 @@ export default async function StudentsPage() {
   // Live list rule: paid requests appear only once the receipt is verified
   // (status 'scheduled'); excused requests appear right after first approval
   // (status 'accepted'), since they have no receipt step.
-  const activeId = await activePeriodIdCached()
+  const activePeriod = await getActivePeriodCached()
+  const activeId = activePeriod?.id ?? null
+  // The Excel header follows Exam Periods: the term, and the deadline is the day
+  // the submission window closes. Blank if no window is set for the term.
+  const win = activePeriod ? computeWindow(activePeriod.submissionStart, activePeriod.windowDays) : null
+  const exportHeader = {
+    examPeriod: activePeriod
+      ? `${SEMESTER_LABEL[activePeriod.semester]} ${TERM_LABEL[activePeriod.term]} Examination`
+      : '',
+    deadlineText: win?.end
+      ? `on or before ${new Date(win.end).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}, 12:00 NN`
+      : '',
+  }
   const rows = keepActive(data ?? [], activeId).map((r) => {
     const subj = r.subjects as unknown as {
       subject_code: string
@@ -73,5 +85,5 @@ export default async function StudentsPage() {
     }
   }).filter((r) => r.status === 'scheduled' || (r.status === 'accepted' && r.exam_type === 'excused'))
 
-  return <StudentsList initial={rows} />
+  return <StudentsList initial={rows} exportHeader={exportHeader} />
 }

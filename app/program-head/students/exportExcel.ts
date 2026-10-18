@@ -16,10 +16,16 @@ export interface ExportRow {
   subject_name: string
 }
 
-// ── School-standard text (update these each exam period) ──────────────
+// ── School-standard text ──────────────
+// The exam period line (e.g. "1st Semester Prelim Examination") and the deadline
+// text (e.g. "on or before January 20, 2027, 12:00 NN") are passed in, built from
+// the active period in Exam Periods.
 const DEADLINE_LABEL = "Deadline of School's Submission of this List:"
-const EXAM_PERIOD = 'Midterm/3Q Examination'
-const DEADLINE_TEXT = 'on or before April 6, 2026, 12:00 NN'
+
+export interface ExportHeader {
+  examPeriod: string
+  deadlineText: string
+}
 
 const ARIAL = 'Arial'
 const RED = 'FFC00000'           // deadline banner
@@ -53,7 +59,7 @@ function reasonStr(r: ExportRow) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type WS = any
 
-function buildListSheet(wb: WS, name: string, rows: ExportRow[], withReason: boolean) {
+function buildListSheet(wb: WS, name: string, rows: ExportRow[], withReason: boolean, header: ExportHeader) {
   const ws = wb.addWorksheet(name)
   const size = withReason ? 11 : 12
   const lastCol = withReason ? 7 : 6
@@ -97,13 +103,13 @@ function buildListSheet(wb: WS, name: string, rows: ExportRow[], withReason: boo
   // ── Row 2: exam period + deadline text ──
   ws.mergeCells(`A2:${dataEndCol}2`)
   const t2 = ws.getCell('A2')
-  t2.value = EXAM_PERIOD
+  t2.value = header.examPeriod
   t2.font = { name: ARIAL, size }
   t2.alignment = { horizontal: 'center', vertical: 'middle' }
   t2.border = allBorders
   t2.fill = solid(BLUE_TITLE)
   ws.mergeCells(`E2:${lastColLetter}2`)
-  redCell(ws.getCell('E2'), DEADLINE_TEXT)
+  redCell(ws.getCell('E2'), header.deadlineText)
 
   // ── Row 3: headers ──
   const headers = [
@@ -217,13 +223,13 @@ function buildSummary(wb: WS, rows: ExportRow[]) {
   ws.views = [{ state: 'frozen', ySplit: 1 }]
 }
 
-export async function exportSchoolFormat(rows: ExportRow[]) {
+export async function exportSchoolFormat(rows: ExportRow[], header: ExportHeader) {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
   wb.creator = 'EXAMFLOW'
 
-  buildListSheet(wb, 'PAID SPECIAL EXAM', rows.filter((r) => r.exam_type === 'paid'), false)
-  buildListSheet(wb, 'WAIVED FEE (VALID REASON)', rows.filter((r) => r.exam_type === 'excused'), true)
+  buildListSheet(wb, 'PAID SPECIAL EXAM', rows.filter((r) => r.exam_type === 'paid'), false, header)
+  buildListSheet(wb, 'WAIVED FEE (VALID REASON)', rows.filter((r) => r.exam_type === 'excused'), true, header)
   buildSummary(wb, rows)
 
   const buf = await wb.xlsx.writeBuffer()

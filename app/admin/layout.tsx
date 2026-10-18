@@ -27,6 +27,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // Head page where that step is done, which the admin may act on directly.
     // First tab and the admin's home (app/admin/page.tsx).
     { label: 'Requests', href: '/admin/requests', icon: 'inbox' as const, badge: waiting },
+    // Same list and Excel export as the Program Head's Accepted Students.
+    { label: 'Accepted Students', href: '/admin/students', icon: 'cap' as const },
     { label: 'Analytics', href: '/admin/analytics', icon: 'chart' as const },
     // The same Exam Periods form as the Program Head's: term, submission
     // window and exam date. Checked every term.
@@ -45,6 +47,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // still drives what a Program Head sees, via lib/deptFilter.ts.
     // Who signed in and when, last 90 days (supabase/migration_login_history.sql).
     { label: 'Login History', href: '/admin/login-history', icon: 'history' as const },
+    // What users did on requests (progress_logs), all roles.
+    { label: 'User Activity', href: '/admin/activity', icon: 'list' as const },
     // School-wide settings, starting with the special-exam fee.
     { label: 'Settings', href: '/admin/settings', icon: 'settings' as const },
     // Testing tool, not a school workflow: wipes every request so a demo run
