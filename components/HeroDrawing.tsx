@@ -58,7 +58,10 @@ export default function HeroDrawing() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 right-0 -z-10 hidden w-[54%] md:block"
+      // Phones: a strip along the bottom of the hero, under the text (the text
+      // fills the width there, so beside it was never an option). From md up:
+      // the right 54%, full height, behind the text.
+      className="pointer-events-none absolute -z-10 inset-x-0 bottom-0 h-64 w-full md:inset-x-auto md:inset-y-0 md:right-0 md:h-auto md:w-[54%]"
     >
       <style>{`
         .efh-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: efh-draw 2.4s linear .4s both; }

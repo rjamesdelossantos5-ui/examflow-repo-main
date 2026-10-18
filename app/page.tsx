@@ -73,7 +73,7 @@ export default function LandingPage() {
           stacking context), clipped to the section. */}
       <section className="relative isolate overflow-hidden" style={{ background: PAPER_COOL }}>
         <HeroDrawing />
-        <div className={`${CONTAINER} pt-20 pb-24 lg:pt-32 lg:pb-36`}>
+        <div className={`${CONTAINER} pt-20 pb-72 md:pb-24 lg:pt-32 lg:pb-36`}>
           <h1
             className="ef-reveal font-extrabold leading-[0.98] text-balance"
             // marginLeft: optical alignment. At this size the M's built-in side
