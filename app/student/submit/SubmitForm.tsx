@@ -439,7 +439,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium ef-muted mb-1">
-                  Subjects * <span className="font-normal">(up to {MAX_SUBJECTS} — one parent check covers all of them)</span>
+                  Subjects * <span className="font-normal">(up to {MAX_SUBJECTS})</span>
                 </label>
                 {!course ? (
                   <p className="text-sm ef-muted">Select a course first.</p>
