@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Icon, type IconName } from './Icon'
 import { markNotificationsSeen } from '@/app/notificationActions'
+import { markRequestsViewed } from '@/app/requestViewActions'
 
 export type NotificationTone = 'info' | 'success' | 'warning' | 'danger'
 
@@ -30,6 +31,30 @@ export interface NotificationItem {
 
 const keyOf = (n: NotificationItem) => `${n.id}|${n.text}`
 
+// Alerts that are neither a student's status change nor one request (e.g. a
+// Registrar's payment assessment) have no record on the server. Their keys are
+// remembered in this browser instead, so opening the bell clears them too. The
+// key includes the text, so an alert whose wording changes (a new count) shows
+// again.
+const SEEN_STORAGE = 'ef-seen-alerts'
+const isPlain = (n: NotificationItem) => n.unread === undefined && n.read === undefined
+function loadSeen(): string[] {
+  try {
+    const raw = localStorage.getItem(SEEN_STORAGE)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === 'string') : []
+  } catch {
+    return []
+  }
+}
+function saveSeen(keys: Set<string>) {
+  try {
+    localStorage.setItem(SEEN_STORAGE, JSON.stringify([...keys].slice(-200)))
+  } catch {
+    // Storage unavailable: the badge just clears for this visit only.
+  }
+}
+
 // Tone → accent color used by the per-item icon chip (tinted bg + solid icon).
 const TONE: Record<NotificationTone, string> = {
   info: '#3b82f6',
@@ -48,11 +73,17 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
   // Unread items already opened in this visit — hides the badge at once,
   // before the server's copy catches up.
   const [seenKeys, setSeenKeys] = useState<Set<string>>(() => new Set())
+  // Plain alerts already opened on this device (see SEEN_STORAGE).
+  const [plainSeen, setPlainSeen] = useState<Set<string>>(() => new Set())
+  // Read after mount: localStorage does not exist on the server, and reading it
+  // during render would make the first client render differ from the server's.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setPlainSeen(new Set(loadSeen())), [])
   const pending = useRef<Promise<void> | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const isUnread = (n: NotificationItem) =>
-    n.read !== undefined ? !n.read : n.unread === undefined || (n.unread && !seenKeys.has(keyOf(n)))
+    n.read !== undefined ? !n.read && !seenKeys.has(keyOf(n)) : n.unread === undefined ? !plainSeen.has(keyOf(n)) : n.unread && !seenKeys.has(keyOf(n))
   const count = items.filter(isUnread).length
   const newInList = items.filter((n) => (n.read !== undefined ? !n.read : n.unread !== false)).length
 
@@ -79,13 +110,28 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
   // Opening the bell marks unread items seen: the badge clears (and stays
   // cleared, even across a re-login) until something newer shows up. The items
   // themselves stay listed.
+  //   Students: one timestamp on their profile.
+  //   Staff: each listed request is recorded as opened (the same record that
+  //   opening the request itself writes), so the badge drops to what has not
+  //   been looked at. Items not tied to one request (e.g. payment assessment)
+  //   have no read flag and keep counting.
   function handleToggle() {
     if (open) return close()
     setOpen(true)
     const fresh = items.filter((n) => n.unread && !seenKeys.has(keyOf(n)))
+    const freshStaff = items.filter((n) => n.read === false && !seenKeys.has(keyOf(n)))
+    const freshPlain = items.filter((n) => isPlain(n) && !plainSeen.has(keyOf(n)))
+    if (freshPlain.length) {
+      const next = new Set([...plainSeen, ...freshPlain.map(keyOf)])
+      setPlainSeen(next)
+      saveSeen(next)
+    }
     if (fresh.length) {
       setSeenKeys((prev) => new Set([...prev, ...fresh.map(keyOf)]))
       pending.current = markNotificationsSeen()
+    } else if (freshStaff.length) {
+      setSeenKeys((prev) => new Set([...prev, ...freshStaff.map(keyOf)]))
+      pending.current = markRequestsViewed(freshStaff.map((n) => n.id)).then(() => undefined)
     }
   }
 
