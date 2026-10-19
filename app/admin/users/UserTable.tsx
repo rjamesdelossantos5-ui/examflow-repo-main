@@ -744,32 +744,37 @@ export default function UserTable({
             aria-modal="true"
             aria-labelledby="delete-user-title"
             aria-describedby="delete-user-desc"
-            className="ef-dialog ef-card rounded-2xl shadow-2xl max-w-sm w-full p-6"
+            className="ef-dialog ef-card rounded-lg shadow-xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="delete-user-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Delete this account?</h3>
 
-            <div className="mt-3 rounded-lg border ef-border px-3 py-2.5">
-              <p className="text-sm font-semibold break-all" style={{ color: 'var(--card-foreground)' }}>{toDelete.full_name}</p>
-              {toDelete.email !== toDelete.full_name && <p className="text-xs ef-muted break-all">{toDelete.email}</p>}
-              <p className="text-xs ef-muted mt-0.5">{ROLE_LABELS[toDelete.role] ?? toDelete.role}</p>
+            {/* Who it is: name and email, the role as a small tag. No box. */}
+            <div className="mt-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold break-words" style={{ color: 'var(--card-foreground)' }}>{toDelete.full_name}</p>
+                {toDelete.email !== toDelete.full_name && <p className="text-xs ef-muted break-all mt-0.5">{toDelete.email}</p>}
+              </div>
+              <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'color-mix(in srgb, var(--muted) 16%, transparent)', color: 'var(--card-foreground)' }}>
+                {ROLE_LABELS[toDelete.role] ?? toDelete.role}
+              </span>
             </div>
 
-            <p id="delete-user-desc" className="mt-3 text-sm ef-muted">
+            <p id="delete-user-desc" className="mt-4 text-sm ef-muted">
               Their login and profile are removed for good. If they are in the School Data file, importing it again creates a new account for them.
             </p>
 
             {deleteError && (
-              <p className="mt-3 rounded-md px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">{deleteError}</p>
+              <p role="alert" className="mt-4 text-sm" style={{ color: 'var(--status-danger)' }}>{deleteError}</p>
             )}
 
-            <div className="flex gap-3 mt-5">
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={closeDelete}
                 disabled={isPending}
                 autoFocus
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border disabled:opacity-50"
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-50"
                 style={{ color: 'var(--card-foreground)' }}
               >
                 Cancel
@@ -778,7 +783,7 @@ export default function UserTable({
                 type="button"
                 onClick={confirmDelete}
                 disabled={isPending}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-white disabled:opacity-60"
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90 disabled:opacity-60"
                 style={{ backgroundColor: 'var(--status-danger)' }}
               >
                 {isPending ? 'Deleting…' : 'Delete account'}
