@@ -10,6 +10,7 @@ import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import { createVerificationSession, isApproved } from '@/lib/didit'
 import { syncDiditResult } from '@/lib/diditSync'
+import { shareVerificationWithGroup } from '@/lib/verificationGroup'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
 const MAX_BYTES = 5 * 1024 * 1024
@@ -331,6 +332,10 @@ export async function confirmSubmission(requestId: string) {
   const admin = createAdminClient()
   if (!admin) return { error: SERVICE_KEY_MISSING }
   const now = new Date().toISOString()
+  // Make sure the other subjects filed in this submission hold the same Approved
+  // result before confirming them together (normally already copied when the
+  // result arrived; this covers a copy that did not happen).
+  await shareVerificationWithGroup(admin, requestId)
   // Returned by the Program Head for re-verification (returnForReverification):
   // it was submitted long ago and is already past the Registrar and Teacher,
   // so it keeps its original submitted_at and goes back to the Program Head.
