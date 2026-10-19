@@ -1,11 +1,14 @@
 /*
  * Landing page — direction (impeccable, seed d4bfd451, revised by the user to
  * text only, light)
- * THESIS: Words do the work. No illustrations, cards or mock-ups; the page is
- *   a short, plain notice a student reads in under a minute.
+ * THESIS: Words do the work. No cards or mock-ups; the page is a short, plain
+ *   notice a student reads in under a minute. The one picture is a quiet navy
+ *   line drawing behind the first screen (HeroDrawing): a form travelling to
+ *   the three signatures and arriving on a phone.
  * OWN-WORLD: Navy nav bar (the same bar the dashboards use) over cool
  *   off-white and white paper, navy ink, hairline rules; gold only on the
- *   nav's Log in. Archivo: wide for headings, normal width for reading.
+ *   nav's Log in (and, in the drawing, on what is done). Archivo: wide for
+ *   headings, normal width for reading.
  * STORY: A student who missed an exam learns what to prepare (parent with ID,
  *   document, paper form) and the order of the steps, then logs in.
  * FIRST VIEWPORT: Navy nav bar; on cool off-white the headline, one sentence
@@ -13,6 +16,7 @@
  */
 import { archivo } from './fonts'
 import LoginModal from './LoginModal'
+import HeroDrawing from '@/components/HeroDrawing'
 
 const NAVY = '#002F6C'
 const GOLD = '#FDB913'
@@ -64,7 +68,11 @@ export default function LandingPage() {
       </header>
 
       {/* ───────── First viewport ───────── */}
-      <section style={{ background: PAPER_COOL }}>
+      {/* "relative isolate overflow-hidden": the drawing is positioned inside
+          this section and sits behind the text (-z-10 within the isolated
+          stacking context), clipped to the section. */}
+      <section className="relative isolate overflow-hidden" style={{ background: PAPER_COOL }}>
+        <HeroDrawing />
         <div className={`${CONTAINER} pt-20 pb-24 lg:pt-32 lg:pb-36`}>
           <h1
             className="ef-reveal font-extrabold leading-[0.98] text-balance"

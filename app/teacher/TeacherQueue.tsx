@@ -4,9 +4,9 @@ import { useErrorToast } from '@/components/Toaster'
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
+import MarkViewed from '@/components/MarkViewed'
 import { Icon } from '@/components/Icon'
-import { approveRequest, rejectTeacherRequest, approveAll } from './actions'
-import { TEACHER_REJECT } from '@/lib/rejectReasons'
+import { approveRequest, approveAll } from './actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface RequestRow {
@@ -46,9 +46,13 @@ function groupByStudent(rows: RequestRow[]): Group[] {
 
 /**
  * Teacher's pending queue: master list of students on the left, the selected
- * student's forms (approve / reject panels) on the right. Approving or
- * rejecting removes the form from the list immediately (optimistic) — the
- * server round trip happens in the background via the actions in ./actions.
+ * student's forms (approve panels) on the right. Approving removes the form
+ * from the list immediately (optimistic) — the server round trip happens in
+ * the background via the actions in ./actions.
+ *
+ * Rejecting is not offered at this stage: the review panel is rendered without
+ * onReject, and RequestReviewPanel only shows its Reject button when that
+ * function is passed. (This also applies to the Admin viewing this page.)
  */
 export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const reqParam = useSearchParams().get('req')
@@ -101,6 +105,8 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
 
   return (
     <div>
+      {/* Opening a student shows all their forms, so all count as viewed. */}
+      <MarkViewed ids={active?.forms.map((f) => f.id) ?? []} />
       <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
 
       {error && (
@@ -136,7 +142,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                       {g.name}
                       {anyResub && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                     </p>
-                    <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_code).join(', ')}</p>
+                    <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_name).join(', ')}</p>
                   </div>
                   <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
                     {pending} form{pending === 1 ? '' : 's'}
@@ -178,9 +184,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                       media={f.media}
                       logs={f.logs}
                       onVerify={approveRequest}
-                      onReject={rejectTeacherRequest}
                       onDone={() => dropForm(f.id)}
-                      rejectPresets={TEACHER_REJECT}
                       verifyLabel="Approve & Forward to Program Head"
                       actionableStatus="verified_by_registrar"
                       showDocuments={false}

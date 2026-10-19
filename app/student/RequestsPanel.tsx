@@ -197,7 +197,6 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                   {/* Header: code, subject, type + filed time, status pill */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-2xs font-semibold uppercase tracking-wider ef-muted">{r.subject_code ?? '—'}</p>
                       <h3 className="text-lg font-bold leading-snug truncate" style={{ color: 'var(--card-foreground)' }}>
                         {r.subject_name ?? 'Unknown subject'}
                       </h3>

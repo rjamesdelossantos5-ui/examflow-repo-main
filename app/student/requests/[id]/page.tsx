@@ -1,5 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import MarkViewed from '@/components/MarkViewed'
 import { createClient } from '@/lib/supabase/server'
 import { attachSignedUrls } from '@/lib/supabase/getSignedUrls'
 import { getCurrentUser } from '@/lib/currentUser'
@@ -183,6 +184,8 @@ export default async function RequestDetailPage({
 
   return (
     <div className="max-w-2xl space-y-5">
+      {/* Opening the request counts as viewing it: the bell stops flagging it as new. */}
+      <MarkViewed ids={[req.id]} />
       <Link href="/student" className="inline-flex items-center gap-1 text-sm ef-muted hover:underline">
         ← Back to My Requests
       </Link>
@@ -211,7 +214,6 @@ export default async function RequestDetailPage({
             <h1 className="text-xl font-bold truncate" style={{ color: 'var(--card-foreground)' }}>
               {subj?.subject_name}
             </h1>
-            <p className="text-sm ef-muted">{subj?.subject_code}</p>
           </div>
           {/* The row's status is 'submitted' from the moment it is created, so
               StatusBadge would read "Submitted" before it actually is. */}

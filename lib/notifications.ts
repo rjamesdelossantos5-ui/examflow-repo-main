@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import type { NotificationItem } from '@/components/NotificationBell'
 import type { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/lib/supabase/types'
@@ -60,6 +61,40 @@ export async function countRegistrarPending(supabase: SupabaseServer): Promise<n
   return count ?? 0
 }
 
+// Students with paid requests the Program Head accepted that the Registrar has
+// not assessed yet (payment_assessed_at is null) — the "Awaiting assessment" tab
+// of /registrar/assessment, where one student's subjects are one bill. Same
+// term rule as that page (active term plus legacy null-period rows). Cached so
+// the nav badge and the bell share one query per request. If
+// migration_payment_assessment.sql hasn't run, the column is missing, the query
+// errors and this reports nothing rather than breaking the layout.
+const awaitingAssessment = cache(async (supabase: SupabaseServer): Promise<{ studentId: string; name: string; subjects: number }[]> => {
+  const activeId = await activePeriodIdCached()
+  let q = supabase
+    .from('special_exam_requests')
+    .select('student_id, snap_name, profiles!student_id(full_name)')
+    .eq('status', 'accepted')
+    .eq('exam_type', 'paid')
+    .is('payment_assessed_at', null)
+    .limit(1000)
+  if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
+  const { data, error } = await q
+  if (error) return []
+
+  const byStudent = new Map<string, { studentId: string; name: string; subjects: number }>()
+  for (const r of (data ?? []) as unknown as { student_id: string; snap_name: string | null; profiles: { full_name: string } | null }[]) {
+    const cur = byStudent.get(r.student_id)
+    if (cur) cur.subjects++
+    else byStudent.set(r.student_id, { studentId: r.student_id, name: r.snap_name ?? r.profiles?.full_name ?? 'A student', subjects: 1 })
+  }
+  return [...byStudent.values()]
+})
+
+// The Registrar's Payment Assessment nav badge: students awaiting assessment.
+export async function countAwaitingAssessment(supabase: SupabaseServer): Promise<number> {
+  return (await awaitingAssessment(supabase)).length
+}
+
 // Forms waiting on someone at any step (Registrar, Teacher, Program Head first
 // and second approval) — the admin's Requests nav-tab badge. Each count goes
 // through the same gate as its queue, so the badge matches what is listed.
@@ -81,6 +116,7 @@ const MAX_ITEMS = 50
 
 interface QueueRow {
   id: string
+  updated_at: string | null
   snap_name: string | null
   profiles: { full_name: string } | null
   subjects: { subject_code: string } | null
@@ -98,6 +134,23 @@ export async function getNotifications(
   // drop off the bell too (keeps the bell in step with the queue + badge).
   const activeId = role === 'student' ? null : await activePeriodIdCached()
 
+  // When this person last opened each request (request_views, written by
+  // markRequestsViewed). A request is "read" for them while that is at or after
+  // the request's updated_at, so anything new on it counts again. Without the
+  // table (migration_request_views.sql not run) the query fails, the map stays
+  // empty and every item counts, as before.
+  const viewedAtMap = async (ids: string[]): Promise<Map<string, string>> => {
+    const map = new Map<string, string>()
+    if (!ids.length) return map
+    const { data } = await supabase.from('request_views').select('request_id, viewed_at').eq('user_id', userId).in('request_id', ids)
+    for (const v of (data ?? []) as { request_id: string; viewed_at: string }[]) map.set(v.request_id, v.viewed_at)
+    return map
+  }
+  const isRead = (viewed: Map<string, string>, id: string, updatedAt: string | null | undefined) => {
+    const v = viewed.get(id)
+    return !!v && !!updatedAt && new Date(v).getTime() >= new Date(updatedAt).getTime()
+  }
+
   const queueItems = async (
     status: string,
     basePath: string,
@@ -113,7 +166,7 @@ export async function getNotifications(
     const run = (gate: string | null) => {
       let q = supabase
         .from('special_exam_requests')
-        .select('id, snap_name, profiles!student_id(full_name), subjects(subject_code)')
+        .select('id, updated_at, snap_name, profiles!student_id(full_name), subjects(subject_code)')
         .eq('status', status)
         .order('submitted_at', { ascending: false })
         .limit(MAX_ITEMS)
@@ -124,17 +177,32 @@ export async function getNotifications(
     }
     const { data } = gated ? await withRegistrarGate(run) : await run(null)
 
-    return ((data ?? []) as unknown as QueueRow[]).map((r) => ({
+    const rows = (data ?? []) as unknown as QueueRow[]
+    const viewed = await viewedAtMap(rows.map((r) => r.id))
+    return rows.map((r) => ({
       id: r.id,
       text: text(r.snap_name ?? r.profiles?.full_name ?? 'A student', r.subjects?.subject_code ?? 'a subject'),
       href: `${basePath}?req=${r.id}`,
       tone,
       icon,
+      read: isRead(viewed, r.id, r.updated_at),
     }))
   }
 
   if (role === 'registrar') {
-    return queueItems('submitted', '/registrar', (name, code) => `${name} submitted a request for ${code}.`, 'info', 'inbox', null, true)
+    const [submitted, toAssess] = await Promise.all([
+      queueItems('submitted', '/registrar', (name, code) => `${name} submitted a request for ${code}.`, 'info', 'inbox', null, true),
+      awaitingAssessment(supabase),
+    ])
+    // One alert per student: their accepted paid subjects are one bill.
+    const assessItems: NotificationItem[] = toAssess.map((s) => ({
+      id: `assess-${s.studentId}`,
+      text: `${s.name} — ${s.subjects} accepted paid subject${s.subjects === 1 ? '' : 's'} awaiting payment assessment.`,
+      href: '/registrar/assessment',
+      tone: 'warning',
+      icon: 'receipt',
+    }))
+    return [...submitted, ...assessItems]
   }
 
   if (role === 'subject_teacher') {
@@ -193,6 +261,8 @@ export async function getNotifications(
       .limit(MAX_ITEMS)
     const data = allData ?? []
     const isNew = (iso: string | null | undefined) => !!iso && new Date(iso).getTime() > seenMs
+    // A request the student has opened since it last changed is not new.
+    const viewed = await viewedAtMap(data.map((r) => r.id as string))
 
     const items: NotificationItem[] = []
 
@@ -241,7 +311,7 @@ export async function getNotifications(
     for (const r of data) {
       const code = (r.subjects as unknown as { subject_code: string } | null)?.subject_code ?? 'your subject'
       const href = `/student/requests/${r.id}`
-      const unread = isNew(r.updated_at)
+      const unread = isNew(r.updated_at) && !isRead(viewed, r.id as string, r.updated_at as string)
       if (r.status === 'accepted' && r.exam_type === 'paid')
         items.push({ unread, id: r.id, text: `Action needed: upload your payment receipt for ${code}.`, href, tone: 'warning', icon: 'receipt' })
       else if (r.status === 'accepted')

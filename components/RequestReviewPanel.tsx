@@ -134,7 +134,6 @@ export default function RequestReviewPanel({
   studentInfo,
   teacherName,
   subjectName,
-  subjectCode,
   examType,
   excusedReason,
   otherReason,
@@ -211,7 +210,7 @@ export default function RequestReviewPanel({
         <div className="min-w-0">
           <h3 className="text-lg font-bold leading-tight" style={{ color: 'var(--card-foreground)' }}>{studentName}</h3>
           <p className="mt-1 text-sm ef-muted">
-            <span className="font-semibold" style={{ color: 'var(--card-foreground)' }}>{subjectCode}</span> {subjectName}
+            {subjectName}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span

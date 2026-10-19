@@ -6,6 +6,11 @@ import { createClient } from '@/lib/supabase/server'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import { emailRequestEvent } from '@/lib/requestEmails'
 
+// Rejecting at the Teacher stage is switched off (this covers the Admin acting
+// as the Teacher too). Set to true to bring rejection back. Keep this constant
+// NOT exported: a 'use server' file may only export async functions.
+const TEACHER_CAN_REJECT = false
+
 async function requireTeacher() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -95,6 +100,9 @@ export async function approveAll(requestIds: string[]) {
 }
 
 export async function rejectTeacherRequest(requestId: string, reason: string) {
+  // Server-side block: hiding the button alone wouldn't stop a direct call.
+  if (!TEACHER_CAN_REJECT) return { error: 'Rejecting is not available at the Teacher stage.' }
+
   const ctx = await requireTeacher()
   if (!ctx) return { error: 'Unauthorized' }
   const { supabase, userId, role } = ctx
