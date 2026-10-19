@@ -36,8 +36,8 @@ export async function updateProfile(formData: FormData) {
   }
   const course = clean(formData.get('course'), 60)
   if (course && !isValidCode(course)) return { error: 'Enter a valid course (letters and numbers only).' }
-  const section = clean(formData.get('section'), 20)
-  if (section && !isValidCode(section)) return { error: 'Enter a valid section (letters and numbers only).' }
+  // Section is not edited here. It comes from the School Data import and is left
+  // untouched, so saving this page never blanks it.
 
   const { error } = await supabase
     .from('profiles')
@@ -45,7 +45,6 @@ export async function updateProfile(formData: FormData) {
       ...(numberAlreadySaved ? {} : { student_number: studentNumber || null }),
       course: course || null,
       year_level: yearLevel,
-      section: section || null,
     })
     .eq('id', user.id)
 

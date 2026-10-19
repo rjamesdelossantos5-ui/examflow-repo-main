@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { updateProfile } from './actions'
 import { initials } from '@/lib/initials'
+import Select from '@/components/Select'
 import type { Profile } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -12,6 +13,8 @@ const ROLE_LABELS: Record<string, string> = {
   program_head: 'Program Head',
   student: 'Student',
 }
+
+const YEARS = [1, 2, 3, 4]
 
 const inputClass =
   'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent'
@@ -32,11 +35,11 @@ function Banner({ kind, text }: { kind: 'ok' | 'err'; text: string }) {
 
 /**
  * My Account page: for students, edit the details that pre-fill the submit
- * form — student number, course, year, section. Name (from the Microsoft 365
+ * form — student number, course, year. Name (from the Microsoft 365
  * account), email and role are read-only here. Note: edits
  * do NOT rewrite past requests — those keep the snapshot taken at submit time.
  */
-export default function ProfileForm({ profile, assignment, studentNumberLocked = false }: { profile: Profile; assignment?: React.ReactNode; studentNumberLocked?: boolean }) {
+export default function ProfileForm({ profile, assignment, studentNumberLocked = false, courses = [] }: { profile: Profile; assignment?: React.ReactNode; studentNumberLocked?: boolean; courses?: { code: string; name: string | null }[] }) {
   const isStudent = profile.role === 'student'
   const [isPending, startTransition] = useTransition()
   const [profileMsg, setProfileMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
@@ -92,7 +95,7 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
         </div>
 
         {isStudent && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">
                 Student number {!studentNumberLocked && <span className="font-normal text-2xs">(optional)</span>}
@@ -108,15 +111,36 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Course</label>
-              <input name="course" defaultValue={profile.course ?? ''} className={inputClass} placeholder="e.g. BSIT" />
+              {courses.length ? (
+                <Select
+                  name="course"
+                  defaultValue={profile.course ?? ''}
+                  placeholder="— Select course —"
+                  // A course already saved stays selectable even if it is not on the list.
+                  options={[
+                    ...courses.map((c) => ({ value: c.code, label: c.name ? `${c.code} — ${c.name}` : c.code })),
+                    ...(profile.course && !courses.some((c) => c.code === profile.course) ? [{ value: profile.course, label: profile.course }] : []),
+                  ]}
+                  className={inputClass}
+                />
+              ) : (
+                // No programs imported yet: typing still works so an account can be filled in.
+                <input name="course" defaultValue={profile.course ?? ''} className={inputClass} placeholder="e.g. BSIT" />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">Year level</label>
-              <input name="year_level" type="number" min={1} max={6} defaultValue={profile.year_level ?? ''} className={inputClass} placeholder="1-6" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium ef-muted mb-1">Section</label>
-              <input name="section" defaultValue={profile.section ?? ''} className={inputClass} placeholder="e.g. A" />
+              <Select
+                name="year_level"
+                defaultValue={profile.year_level ? String(profile.year_level) : ''}
+                placeholder="— Select year —"
+                options={[
+                  ...YEARS.map((y) => ({ value: String(y), label: `Year ${y}` })),
+                  // A year already saved outside 1-4 stays selectable.
+                  ...(profile.year_level && !YEARS.includes(profile.year_level) ? [{ value: String(profile.year_level), label: `Year ${profile.year_level}` }] : []),
+                ]}
+                className={inputClass}
+              />
             </div>
           </div>
         )}

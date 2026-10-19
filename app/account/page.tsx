@@ -26,6 +26,13 @@ export default async function AccountPage() {
   if (!profile) redirect('/login')
 
   const role = profile.role as UserRole
+
+  // Programs from the School Data import, for the student's course dropdown.
+  let courses: { code: string; name: string | null }[] = []
+  if (role === 'student') {
+    const { data: programRows } = await supabase.from('program_departments').select('program, name').order('program')
+    courses = (programRows ?? []).map((p) => ({ code: p.program as string, name: (p.name as string | null) ?? null }))
+  }
   const deptName = (profile.departments as unknown as { name: string } | null)?.name ?? null
 
   // A subject teacher's dedicated subject(s) — the ones that route to them.
@@ -90,6 +97,7 @@ export default async function AccountPage() {
           student_number: (role === 'student' ? studentNumberFromEmail(profile.email) : null) ?? profile.student_number,
         }}
         studentNumberLocked={role === 'student' && studentNumberFromEmail(profile.email) !== null}
+        courses={courses}
       />
     </div>
   )
