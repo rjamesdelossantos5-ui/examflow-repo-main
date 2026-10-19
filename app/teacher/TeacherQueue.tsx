@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
 import MarkViewed from '@/components/MarkViewed'
 import { Icon } from '@/components/Icon'
-import { approveRequest, approveAll } from './actions'
+import { approveRequest, approveAll, rejectTeacherRequest } from './actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface RequestRow {
@@ -50,9 +50,8 @@ function groupByStudent(rows: RequestRow[]): Group[] {
  * from the list immediately (optimistic) — the server round trip happens in
  * the background via the actions in ./actions.
  *
- * Rejecting is not offered at this stage: the review panel is rendered without
- * onReject, and RequestReviewPanel only shows its Reject button when that
- * function is passed. (This also applies to the Admin viewing this page.)
+ * The teacher can also reject a form. The panel is given no reason presets, so
+ * the teacher types the reason themselves in a plain text box.
  */
 export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const reqParam = useSearchParams().get('req')
@@ -184,6 +183,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                       media={f.media}
                       logs={f.logs}
                       onVerify={approveRequest}
+                      onReject={rejectTeacherRequest}
                       onDone={() => dropForm(f.id)}
                       verifyLabel="Approve & Forward to Program Head"
                       actionableStatus="verified_by_registrar"

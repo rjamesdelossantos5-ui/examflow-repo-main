@@ -305,6 +305,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
             {r.subject.subject_name}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-xs ef-muted -mr-1.5">Exam type:</span>
             <span
               className="px-2 py-0.5 rounded-full text-xs font-semibold"
               style={{

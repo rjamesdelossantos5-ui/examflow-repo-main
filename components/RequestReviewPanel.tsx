@@ -206,6 +206,7 @@ export default function RequestReviewPanel({
             {subjectName}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs ef-muted">Exam type:</span>
             <span
               className="px-2 py-0.5 rounded-full text-xs font-semibold"
               style={{
