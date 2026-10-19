@@ -3,21 +3,32 @@
 import { useEffect, useSyncExternalStore } from 'react'
 
 /**
- * Error pop-ups, bottom-right, gone after a few seconds.
+ * Pop-ups, bottom-right, gone after a few seconds: red for errors, green for
+ * successes.
  *
  * Most screens already show an error as a banner at the top of the page, which a
  * user scrolled down a long form (or looking at a modal) never sees. This shows
  * the same message where they are looking. The banners stay; this is added on top.
  *
- * Mounted once in DashboardLayout. Call toastError(message) from an event
- * handler, or useErrorToast(error) next to an `error` state so every change of
- * that state pops up. <ErrorToast message={...} /> does the same for server pages.
+ * Mounted once in DashboardLayout.
+ *
+ * Errors:
+ *   toastError(message)            from an event handler
+ *   useErrorToast(error)           next to an `error` state; pops up on every change
+ *   <ErrorToast message={...} />   for server pages
+ *
+ * Successes (same three, same behaviour):
+ *   toastSuccess(message)
+ *   useSuccessToast(message)
+ *   <SuccessToast message={...} />
  */
 
-const SHOW_MS = 5000
+const ERROR_MS = 5000
+const SUCCESS_MS = 4000
 const MAX_VISIBLE = 3
 
-interface Toast { id: number; message: string }
+type Kind = 'error' | 'success'
+interface Toast { id: number; message: string; kind: Kind }
 
 let toasts: Toast[] = []
 let nextId = 1
@@ -33,14 +44,22 @@ function dismiss(id: number) {
   emit()
 }
 
-export function toastError(message: string) {
+function show(kind: Kind, message: string, ms: number) {
   // The same message already on screen (dev double-effects, a repeated click)
   // is not shown twice.
-  if (!message || toasts.some((t) => t.message === message)) return
+  if (!message || toasts.some((t) => t.message === message && t.kind === kind)) return
   const id = nextId++
-  toasts = [...toasts, { id, message }].slice(-MAX_VISIBLE)
+  toasts = [...toasts, { id, message, kind }].slice(-MAX_VISIBLE)
   emit()
-  setTimeout(() => dismiss(id), SHOW_MS)
+  setTimeout(() => dismiss(id), ms)
+}
+
+export function toastError(message: string) {
+  show('error', message, ERROR_MS)
+}
+
+export function toastSuccess(message: string) {
+  show('success', message, SUCCESS_MS)
 }
 
 /** Pops up whenever `message` changes to a non-empty value. */
@@ -50,9 +69,22 @@ export function useErrorToast(message: string | null | undefined) {
   }, [message])
 }
 
+/** Pops up whenever `message` changes to a non-empty value. */
+export function useSuccessToast(message: string | null | undefined) {
+  useEffect(() => {
+    if (message) toastSuccess(message)
+  }, [message])
+}
+
 /** For server components, which can't call the hook themselves. */
 export function ErrorToast({ message }: { message?: string | null }) {
   useErrorToast(message)
+  return null
+}
+
+/** For server components, which can't call the hook themselves. */
+export function SuccessToast({ message }: { message?: string | null }) {
+  useSuccessToast(message)
   return null
 }
 
@@ -67,33 +99,51 @@ export default function Toaster() {
 
   return (
     <div
-      role="alert"
-      aria-live="assertive"
       className="fixed z-[200] right-4 bottom-4 flex flex-col gap-2 w-[calc(100vw-2rem)] max-w-sm pointer-events-none"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      {items.map((t) => (
-        <div
-          key={t.id}
-          className="ef-toast pointer-events-auto flex items-start gap-3 rounded-lg px-4 py-3 text-sm shadow-lg border"
-          style={{
-            background: 'var(--card)',
-            color: 'var(--card-foreground)',
-            borderColor: 'var(--border)',
-            borderLeft: '4px solid var(--status-danger)',
-          }}
-        >
-          <span className="flex-1 min-w-0 break-words">{t.message}</span>
-          <button
-            type="button"
-            onClick={() => dismiss(t.id)}
-            aria-label="Dismiss"
-            className="shrink-0 leading-none text-lg ef-muted hover:opacity-70"
+      {items.map((t) => {
+        const success = t.kind === 'success'
+        return (
+          <div
+            key={t.id}
+            role={success ? 'status' : 'alert'}
+            aria-live={success ? 'polite' : 'assertive'}
+            className="ef-toast pointer-events-auto flex items-start gap-3 rounded-lg px-4 py-3 text-sm shadow-lg border"
+            style={{
+              background: 'var(--card)',
+              color: 'var(--card-foreground)',
+              borderColor: 'var(--border)',
+              borderLeft: `4px solid ${success ? 'var(--status-success, #16a34a)' : 'var(--status-danger)'}`,
+            }}
           >
-            ×
-          </button>
-        </div>
-      ))}
+            {success && (
+              <svg
+                viewBox="0 0 24 24"
+                className="w-5 h-5 shrink-0 mt-px"
+                fill="none"
+                stroke="var(--status-success, #16a34a)"
+                strokeWidth={2.25}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8 12.5l2.7 2.7L16 9.8" />
+              </svg>
+            )}
+            <span className="flex-1 min-w-0 break-words">{t.message}</span>
+            <button
+              type="button"
+              onClick={() => dismiss(t.id)}
+              aria-label="Dismiss"
+              className="shrink-0 leading-none text-lg ef-muted hover:opacity-70"
+            >
+              ×
+            </button>
+          </div>
+        )
+      })}
     </div>
   )
 }
