@@ -33,16 +33,16 @@ export default function ParentNameCheck({ check }: { check: ParentCheck }) {
         <p className="font-semibold" style={{ color: head.tone.color }}>{head.text}</p>
         {(idName || onFile.length > 0) && (
           // Label / value rows, so the names line up instead of running together.
-          <dl className="mt-2 grid grid-cols-[6.5rem_1fr] gap-x-3 gap-y-1.5" style={{ color: 'var(--card-foreground)' }}>
+          <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1.5" style={{ color: 'var(--card-foreground)' }}>
             {idName && (
               <>
-                <dt className="ef-muted">Name on the ID</dt>
+                <dt className="ef-muted whitespace-nowrap">Name on the ID</dt>
                 <dd className="font-semibold break-words">{idName}</dd>
               </>
             )}
             {onFile.length > 0 && (
               <>
-                <dt className="ef-muted">On the list</dt>
+                <dt className="ef-muted whitespace-nowrap">On the list</dt>
                 <dd className="space-y-0.5">
                   {onFile.map((p) => (
                     <div key={`${p.relationship}|${p.name}`} className={p.name === matched?.name && p.relationship === matched.relationship ? 'font-semibold' : ''}>
