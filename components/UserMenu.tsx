@@ -114,7 +114,7 @@ export default function UserMenu({
               className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
             >
               <Icon name="logout" className="w-4 h-4" />
-              <span>Sign Out</span>
+              <span>Sign out</span>
             </button>
           </div>
         </div>
@@ -123,21 +123,31 @@ export default function UserMenu({
       {/* Logout confirmation */}
       {confirmLogout && (
         <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmLogout(false)}>
-          <div className="ef-dialog ef-card rounded-xl shadow-xl max-w-sm w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Sign out of EXAMFLOW?</h3>
-            <p className="text-sm ef-muted mt-1 mb-5">You can sign back in anytime to pick up where you left off.</p>
-            <div className="flex gap-3">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sign-out-title"
+            className="ef-dialog ef-card rounded-lg shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="sign-out-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Sign out?</h3>
+            <p className="text-sm ef-muted mt-1">You can sign back in anytime and pick up where you left off.</p>
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmLogout(false)}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                 style={{ color: 'var(--card-foreground)' }}
               >
                 Cancel
               </button>
-              <form action={logout} className="flex-1">
-                <button type="submit" className="w-full py-2.5 rounded-lg font-semibold text-sm bg-red-600 text-white hover:bg-red-700 transition-colors">
-                  Sign Out
+              <form action={logout}>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90"
+                  style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                >
+                  Sign out
                 </button>
               </form>
             </div>

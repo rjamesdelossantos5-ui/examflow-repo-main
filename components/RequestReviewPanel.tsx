@@ -86,24 +86,17 @@ function VerificationLine({ status, livenessScore, faceMatchScore, documentType 
     : !s || s === 'not started' ? { icon: 'clock', color: 'var(--muted)', label: 'Not verified yet' }
     : { icon: 'clock', color: 'var(--status-info)', label: 'In progress' }
 
-  const facts = [
-    documentType,
-    livenessScore != null ? `live selfie check ${livenessScore}` : null,
-    faceMatchScore != null ? `face match ${faceMatchScore}` : null,
-  ].filter(Boolean)
+  // The ID type and the scores are not shown here: the Registrar only needs the
+  // verdict. (The props stay so the caller's shape doesn't change.)
+  void livenessScore; void faceMatchScore; void documentType
 
   return (
-    <div className="flex gap-2.5 text-sm">
+    <div className="flex items-start gap-2.5 text-sm">
       <Icon name={tone.icon} className="w-4 h-4 mt-0.5 shrink-0" style={{ color: tone.color }} />
-      <div className="min-w-0 space-y-1">
-        <p>
-          <span className="font-semibold" style={{ color: tone.color }}>{tone.label}</span>
-          {facts.length > 0 && <span style={{ color: 'var(--card-foreground)' }}>: {facts.join(', ')}</span>}
-        </p>
-        {s === 'approved' && (
-          <p className="text-xs ef-muted">The person present matched the ID they scanned.</p>
-        )}
-      </div>
+      <p className="min-w-0">
+        <span className="font-semibold" style={{ color: tone.color }}>{tone.label}</span>
+        {s === 'approved' && <span className="ef-muted"> · The person present matched the ID they scanned.</span>}
+      </p>
     </div>
   )
 }
@@ -329,7 +322,7 @@ export default function RequestReviewPanel({
           the two is the Registrar's check. */}
       {verification && (
         <Section title="Parent check">
-          <div className="space-y-3">
+          <div className="space-y-4">
             <VerificationLine {...verification} />
             {parentCheck && <ParentNameCheck check={parentCheck} />}
           </div>

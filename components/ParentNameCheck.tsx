@@ -29,28 +29,33 @@ export default function ParentNameCheck({ check }: { check: ParentCheck }) {
   return (
     <div className="flex gap-2.5 text-sm">
       <Icon name={head.tone.icon} className="w-4 h-4 mt-0.5 shrink-0" style={{ color: head.tone.color }} />
-      <div className="min-w-0 space-y-1">
+      <div className="min-w-0 flex-1">
         <p className="font-semibold" style={{ color: head.tone.color }}>{head.text}</p>
-        {idName && (
-          <p style={{ color: 'var(--card-foreground)' }}>
-            <span className="ef-muted">Name on the ID:</span> <strong>{idName}</strong>
-          </p>
-        )}
-        {onFile.length > 0 && (
-          <p style={{ color: 'var(--card-foreground)' }}>
-            <span className="ef-muted">On the list:</span>{' '}
-            {onFile.map((p, i) => (
-              <span key={`${p.relationship}|${p.name}`}>
-                {i > 0 && <span className="ef-muted">; </span>}
-                <span className={p.name === matched?.name && p.relationship === matched.relationship ? 'font-semibold' : ''}>
-                  {p.relationship} {p.name}
-                </span>
-              </span>
-            ))}
-          </p>
+        {(idName || onFile.length > 0) && (
+          // Label / value rows, so the names line up instead of running together.
+          <dl className="mt-2 grid grid-cols-[6.5rem_1fr] gap-x-3 gap-y-1.5" style={{ color: 'var(--card-foreground)' }}>
+            {idName && (
+              <>
+                <dt className="ef-muted">Name on the ID</dt>
+                <dd className="font-semibold break-words">{idName}</dd>
+              </>
+            )}
+            {onFile.length > 0 && (
+              <>
+                <dt className="ef-muted">On the list</dt>
+                <dd className="space-y-0.5">
+                  {onFile.map((p) => (
+                    <div key={`${p.relationship}|${p.name}`} className={p.name === matched?.name && p.relationship === matched.relationship ? 'font-semibold' : ''}>
+                      {p.name} <span className="ef-muted font-normal">· {p.relationship}</span>
+                    </div>
+                  ))}
+                </dd>
+              </>
+            )}
+          </dl>
         )}
         {result !== 'no_name' && (
-          <p className="text-xs ef-muted">Names on an ID can be written differently from the list. Compare them yourself before deciding.</p>
+          <p className="mt-2 text-xs ef-muted">Names on an ID can be written differently from the list. Compare them yourself before deciding.</p>
         )}
       </div>
     </div>
