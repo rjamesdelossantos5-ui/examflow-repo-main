@@ -153,15 +153,18 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
     ? offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course) && (!enrolled || override || o.section === enrolled))
     : []
 
-  const subjectOptions = Array.from(
-    new Map(courseOfferings.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
-  )
-  // Sections available for the chosen subject (and year, when the offering
-  // specifies one).
+  // The year level decides what is offered: only subjects (and their sections)
+  // of the chosen year. Irregular-student mode shows every year, and an offering
+  // with no year recorded is always kept.
   const yearNum = yearLevel ? Number(yearLevel) : null
-  const sectionOptions = courseOfferings.filter(
-    (o) => o.subjectId === subjectId && (override || !enrolled || yearNum == null || o.yearLevel == null || o.yearLevel === yearNum),
+  const matchesYear = (o: Offering) => override || yearNum == null || o.yearLevel == null || o.yearLevel === yearNum
+  const yearOfferings = courseOfferings.filter(matchesYear)
+
+  const subjectOptions = Array.from(
+    new Map(yearOfferings.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
   )
+  // Sections available for the chosen subject.
+  const sectionOptions = yearOfferings.filter((o) => o.subjectId === subjectId)
   const teacherName = courseOfferings.find((o) => o.subjectId === subjectId && o.section === section)?.teacherName ?? null
 
   const formRef = useRef<HTMLFormElement>(null)
@@ -391,7 +394,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                   name="year_level"
                   required
                   value={yearLevel}
-                  onChange={(v) => { setYearLevel(v); setSection('') }}
+                  onChange={(v) => { setYearLevel(v); setSubjectId(''); setSection(''); setPicked([]); setPickedSection({}) }}
                   placeholder="— Select year —"
                   options={YEARS.map((y) => ({ value: String(y), label: `Year ${y}` }))}
                   className={selectClass}
@@ -441,7 +444,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 {!course ? (
                   <p className="text-sm ef-muted">Select a course first.</p>
                 ) : subjectOptions.length === 0 ? (
-                  <p className="text-sm ef-muted">No subjects for that course yet.</p>
+                  <p className="text-sm ef-muted">{yearNum ? `No subjects for Year ${yearNum} yet.` : 'No subjects for that course yet.'}</p>
                 ) : (
                   <ul className="rounded-lg border ef-border divide-y max-h-72 overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
                     {subjectOptions.map((o) => {
@@ -463,7 +466,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
               {picked.map((id) => {
                 const subj = subjectOptions.find((o) => o.id === id)
-                const opts = courseOfferings.filter((o) => o.subjectId === id && (override || !enrolled || yearNum == null || o.yearLevel == null || o.yearLevel === yearNum))
+                const opts = yearOfferings.filter((o) => o.subjectId === id)
                 const chosen = pickedSection[id] ?? (opts.length === 1 ? opts[0].section : '')
                 const teacher = opts.find((o) => o.section === chosen)?.teacherName ?? null
                 return (
