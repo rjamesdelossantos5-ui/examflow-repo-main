@@ -37,7 +37,14 @@ export default async function ProgramHeadLayout({ children }: { children: React.
   ]
 
   return (
-    <DashboardLayout role={isAdmin ? 'admin' : 'program_head'} userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
+    <DashboardLayout
+  role={isAdmin ? 'admin' : 'program_head'}
+  backHref={isAdmin ? '/admin/requests' : undefined}
+  userName={profile.full_name}
+  email={profile.email}
+  navItems={nav}
+  notifications={notifications}
+>
       {isAdmin && <AdminActingBanner asRole="Program Head" />}
       {children}
     </DashboardLayout>
