@@ -1,4 +1,5 @@
 import type { createClient } from '@/lib/supabase/server'
+import { deleteOrphanedSessions } from '@/lib/verificationGroup'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -15,6 +16,7 @@ interface PurgeCandidate {
   exam_type: string | null
   period_id: string | null
   final_schedule: string | null
+  didit_session_id: string | null
 }
 
 /**
@@ -65,7 +67,7 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
     // plus any with an explicit past final_schedule (override-scheduled ones).
     // Full rows (not just ids) so the ones reaching 'scheduled' can be logged.
     const candidates = new Map<string, PurgeCandidate>()
-    const SELECT = 'id, status, subject_id, exam_type, period_id, final_schedule'
+    const SELECT = 'id, status, subject_id, exam_type, period_id, final_schedule, didit_session_id'
 
     if (expiredPeriodIds.length) {
       const { data } = await supabase
@@ -134,6 +136,10 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
       .delete()
       .in('id', idList)
       .in('status', ['accepted', 'scheduled'])
+
+    // The parent's ID and selfie photos are kept at Didit for the whole term
+    // (one check can cover several requests) and go with the term's requests.
+    await deleteOrphanedSessions(supabase, [...candidates.values()].map((r) => r.didit_session_id))
   } catch {
     // Best-effort cleanup — swallow everything so the page still renders.
   }

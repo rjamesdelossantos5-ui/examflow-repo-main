@@ -362,7 +362,7 @@ function examTypeLabel(r: RequestEmailInfo): string | null {
   if (r.examType !== 'excused') return null
   const why = r.excusedReason ? EXCUSED_LABEL[r.excusedReason] ?? r.excusedReason : null
   const other = r.excusedReason === 'other' && r.otherReason ? `: ${r.otherReason}` : ''
-  return why ? `Excused — ${why}${other}` : 'Excused'
+  return why ? `Waived — ${why}${other}` : 'Waived'
 }
 
 /** Dates in the school's time zone, whatever the server's is. */

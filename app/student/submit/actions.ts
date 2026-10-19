@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getActivePeriod, computeWindow } from '@/lib/examSettings'
 import { isValidPhone, isValidStudentNumber } from '@/lib/validation'
 import { withoutAccountTag } from '@/lib/initials'
+import { MAX_GROUP, reuseApprovedVerification } from '@/lib/verificationGroup'
 import type { ExcusedReason } from '@/lib/supabase/types'
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'application/pdf']
@@ -79,12 +80,15 @@ export async function submitRequest(formData: FormData) {
   }
 
   const examType = String(formData.get('exam_type') ?? '')
-  const subjectId = String(formData.get('subject_id') ?? '')
+  // One or several subjects (up to MAX_GROUP). A resubmit always sends exactly one.
+  const subjectIds = [...new Set(formData.getAll('subject_id').map((v) => String(v)).filter(Boolean))]
+  const subjectId = subjectIds[0] ?? ''
   const excusedReason = formData.get('excused_reason') as ExcusedReason | null
   const otherReason = String(formData.get('other_reason') ?? '').trim().slice(0, 500)
 
   if (!['paid', 'excused'].includes(examType)) return redirect('/student/submit?error=Invalid+exam+type')
   if (!subjectId) return redirect('/student/submit?error=Please+select+a+subject')
+  if (subjectIds.length > MAX_GROUP) return redirect(`/student/submit?error=${encodeURIComponent(`You can submit up to ${MAX_GROUP} subjects at a time.`)}`)
 
   const resubmitFrom = String(formData.get('resubmit_from') ?? '')
 
@@ -151,86 +155,130 @@ export async function submitRequest(formData: FormData) {
   // only guards the NEW-submission path; the resubmit branch above is exempt.
   const { data: dupes, error: dupeErr } = await supabase
     .from('special_exam_requests')
-    .select('id, status')
+    .select('id, status, subject_id')
     .eq('student_id', user.id)
-    .eq('subject_id', subjectId)
+    .in('subject_id', subjectIds)
     .eq('period_id', activePeriod.id)
-    .limit(1)
-  const dupe = dupes?.[0]
   // If the period_id column isn't migrated, dupeErr is set — fail open rather
   // than block every submission.
-  if (!dupeErr && dupe) {
-    const msg = dupe.status === 'rejected'
-      ? 'You already have a request for this subject this term. Open it and use “Edit & Resubmit” instead of filing a new one.'
-      : 'You already have a request for this subject this term.'
+  if (!dupeErr && dupes?.length) {
+    const rejected = dupes.some((d) => d.status === 'rejected')
+    const msg = subjectIds.length > 1
+      ? 'You already have a request this term for one of the selected subjects. Remove it from the selection, or open it from My Requests.'
+      : rejected
+        ? 'You already have a request for this subject this term. Open it and use “Edit & Resubmit” instead of filing a new one.'
+        : 'You already have a request for this subject this term.'
     return redirect(`/student/submit?error=${encodeURIComponent(msg)}`)
   }
 
   const errors: string[] = []
 
   if (examType === 'excused') {
-    if (!excusedReason) errors.push('Reason is required for Excused exam')
+    if (!excusedReason) errors.push('Reason is required for Waived exam')
     const docErr = validateFile(supportDoc, 'Supporting document')
     if (docErr) errors.push(docErr)
   }
 
   if (errors.length) return redirect(`/student/submit?error=${encodeURIComponent(errors.join('; '))}`)
 
-  // Route to the chosen section's teacher.
-  const routedTeacherId = await resolveOfferingTeacher(supabase, subjectId, snapshot.snap_section)
+  // Subjects filed together share one parent check (see lib/verificationGroup.ts).
+  const group = subjectIds.length > 1 ? crypto.randomUUID() : null
+  const createdIds: string[] = []
 
-  // Insert request (with the per-form snapshot of student details)
-  const { data: req, error: reqErr } = await supabase
-    .from('special_exam_requests')
-    .insert({
-      student_id: user.id,
-      subject_id: subjectId,
-      exam_type: examType as 'paid' | 'excused',
-      excused_reason: excusedReason,
-      other_reason: examType === 'excused' && excusedReason === 'other' ? otherReason : null,
-      status: 'submitted',
-      // Written HERE, in the same statement that creates the row, so a request
-      // can never exist unstamped. As a separate best-effort UPDATE afterwards,
-      // any failure left didit_status NULL — which the Registrar queue reads as
-      // "legacy row, nothing to verify" and shows immediately. Fail-open on the
-      // wrong side of a gate whose whole job is to hold the request back.
-      didit_status: 'Not Started',
-      period_id: activePeriod.id,
-      teacher_id: routedTeacherId,
-      ...snapshot,
-    })
-    .select()
-    .single()
+  for (const sid of subjectIds) {
+    // Each subject has its own section (and so its own teacher). A single-subject
+    // form sends it as `section`.
+    const section = String(formData.get(`section_${sid}`) ?? formData.get('section') ?? '').trim().slice(0, 20) || null
+    const snap = { ...snapshot, snap_section: section }
+    const routedTeacherId = await resolveOfferingTeacher(supabase, sid, section)
 
-  if (reqErr || !req) {
-    // If the snapshot columns aren't migrated yet, retry without them so
-    // submissions never break (see supabase/migration_snapshot.sql).
-    const retry = await supabase
+    // Insert request (with the per-form snapshot of student details)
+    const { data: req, error: reqErr } = await supabase
       .from('special_exam_requests')
       .insert({
         student_id: user.id,
-        subject_id: subjectId,
+        subject_id: sid,
         exam_type: examType as 'paid' | 'excused',
         excused_reason: excusedReason,
         other_reason: examType === 'excused' && excusedReason === 'other' ? otherReason : null,
         status: 'submitted',
+        // Written HERE, in the same statement that creates the row, so a request
+        // can never exist unstamped. As a separate best-effort UPDATE afterwards,
+        // any failure left didit_status NULL — which the Registrar queue reads as
+        // "legacy row, nothing to verify" and shows immediately. Fail-open on the
+        // wrong side of a gate whose whole job is to hold the request back.
+        didit_status: 'Not Started',
+        period_id: activePeriod.id,
+        teacher_id: routedTeacherId,
+        verification_group: group,
+        ...snap,
       })
       .select()
       .single()
-    if (retry.error || !retry.data) {
-      return redirect(`/student/submit?error=${encodeURIComponent(retry.error?.message ?? 'Submission failed')}`)
+
+    let created: { id: string } | null = req
+    if (reqErr || !req) {
+      // If the snapshot columns aren't migrated yet, retry without them so
+      // submissions never break (see supabase/migration_snapshot.sql).
+      const retry = await supabase
+        .from('special_exam_requests')
+        .insert({
+          student_id: user.id,
+          subject_id: sid,
+          exam_type: examType as 'paid' | 'excused',
+          excused_reason: excusedReason,
+          other_reason: examType === 'excused' && excusedReason === 'other' ? otherReason : null,
+          status: 'submitted',
+        })
+        .select()
+        .single()
+      if (retry.error || !retry.data) {
+        await discardRequests(supabase, createdIds)
+        return redirect(`/student/submit?error=${encodeURIComponent(retry.error?.message ?? 'Submission failed')}`)
+      }
+      created = retry.data
     }
-    return finishSubmission(supabase, retry.data, user.id, examType, files)
+
+    createdIds.push(created!.id)
+    const failure = await finishSubmission(supabase, created!, user.id, examType, files)
+    if (failure) {
+      await discardRequests(supabase, createdIds)
+      return redirect(`/student/submit?error=${encodeURIComponent(failure)}`)
+    }
   }
 
-  return finishSubmission(supabase, req, user.id, examType, files)
+  // A parent who already passed this term does not verify again: the earlier
+  // Approved check is copied onto these requests (verify=1 below then finds a
+  // usable verification and does not open Didit).
+  const reuseAdmin = createAdminClient()
+  if (reuseAdmin) await reuseApprovedVerification(reuseAdmin, user.id, activePeriod.id, createdIds)
+
+  // verify=1 makes the request page open Didit immediately instead of showing a
+  // "Start verification" button the student has to find and press. The form's
+  // button says "Continue to Parent Verification", so landing on an intermediate
+  // page and stopping would be a broken promise. The check is started on the
+  // first request; the others get its result when it is Approved.
+  //
+  // This can't be a redirect straight to verify.didit.me: submitRequest runs as
+  // a Server Action, i.e. a form POST, and Chrome and Safari block cross-origin
+  // redirects that follow one under `form-action 'self'`. So we bounce through
+  // our own page, which then navigates client-side.
+  redirect(`/student/requests/${createdIds[0]}?submitted=1&verify=1`)
 }
 
 interface SubmissionFiles {
   supportDoc: File | null
 }
 
-async function finishSubmission(supabase: DB, req: { id: string }, userId: string, examType: string, f: SubmissionFiles) {
+// Removes requests created by a submission that failed part-way, so the student
+// retries from a clean slate instead of tripping the one-per-subject check.
+async function discardRequests(supabase: DB, ids: string[]) {
+  if (ids.length) await supabase.from('special_exam_requests').delete().in('id', ids)
+}
+
+// Uploads, stamps and logs one freshly created request. Returns an error message
+// (the caller discards the submission) or null.
+async function finishSubmission(supabase: DB, req: { id: string }, userId: string, examType: string, f: SubmissionFiles): Promise<string | null> {
   const uploads: Promise<{ path: string; error: string | null }>[] = []
   if (examType === 'excused' && f.supportDoc) {
     uploads.push(uploadFile(supabase, f.supportDoc, req.id, 'supporting_document'))
@@ -238,10 +286,7 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
 
   const uploaded = await Promise.all(uploads)
   const uploadErrors = uploaded.filter((u) => u.error)
-  if (uploadErrors.length) {
-    await supabase.from('special_exam_requests').delete().eq('id', req.id)
-    return redirect(`/student/submit?error=${encodeURIComponent('File upload failed: ' + uploadErrors[0].error)}`)
-  }
+  if (uploadErrors.length) return 'File upload failed: ' + uploadErrors[0].error
 
   // BACKSTOP ONLY. The insert above now writes didit_status in the same
   // statement that creates the row, so this is reached with the stamp already
@@ -314,16 +359,7 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
     },
   ])
 
-  // verify=1 makes the request page open Didit immediately instead of showing a
-  // "Start verification" button the student has to find and press. The form's
-  // button says "Continue to Parent Verification", so landing on an intermediate
-  // page and stopping would be a broken promise.
-  //
-  // This can't be a redirect straight to verify.didit.me: submitRequest runs as
-  // a Server Action, i.e. a form POST, and Chrome and Safari block cross-origin
-  // redirects that follow one under `form-action 'self'`. So we bounce through
-  // our own page, which then navigates client-side.
-  redirect(`/student/requests/${req.id}?submitted=1&verify=1`)
+  return null
 }
 
 interface ResubmitFields {
@@ -447,7 +483,7 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
   // Validate: a slot is required only if there's no file on record for it.
   const errors: string[] = []
   if (fields.examType === 'excused') {
-    if (!fields.excusedReason) errors.push('Reason is required for Excused exam')
+    if (!fields.excusedReason) errors.push('Reason is required for Waived exam')
     const docErr = validateFile(f.supportDoc, 'Supporting document', onRecord.has('supporting_document'))
     if (docErr) errors.push(docErr)
   }

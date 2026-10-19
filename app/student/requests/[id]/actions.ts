@@ -308,7 +308,7 @@ export async function confirmSubmission(requestId: string) {
 
   const { data: req } = await supabase
     .from('special_exam_requests')
-    .select('id, status, didit_status, student_confirmed_at')
+    .select('id, status, didit_status, student_confirmed_at, verification_group')
     .eq('id', requestId)
     .eq('student_id', user.id)
     .maybeSingle()
@@ -347,17 +347,35 @@ export async function confirmSubmission(requestId: string) {
   if (error) return { error: friendlyError('confirmSubmission', error, `We couldn't submit this request. ${RETRY_HINT}`) }
   if (!saved?.length) return { error: `We couldn't submit this request. ${RETRY_HINT}` }
 
-  await supabase.from('progress_logs').insert({
-    request_id: requestId,
-    actor_id: user.id,
-    actor_role: 'student',
-    action: returnedByPH
-      ? 'Parent verified again — sent back to the Program Head'
-      : 'Submitted to the Registrar after parent verification',
-  })
+  // Filed together with other subjects: one confirm submits them all. Only those
+  // already holding the shared Approved result, and not yet confirmed.
+  const confirmedIds = [requestId]
+  if (req.verification_group && !returnedByPH) {
+    const { data: sibs } = await admin
+      .from('special_exam_requests')
+      .update({ student_confirmed_at: now, submitted_at: now })
+      .eq('verification_group', req.verification_group)
+      .eq('student_id', user.id)
+      .eq('didit_status', 'Approved')
+      .is('student_confirmed_at', null)
+      .neq('id', requestId)
+      .select('id')
+    for (const r of sibs ?? []) confirmedIds.push(r.id as string)
+  }
+
+  await supabase.from('progress_logs').insert(
+    confirmedIds.map((id) => ({
+      request_id: id,
+      actor_id: user.id,
+      actor_role: 'student',
+      action: returnedByPH
+        ? 'Parent verified again — sent back to the Program Head'
+        : 'Submitted to the Registrar after parent verification',
+    })),
+  )
 
   // Sent after the response — see lib/requestEmails.ts.
-  after(() => emailRequestEvent(returnedByPH ? 'reverified' : 'submitted', [requestId]))
+  after(() => emailRequestEvent(returnedByPH ? 'reverified' : 'submitted', confirmedIds))
 
   revalidatePath(`/student/requests/${requestId}`)
   revalidatePath('/student')

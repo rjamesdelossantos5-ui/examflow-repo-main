@@ -28,15 +28,15 @@ const CONTAINER = 'max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8'
 const PREPARE = [
   { title: 'Your STI Microsoft account', note: 'You log in to EXAMFLOW with it.' },
   { title: 'Your parent or guardian, with a valid ID', note: 'They verify with a live face check and a photo of their ID, on your phone.' },
-  { title: 'For an excused exam: your document', note: 'Medical certificate, death certificate, or another supporting document. JPG, PNG or PDF, up to 5 MB.' },
+  { title: 'For a waived exam: your document', note: 'Medical certificate, death certificate, or another supporting document. JPG, PNG or PDF, up to 5 MB.' },
   { title: 'Time for one visit to the Registrar', note: 'The printed special exam form is collected there to finish your application.' },
 ]
 
 const STEPS = [
-  { title: 'Fill the form', body: 'Pick the subject, then excused or paid. Attach your document if it is excused.' },
+  { title: 'Fill the form', body: 'Pick the subject, then waived or paid. Attach your document if it is waived.' },
   { title: 'Your parent or guardian verifies', body: 'They do the face and ID check. Then you press Submit.' },
   { title: 'Three signatures, in order', body: 'The Registrar verifies, your teacher approves, the Program Head accepts. You can follow each one from your dashboard.' },
-  { title: 'Your exam is scheduled', body: 'Excused: right after the Program Head accepts. Paid: after you pay at the Cashier and your uploaded receipt is checked.' },
+  { title: 'Your exam is scheduled', body: 'Waived: right after the Program Head accepts. Paid: after you pay at the Cashier and your uploaded receipt is checked.' },
   { title: 'Collect the printed form', body: 'Get it at the Registrar’s office.' },
 ]
 

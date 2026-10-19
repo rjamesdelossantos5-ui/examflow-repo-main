@@ -144,7 +144,7 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
                     <div style={{ color: 'var(--card-foreground)' }}>{r.subject_name}</div>
                     <div className="text-xs ef-muted">{r.subject_code}</div>
                   </td>
-                  <td className="px-4 py-3 capitalize ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Excused'}</td>
+                  <td className="px-4 py-3 capitalize ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Waived'}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={r.status} label={badge} />
                     {r.status === 'rejected' && (

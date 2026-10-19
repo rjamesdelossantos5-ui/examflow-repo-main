@@ -221,7 +221,7 @@ export default function RequestReviewPanel({
                 color: isPaid ? 'var(--status-warning)' : 'var(--status-info)',
               }}
             >
-              {isPaid ? 'Paid' : 'Excused'}
+              {isPaid ? 'Paid' : 'Waived'}
             </span>
             {reasonText && <span className="text-xs capitalize ef-muted">{reasonText}</span>}
           </div>

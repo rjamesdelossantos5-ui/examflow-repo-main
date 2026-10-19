@@ -57,6 +57,8 @@ export interface SpecialExamRequest {
   // Parent identity verification (Didit) — see supabase/migration_didit.sql.
   // All optional: rows created before that migration ran won't have them, and
   // the columns stay null until the parent completes a verification.
+  /** Requests filed together in one multi-subject submission share this id and one parent check (migration_multi_subject.sql). */
+  verification_group?: string | null
   didit_session_id?: string | null
   /** Verbatim Didit status ('Approved', 'Declined', 'In Review', …). Text, not
    *  a union — Didit can add values, and an unknown one must not break a page.

@@ -88,11 +88,11 @@ export default function PrivacyNoticeContent({ heading = 'h2' }: { heading?: 'h2
             full name, student number, course, year level, section, contact number, and school email address.
           </Item>
           <Item term="About the request">
-            the subject, the exam type (paid or excused), the reason given, and the review history — including who
+            the subject, the exam type (paid or waived), the reason given, and the review history — including who
             approved or rejected it, when, and why.
           </Item>
           <Item term="Documents you upload">
-            a supporting document for an excused exam (for example, a medical or death certificate), and the
+            a supporting document for a waived exam (for example, a medical or death certificate), and the
             official receipt for a paid exam.
           </Item>
           <Item term="The parent or guardian check">
@@ -139,7 +139,8 @@ export default function PrivacyNoticeContent({ heading = 'h2' }: { heading?: 'h2
       <Section as={heading} title="How long we keep it">
         {/* Deletion runs in lib/purgeExpiredExams.ts, on page load of the PH
             and admin request lists; Didit sessions are deleted only in
-            app/program-head/actions.ts (accept / return). */}
+            lib/purgeExpiredExams.ts and deleteFinishedRequest (and on return, in
+            app/program-head/actions.ts). */}
         <p>
           Approved and scheduled requests, together with every document uploaded for them, are <B>permanently
           deleted from the day after the exam date</B>. This happens automatically, the next time a Program Head or
@@ -150,9 +151,11 @@ export default function PrivacyNoticeContent({ heading = 'h2' }: { heading?: 'h2
           pending or after it is rejected.
         </p>
         <p>
-          EXAMFLOW asks Didit to <B>delete the parent or guardian&apos;s photos</B> as soon as the Program Head
-          accepts the request or sends it back for a new check. If a request is rejected or removed before that,
-          the photos stay with Didit under Didit&apos;s own retention settings.
+          The parent or guardian&apos;s ID and face photos are kept at Didit for the term, so one check can cover every
+          request you file that term and the Program Head can compare them. EXAMFLOW asks Didit to <B>delete them
+          when the term&apos;s requests are deleted</B> (the day after the exam), or straight away if the Program Head
+          sends the request back for a new check. If a request is rejected or removed before then, the photos
+          stay with Didit under Didit&apos;s own retention settings.
         </p>
         <p>
           Anonymised counts (how many students took a special exam, by department, subject and term) are kept for

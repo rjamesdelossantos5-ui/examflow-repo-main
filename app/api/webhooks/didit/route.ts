@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { shareVerificationWithGroup } from '@/lib/verificationGroup'
 import {
   verifyWebhookSignature,
   summarizeDecision,
@@ -94,6 +95,10 @@ export async function POST(request: Request) {
     .from('special_exam_requests')
     .select('id, student_id, didit_event_id, didit_checked_at, didit_status')
     .eq('didit_session_id', sessionId)
+    // Requests filed together share one session once it is approved, so more than
+    // one row can match; any of them carries the same result.
+    .order('id')
+    .limit(1)
     .maybeSingle()
 
   if (findErr) {
@@ -169,6 +174,7 @@ export async function POST(request: Request) {
     console.error('[didit:webhook] update failed', updErr)
     return new Response('update failed', { status: 500 })
   }
+  await shareVerificationWithGroup(supabase, req.id)
 
   // Audit trail, in the same spirit as the RA 10173 consent entry written at
   // submission. Only terminal statuses are logged — "In Progress" fires on every

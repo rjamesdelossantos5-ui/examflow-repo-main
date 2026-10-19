@@ -11,13 +11,28 @@ import { deleteSession, getSessionDecision, photoUrl } from '@/lib/didit'
 import { reviewableSession } from '@/lib/verificationReview'
 import { VERIFICATION_PHOTOS, type VerificationPhoto } from '@/lib/verificationPhotos'
 import { REVERIFY_LOG_PREFIX } from '@/lib/rejectReasons'
+import { deleteOrphanedSessions } from '@/lib/verificationGroup'
 
 // Deletes Didit's copy of the parent's ID photos and selfie once the Program
 // Head is done with them (see deleteSession in lib/didit.ts). Best-effort: a
 // failure is logged there and never blocks the decision, which is already saved.
-async function deleteVerificationPhotos(sessionIds: (string | null | undefined)[]) {
+//
+// Requests filed in one multi-subject submission share a single session, so a
+// session is only deleted once no request using it is still waiting for review —
+// otherwise accepting the first subject would remove the photos the Program Head
+// still needs for the others.
+async function deleteVerificationPhotos(supabase: Awaited<ReturnType<typeof createClient>>, sessionIds: (string | null | undefined)[]) {
   const ids = [...new Set(sessionIds.filter((s): s is string => !!s))]
-  await Promise.all(ids.map((id) => deleteSession(id)))
+  await Promise.all(ids.map(async (id) => {
+    const { data: stillUsed } = await supabase
+      .from('special_exam_requests')
+      .select('id')
+      .eq('didit_session_id', id)
+      .in('status', ['submitted', 'verified_by_registrar', 'approved_by_teacher'])
+      .limit(1)
+    if (stillUsed?.length) return
+    await deleteSession(id)
+  }))
 }
 
 async function requirePH() {
@@ -78,12 +93,12 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
     actor_id: userId,
     actor_role: role,
     action: isExcused
-      ? 'Accepted & scheduled by Program Head (excused — no receipt needed)'
+      ? 'Accepted & scheduled by Program Head (waived — no receipt needed)'
       : 'Accepted by Program Head — awaiting payment receipt',
   })
 
-  // The manual ID and selfie check is done — first approval is their only use.
-  await deleteVerificationPhotos([existing.didit_session_id])
+  // The parent's photos are NOT deleted here any more: one check can cover other
+  // requests this term, so they stay until the term's requests are purged.
 
   after(() => emailRequestEvent(isExcused ? 'scheduled' : 'accepted_paid', [requestId]))
 
@@ -139,12 +154,10 @@ export async function acceptAll(requestIds: string[]) {
       actor_id: userId,
       actor_role: role,
       action: r.exam_type === 'excused'
-        ? 'Accepted & scheduled by Program Head (excused — no receipt needed)'
+        ? 'Accepted & scheduled by Program Head (waived — no receipt needed)'
         : 'Accepted by Program Head — awaiting payment receipt',
     }))
   )
-
-  await deleteVerificationPhotos(accepted.map((r) => r.didit_session_id))
 
   after(async () => {
     await emailRequestEvent('scheduled', accepted.filter((r) => r.exam_type === 'excused').map((r) => r.id))
@@ -194,9 +207,7 @@ export async function returnForReverification(requestId: string, reason: string)
   // migration_protect_verification_columns.sql applies to students only.
   // 'Not Started' (not NULL) keeps it a verified-era request: NULL would read
   // as a legacy row and walk straight through the gate.
-  const { data: updated, error } = await supabase
-    .from('special_exam_requests')
-    .update({
+  const cleared = {
       didit_session_id: null,
       didit_status: 'Not Started',
       didit_checked_at: null,
@@ -207,24 +218,43 @@ export async function returnForReverification(requestId: string, reason: string)
       didit_id_name: null,
       didit_warnings: null,
       student_confirmed_at: null,
-    })
-    .eq('id', requestId)
+  }
+  // Requests filed in the same submission share this parent check, so the same
+  // photos are being rejected for all of them. Those still at first approval are
+  // returned together; any at an earlier stage keep theirs (and so keep the photos).
+  const { data: siblings } = existing.didit_session_id
+    ? await supabase
+        .from('special_exam_requests')
+        .select('id')
+        .eq('didit_session_id', existing.didit_session_id)
+        .eq('status', 'approved_by_teacher')
+        .neq('id', requestId)
+    : { data: [] as { id: string }[] }
+  const returnIds = [requestId, ...(siblings ?? []).map((r) => r.id as string)]
+
+  const { data: updated, error } = await supabase
+    .from('special_exam_requests')
+    .update(cleared)
+    .in('id', returnIds)
     .eq('status', 'approved_by_teacher')
     .select('id')
 
   if (error) return { error: friendlyError('returnForReverification', error, `We couldn't return this request. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'This request was already handled by someone else.' }
 
-  await supabase.from('progress_logs').insert({
-    request_id: requestId,
-    actor_id: userId,
-    actor_role: role,
-    action: `${REVERIFY_LOG_PREFIX}${sanitizedReason}`,
-  })
+  const returned = updated.map((r) => r.id as string)
+  await supabase.from('progress_logs').insert(
+    returned.map((id) => ({
+      request_id: id,
+      actor_id: userId,
+      actor_role: role,
+      action: `${REVERIFY_LOG_PREFIX}${sanitizedReason}`,
+    })),
+  )
 
-  await deleteVerificationPhotos([existing.didit_session_id])
+  await deleteVerificationPhotos(supabase, [existing.didit_session_id])
 
-  after(() => emailRequestEvent('returned', [requestId], { reason: sanitizedReason }))
+  after(() => emailRequestEvent('returned', returned, { reason: sanitizedReason }))
 
   revalidatePath('/program-head')
   return { error: null }
@@ -359,6 +389,7 @@ export async function deleteFinishedRequest(requestId: string) {
     .eq('request_id', requestId)
   const paths = (media ?? []).map((m) => m.storage_path).filter(Boolean)
   if (paths.length) await supabase.storage.from('exam-documents').remove(paths)
+  const { data: sess } = await supabase.from('special_exam_requests').select('didit_session_id').eq('id', requestId).maybeSingle()
 
   const { data: deleted, error } = await supabase
     .from('special_exam_requests')
@@ -369,6 +400,7 @@ export async function deleteFinishedRequest(requestId: string) {
 
   if (error) return { error: friendlyError('deleteFinishedRequest', error, `We couldn't delete this record. ${RETRY_HINT}`) }
   if (!deleted?.length) return { error: 'Only accepted or scheduled records can be deleted.' }
+  await deleteOrphanedSessions(supabase, [sess?.didit_session_id])
 
   revalidatePath('/program-head/students')
   revalidatePath('/program-head/overview')

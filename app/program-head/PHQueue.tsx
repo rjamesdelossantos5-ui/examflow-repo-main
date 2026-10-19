@@ -309,7 +309,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
                 color: isExcused ? 'var(--status-info)' : 'var(--status-warning)',
               }}
             >
-              {isExcused ? 'Excused' : 'Paid'}
+              {isExcused ? 'Waived' : 'Paid'}
             </span>
             {/* The two signatures already on it */}
             <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--status-success)' }}>

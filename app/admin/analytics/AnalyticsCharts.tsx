@@ -34,7 +34,7 @@ function keyFor(row: ExamStatRow, dim: Dimension): string {
   switch (dim) {
     case 'department': return row.departmentName
     case 'subject': return `${row.subjectCode} — ${row.subjectName}`
-    case 'examType': return row.examType === 'paid' ? 'Paid' : 'Excused'
+    case 'examType': return row.examType === 'paid' ? 'Paid' : 'Waived'
   }
 }
 
@@ -102,7 +102,7 @@ export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatTile label="Total Exams Taken" value={totals.total} icon="layers" accent="var(--status-neutral)" />
         <StatTile label="Paid" value={totals.paid} icon="receipt" accent="var(--status-warning)" />
-        <StatTile label="Excused" value={totals.excused} icon="file" accent="var(--status-info)" />
+        <StatTile label="Waived" value={totals.excused} icon="file" accent="var(--status-info)" />
         <StatTile label="Departments" value={totals.departments} icon="building" accent="var(--status-success)" />
       </div>
 

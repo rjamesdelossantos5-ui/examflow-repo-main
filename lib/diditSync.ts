@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
+import { shareVerificationWithGroup } from '@/lib/verificationGroup'
 import { getSessionDecision, summarizeDecision, isTerminal, isInReview, declineSession } from '@/lib/didit'
 
 
@@ -112,6 +113,9 @@ export async function syncDiditResult(
     console.error('[diditSync] update matched no row', requestId)
     return { fields: null, error: 'Could not save the verification result.' }
   }
+
+  // Requests filed in the same submission share this one parent check.
+  await shareVerificationWithGroup(admin, requestId)
 
   // Didit's copy of the photos is kept on purpose — the Program Head compares
   // them by hand at first approval. See the webhook route for when they go.

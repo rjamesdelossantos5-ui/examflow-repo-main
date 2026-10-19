@@ -232,7 +232,7 @@ export default async function RequestDetailPage({
           <div>
             <span className="ef-muted">Type: </span>
             <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>
-              {req.exam_type === 'paid' ? 'Paid (Unexcused)' : 'Excused'}
+              {req.exam_type === 'paid' ? 'Paid (Unexcused)' : 'Waived'}
             </span>
           </div>
           <div>

@@ -203,7 +203,7 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                       </h3>
                       <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                         <span className={`px-2 py-0.5 rounded text-2xs font-semibold ${isPaid ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300'}`}>
-                          {isPaid ? 'Paid exam' : 'Excused'}
+                          {isPaid ? 'Paid exam' : 'Waived'}
                         </span>
                         <span className="text-xs ef-muted">Filed {timeAgo(r.submitted_at)}</span>
                       </div>

@@ -26,6 +26,7 @@ export interface Offering {
 }
 
 const MAX_MB = 5
+const MAX_SUBJECTS = 7
 const ALLOWED = '.jpg,.jpeg,.png,.pdf'
 
 const REASONS = [
@@ -115,6 +116,16 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const [subjectId, setSubjectId] = useState(prefill?.subjectId ?? '')
   const [section, setSection] = useState(initialOverride ? prefill?.section ?? '' : enrolled ?? eff.section ?? '')
   const [confirming, setConfirming] = useState(false)
+  // New submissions can include several subjects (each with its own section);
+  // a resubmit edits one request, so it keeps the single subject picker.
+  const [picked, setPicked] = useState<string[]>([])
+  const [pickedSection, setPickedSection] = useState<Record<string, string>>({})
+  const [subjectError, setSubjectError] = useState<string | null>(null)
+  useErrorToast(subjectError)
+  function togglePicked(id: string) {
+    setSubjectError(null)
+    setPicked((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= MAX_SUBJECTS ? cur : [...cur, id])
+  }
 
   function toggleOverride() {
     if (override) {
@@ -149,7 +160,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // specifies one).
   const yearNum = yearLevel ? Number(yearLevel) : null
   const sectionOptions = courseOfferings.filter(
-    (o) => o.subjectId === subjectId && (override || yearNum == null || o.yearLevel == null || o.yearLevel === yearNum),
+    (o) => o.subjectId === subjectId && (override || !enrolled || yearNum == null || o.yearLevel == null || o.yearLevel === yearNum),
   )
   const teacherName = courseOfferings.find((o) => o.subjectId === subjectId && o.section === section)?.teacherName ?? null
 
@@ -183,6 +194,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
       return
     }
     setAttachError(null)
+    if (!prefill && picked.length === 0) {
+      setSubjectError('Select at least one subject.')
+      return
+    }
     if (form.reportValidity()) setConfirming(true)
   }
 
@@ -234,7 +249,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 <input type="radio" name="exam_type" value={t} checked={examType === t} onChange={() => setExamType(t)} className="sr-only" />
                 <Icon name={t === 'paid' ? 'receipt' : 'file'} className="w-6 h-6 mb-2" style={{ color: 'var(--card-foreground)' }} />
                 <div className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>
-                  {t === 'paid' ? 'Paid' : 'Excused'}
+                  {t === 'paid' ? 'Paid' : 'Waived'}
                 </div>
                 <div className="text-xs ef-muted">{t === 'paid' ? 'Unexcused absence' : 'With valid reason'}</div>
               </label>
@@ -352,7 +367,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                   name="course"
                   required
                   value={course}
-                  onChange={(v) => { setCourse(v); setSubjectId(''); setSection('') }}
+                  onChange={(v) => { setCourse(v); setSubjectId(''); setSection(''); setPicked([]); setPickedSection({}) }}
                   placeholder="— Select course —"
                   options={courses.map((c) => ({ value: c, label: courseNames[c] ? `${c} — ${courseNames[c]}` : c }))}
                   className={selectClass}
@@ -417,6 +432,63 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           {/* Header so this block reads as its own group — it previously sat
               unlabeled between "Your Information" and the documents section. */}
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Exam Details</h2>
+          {!prefill ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium ef-muted mb-1">
+                  Subjects * <span className="font-normal">(up to {MAX_SUBJECTS} — one parent check covers all of them)</span>
+                </label>
+                {!course ? (
+                  <p className="text-sm ef-muted">Select a course first.</p>
+                ) : subjectOptions.length === 0 ? (
+                  <p className="text-sm ef-muted">No subjects for that course yet.</p>
+                ) : (
+                  <ul className="rounded-lg border ef-border divide-y max-h-72 overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
+                    {subjectOptions.map((o) => {
+                      const on = picked.includes(o.id)
+                      const full = !on && picked.length >= MAX_SUBJECTS
+                      return (
+                        <li key={o.id}>
+                          <label className={`flex items-start gap-3 px-3 py-2.5 text-sm ${full ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} style={{ color: 'var(--card-foreground)' }}>
+                            <input type="checkbox" checked={on} disabled={full} onChange={() => togglePicked(o.id)} className="mt-0.5 w-4 h-4 accent-[var(--sti-gold)]" />
+                            <span>{o.code} — {o.name}</span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+                <p className="mt-1 text-xs ef-muted">{picked.length} of {MAX_SUBJECTS} selected</p>
+              </div>
+
+              {picked.map((id) => {
+                const subj = subjectOptions.find((o) => o.id === id)
+                const opts = courseOfferings.filter((o) => o.subjectId === id && (override || !enrolled || yearNum == null || o.yearLevel == null || o.yearLevel === yearNum))
+                const chosen = pickedSection[id] ?? (opts.length === 1 ? opts[0].section : '')
+                const teacher = opts.find((o) => o.section === chosen)?.teacherName ?? null
+                return (
+                  <div key={id} className="rounded-lg border ef-border p-3 space-y-2">
+                    <input type="hidden" name="subject_id" value={id} />
+                    <div className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>{subj ? `${subj.code} — ${subj.name}` : id}</div>
+                    <Select
+                      name={`section_${id}`}
+                      required
+                      value={chosen}
+                      onChange={(v) => setPickedSection((cur) => ({ ...cur, [id]: v }))}
+                      placeholder={opts.length ? '— Select section —' : 'No sections for that subject/year'}
+                      options={opts.map((o) => ({ value: o.section, label: o.section }))}
+                      className={selectClass}
+                      style={selectStyle}
+                    />
+                    {chosen && (
+                      <p className="text-xs ef-muted">Teacher: <strong style={{ color: 'var(--card-foreground)' }}>{teacher ?? 'Not assigned yet'}</strong></p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <>
           <div>
             <label className="block text-sm font-medium ef-muted mb-1">Subject *</label>
             <Select
@@ -453,6 +525,8 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               <strong style={{ color: 'var(--card-foreground)' }}>{teacherName ?? 'Not assigned yet'}</strong>
               <p className="text-xs ef-muted mt-0.5">Your request will be sent to this section&apos;s teacher for approval.</p>
             </div>
+          )}
+            </>
           )}
         </div>
 

@@ -78,7 +78,7 @@ export default async function StudentHistoryPage() {
                 </div>
 
                 <span className={`hidden sm:inline-block px-2 py-0.5 rounded text-xs font-semibold ${r.exam_type === 'paid' ? 'bg-yellow-100 text-yellow-700' : 'bg-teal-100 text-teal-700'}`}>
-                  {r.exam_type === 'paid' ? 'Paid' : 'Excused'}
+                  {r.exam_type === 'paid' ? 'Paid' : 'Waived'}
                 </span>
 
                 <StatusBadge status={r.status as RequestStatus} />
