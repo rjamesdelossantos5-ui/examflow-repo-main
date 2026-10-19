@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess, withSuccessToast } from '@/components/Toaster'
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
@@ -92,7 +92,10 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
     startTransition(async () => {
       const res = await verifyAll(ids)
       if (res.error) setError(res.error)
-      else setItems((prev) => prev.filter((r) => !ids.includes(r.id)))
+      else {
+        setItems((prev) => prev.filter((r) => !ids.includes(r.id)))
+        toastSuccess(ids.length === 1 ? 'Request verified' : `${ids.length} requests verified`)
+      }
     })
   }
 
@@ -183,8 +186,8 @@ export default function RegistrarQueue({ requests }: { requests: RequestRow[] })
                         documentType: f.didit_document_type ?? null,
                       }}
                       parentCheck={f.parentCheck ?? null}
-                      onVerify={verifyRequest}
-                      onReject={rejectRequest}
+                      onVerify={withSuccessToast(verifyRequest, 'Request verified')}
+                      onReject={withSuccessToast(rejectRequest, 'Request rejected')}
                       onDone={() => dropForm(f.id)}
                       rejectPresets={REGISTRAR_REJECT}
                       // The excuse certificate is for the Program Head only

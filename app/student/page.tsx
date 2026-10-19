@@ -7,6 +7,7 @@ import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import { displayName, surname } from '@/lib/initials'
+import { SuccessToast } from '@/components/Toaster'
 import SubmissionStatusBanner from './SubmissionStatusBanner'
 import StudentAnnouncements from './StudentAnnouncements'
 import RequestsPanel, { type StudentRequest } from './RequestsPanel'
@@ -14,7 +15,8 @@ import type { RequestStatus } from '@/lib/supabase/types'
 
 export const metadata = { title: 'EXAMFLOW — My Requests' }
 
-export default async function StudentPage() {
+export default async function StudentPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
+  const { deleted } = await searchParams
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
@@ -121,6 +123,8 @@ export default async function StudentPage() {
 
   return (
     <div className="space-y-6">
+      {/* deleteRequest redirects here with ?deleted=1 */}
+      {deleted && <SuccessToast message="Request deleted" clearParam="deleted" />}
       {/* The schedule popup shows first (higher priority); dismissing it reveals
           the submission-window popup immediately — see StudentAnnouncements. */}
       <StudentAnnouncements

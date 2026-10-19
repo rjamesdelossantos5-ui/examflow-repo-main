@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import DocumentViewer from '@/components/DocumentViewer'
@@ -126,7 +126,10 @@ export default function PHQueue({
     startTransition(async () => {
       const res = await acceptAll(ids)
       if (res.error) setError(res.error)
-      else setItems((prev) => prev.filter((r) => !ids.includes(r.id)))
+      else {
+        setItems((prev) => prev.filter((r) => !ids.includes(r.id)))
+        toastSuccess(ids.length === 1 ? 'Request accepted' : `${ids.length} requests accepted`)
+      }
     })
   }
 
@@ -250,7 +253,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     startTransition(async () => {
       const res = await acceptRequest(r.id, '')
       if (res.error) setError(res.error)
-      else onDone()
+      else { toastSuccess('Request accepted'); onDone() }
     })
   }
 
@@ -259,7 +262,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     startTransition(async () => {
       const res = await rejectPHRequest(r.id, reason)
       if (res.error) setError(res.error)
-      else onDone()
+      else { toastSuccess('Request rejected'); onDone() }
     })
   }
 
@@ -268,7 +271,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     startTransition(async () => {
       const res = await returnForReverification(r.id, reason)
       if (res.error) setError(res.error)
-      else onDone()
+      else { toastSuccess('Returned for parent re-verification'); onDone() }
     })
   }
 
@@ -276,7 +279,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     startTransition(async () => {
       const res = await confirmReceipt(r.id)
       if (res.error) setError(res.error)
-      else onDone()
+      else { toastSuccess('Receipt confirmed and exam scheduled'); onDone() }
     })
   }
 
@@ -285,7 +288,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     startTransition(async () => {
       const res = await rejectReceipt(r.id, reason)
       if (res.error) setError(res.error)
-      else onDone()
+      else { toastSuccess('Receipt rejected'); onDone() }
     })
   }
 

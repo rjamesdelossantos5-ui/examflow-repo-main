@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import type { Department } from '@/lib/supabase/types'
 import { createDepartment, updateDepartment, deleteDepartment } from './actions'
@@ -20,7 +20,7 @@ export default function DeptManager({ departments }: { departments: Department[]
     startTransition(async () => {
       const res = await createDepartment(fd)
       if (res.error) setError(res.error)
-      else { form.reset(); setError(null) }
+      else { form.reset(); setError(null); toastSuccess('Department created') }
     })
   }
 
@@ -30,7 +30,7 @@ export default function DeptManager({ departments }: { departments: Department[]
     startTransition(async () => {
       const res = await updateDepartment(id, fd)
       if (res.error) setError(res.error)
-      else { setEditing(null); setError(null) }
+      else { setEditing(null); setError(null); toastSuccess('Department updated') }
     })
   }
 
@@ -39,6 +39,7 @@ export default function DeptManager({ departments }: { departments: Department[]
     startTransition(async () => {
       const res = await deleteDepartment(id)
       if (res.error) setError(res.error)
+      else toastSuccess('Department deleted')
     })
   }
 

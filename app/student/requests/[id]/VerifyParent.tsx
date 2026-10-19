@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { startParentVerification, refreshParentVerification, confirmSubmission } from './actions'
 
@@ -118,6 +118,7 @@ export default function VerifyParent({
     startTransition(async () => {
       const res = await confirmSubmission(requestId)
       if (res.error) setError(res.error)
+      else toastSuccess('Request submitted')
     })
   }
 

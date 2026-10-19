@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useRef, useState, useTransition } from 'react'
 import { uploadReceipt } from './actions'
 import { compressImage } from '@/lib/compressImage'
@@ -82,7 +82,7 @@ export default function ReceiptUpload({
     startTransition(async () => {
       const res = await uploadReceipt(requestId, fd)
       if (res.error) setServerError(res.error)
-      else setSuccess(true)
+      else { setSuccess(true); toastSuccess('Receipt uploaded') }
     })
   }
 

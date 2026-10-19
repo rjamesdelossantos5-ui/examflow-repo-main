@@ -68,7 +68,8 @@ export async function deleteRequest(requestId: string) {
   // existed; on refetch it hit notFound() instead. Now Back refetches and lands
   // on the friendly "no longer available" page (see not-found.tsx here).
   revalidatePath('/student/requests/[id]', 'page')
-  redirect('/student')
+  // ?deleted=1 is only a flag for the "Request deleted" pop-up on /student.
+  redirect('/student?deleted=1')
 }
 
 export async function uploadReceipt(requestId: string, formData: FormData) {
