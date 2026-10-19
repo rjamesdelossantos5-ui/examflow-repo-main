@@ -55,7 +55,7 @@ export default async function StudentPage() {
   // already used for every staff queue.
   const list = keepActive(requests ?? [], activePeriod?.id ?? null)
   // Shown wherever the current term is named (banner, modals, list) — e.g.
-  // "1st Semester · Finals".
+  // "1st Semester · Pre-finals".
   const termLabel = activePeriod ? `${SEMESTER_LABEL[activePeriod.semester]} · ${TERM_LABEL[activePeriod.term]}` : null
   // Serializable rows for the interactive (client) panel below.
   const panelRequests: StudentRequest[] = list.map((r) => {

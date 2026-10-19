@@ -2,9 +2,11 @@ import type { createClient } from '@/lib/supabase/server'
 
 type DB = Awaited<ReturnType<typeof createClient>>
 
-export const TERMS = ['prelim', 'midterms', 'prefinals', 'finals'] as const
+// There is no special exam in Finals, so Pre-finals is the last term. Finals is not
+// offered any more; the label below only keeps an old Finals record readable.
+export const TERMS = ['prelim', 'midterms', 'prefinals'] as const
 export type Term = (typeof TERMS)[number]
-export const TERM_LABEL: Record<Term, string> = {
+export const TERM_LABEL: Record<string, string> = {
   prelim: 'Prelim',
   midterms: 'Midterms',
   prefinals: 'Pre-finals',
@@ -26,13 +28,13 @@ export function nextTerm(t: Term): Term {
   return TERMS[Math.min(i + 1, TERMS.length - 1)]
 }
 
-// The semester + term that follows this one. Finals rolls into the NEXT
-// semester's Prelim; 2nd Semester Finals is the end of the school year and
+// The semester + term that follows this one. Pre-finals rolls into the NEXT
+// semester's Prelim; 2nd Semester Pre-finals is the end of the school year and
 // stays put, since there is no school_year to advance to (it is fixed to ''
 // — see savePeriod). Returning the same pair there is deliberate: it is the
 // caller's cue that the Program Head has to choose, not a suggestion.
 export function nextTermOfSemester(semester: Semester, term: Term): { semester: Semester; term: Term } {
-  if (term !== 'finals') return { semester, term: nextTerm(term) }
+  if (term !== 'prefinals') return { semester, term: nextTerm(term) }
   if (semester === '1st') return { semester: '2nd', term: 'prelim' }
   return { semester, term }
 }

@@ -417,7 +417,7 @@ interface PeriodInput {
   windowDays: number
 }
 
-// Create/update a term's SUBMISSION WINDOW (Prelim/Midterms/Pre-finals/Finals)
+// Create/update a term's SUBMISSION WINDOW (Prelim/Midterms/Pre-finals)
 // for a semester (1st/2nd) and make it the single active one students submit
 // to. The exam schedule (date/location/what-to-bring) is saved separately via
 // saveExamSchedule, so this upsert deliberately does NOT touch those columns —
@@ -427,7 +427,7 @@ export async function savePeriod(input: PeriodInput) {
   if (!ctx) return { error: 'Unauthorized' }
   const { supabase } = ctx
 
-  if (!['prelim', 'midterms', 'prefinals', 'finals'].includes(input.term)) return { error: 'Choose a term.' }
+  if (!['prelim', 'midterms', 'prefinals'].includes(input.term)) return { error: 'Choose a term.' }
   if (!['1st', '2nd'].includes(input.semester)) return { error: 'Choose a semester.' }
   // A blank date is allowed on purpose: it makes this the current term while
   // leaving submissions closed, so the PH can move off a finished term before
