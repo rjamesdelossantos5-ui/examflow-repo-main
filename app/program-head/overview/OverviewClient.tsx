@@ -93,9 +93,11 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
 
       {/* One card: a single row of stage filters, then the table. The filters
           used to be seven big number cards in two rows that pushed the table
-          (the actual work) down the page. Scrolls sideways on phones. */}
+          (the actual work) down the page. Both the filter row and the table
+          scroll sideways, with a thin visible scrollbar, when the window is
+          too narrow to show everything. */}
       <div className="ef-card rounded-xl shadow-sm overflow-hidden">
-        <div className="flex overflow-x-auto no-scrollbar border-b ef-border px-2" aria-label="Filter by stage">
+        <div className="flex overflow-x-auto [scrollbar-width:thin] border-b ef-border px-2" aria-label="Filter by stage">
           {[{ status: 'all' as const, label: 'All Requests', count: rows.length }, ...STAGES.map((s) => ({ ...s, count: counts[s.status] ?? 0 }))].map((s) => {
             const active = filter === s.status
             return (
@@ -119,64 +121,64 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
             )
           })}
         </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="border-b ef-border text-left text-xs font-semibold ef-muted uppercase tracking-wide">
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Section</th>
-              <th className="px-4 py-3">Subject</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Stage</th>
-              <th className="px-4 py-3">Submitted</th>
-              <th className="px-4 py-3 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {visible.map((r) => {
-              const open = openFor(r)
-              const badge = STAGES.find((s) => s.status === stageOf(r))?.badge
-              return (
-                <tr key={r.id} className="hover:bg-black/5 dark:hover:bg-white/5">
-                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.name}</td>
-                  <td className="px-4 py-3 ef-muted">{r.section ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <div style={{ color: 'var(--card-foreground)' }}>{r.subject_name}</div>
-                    <div className="text-xs ef-muted">{r.subject_code}</div>
-                  </td>
-                  <td className="px-4 py-3 capitalize ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Waived'}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={r.status} label={badge} />
-                    {r.status === 'rejected' && (
-                      <div className="mt-1 text-xs">
-                        <span className="font-medium text-red-600 dark:text-red-400">
-                          Rejected by {ROLE_LABEL[r.rejected_by_role ?? ''] ?? 'a reviewer'}
-                        </span>
-                        {r.rejection_reason && <div className="ef-muted mt-0.5 max-w-xs">{r.rejection_reason}</div>}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 ef-muted">{new Date(r.submitted_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    {open && (
-                      <Link
-                        href={open.href(r.id)}
-                        className="inline-block text-xs px-2.5 py-1 rounded-lg font-semibold"
-                        style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-                      >
-                        {open.label}
-                      </Link>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-            {visible.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center ef-muted">No requests in this stage.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+        <div className="overflow-x-auto [scrollbar-width:thin]">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b ef-border text-left text-xs font-semibold ef-muted uppercase tracking-wide">
+                <th className="px-4 py-3">Student</th>
+                <th className="px-4 py-3">Section</th>
+                <th className="px-4 py-3">Subject</th>
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Stage</th>
+                <th className="px-4 py-3">Submitted</th>
+                <th className="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {visible.map((r) => {
+                const open = openFor(r)
+                const badge = STAGES.find((s) => s.status === stageOf(r))?.badge
+                return (
+                  <tr key={r.id} className="hover:bg-black/5 dark:hover:bg-white/5">
+                    <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.name}</td>
+                    <td className="px-4 py-3 ef-muted">{r.section ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <div style={{ color: 'var(--card-foreground)' }}>{r.subject_name}</div>
+                      <div className="text-xs ef-muted">{r.subject_code}</div>
+                    </td>
+                    <td className="px-4 py-3 capitalize ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Waived'}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={r.status} label={badge} />
+                      {r.status === 'rejected' && (
+                        <div className="mt-1 text-xs">
+                          <span className="font-medium text-red-600 dark:text-red-400">
+                            Rejected by {ROLE_LABEL[r.rejected_by_role ?? ''] ?? 'a reviewer'}
+                          </span>
+                          {r.rejection_reason && <div className="ef-muted mt-0.5 max-w-xs">{r.rejection_reason}</div>}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 ef-muted">{new Date(r.submitted_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {open && (
+                        <Link
+                          href={open.href(r.id)}
+                          className="inline-block text-xs px-2.5 py-1 rounded-lg font-semibold"
+                          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                        >
+                          {open.label}
+                        </Link>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+              {visible.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center ef-muted">No requests in this stage.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
