@@ -25,8 +25,20 @@ export default function LoginModal() {
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
+    // /login redirects here with ?login=1 (and ?error=… when something went
+    // wrong). Open the popup, show the error in it, then drop both from the
+    // address bar so the page's URL is just "/".
+    const params = new URLSearchParams(window.location.search)
+    const fromRedirect = params.get('login') === '1' || params.has('error')
+    const openFromRedirect = () => {
+      setOpen(true)
+      setError(params.get('error'))
+      history.replaceState(null, '', window.location.pathname)
+    }
+    if (fromRedirect) openFromRedirect()
+
     const sync = () => setOpen(window.location.hash === '#login')
-    sync()
+    if (!fromRedirect) sync()
     window.addEventListener('hashchange', sync)
     return () => window.removeEventListener('hashchange', sync)
   }, [])
