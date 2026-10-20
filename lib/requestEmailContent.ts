@@ -362,14 +362,14 @@ function examWhen(start: string | null, end: string | null): string | null {
 }
 
 function steps(r: RequestEmailInfo, stage: Stage): { labels: string[]; current: number } {
-  const labels = ['Submitted', 'Teacher', 'Program Head', ...(r.examType === 'paid' ? ['Fee Assessment', 'Receipt', 'Checking'] : []), 'Exam']
+  const labels = ['Submitted', 'Teacher', 'Program Head', ...(r.examType === 'paid' ? ['Fee Assessment', 'Receipt', 'Checking'] : []), 'Scheduled']
   const name: Record<Stage, string> = {
     teacher: 'Teacher',
     program_head: 'Program Head',
     fee_assessment: 'Fee Assessment',
     receipt: 'Receipt',
     checking: 'Checking',
-    exam: 'Exam',
+    exam: 'Scheduled',
   }
   const current = labels.indexOf(name[stage])
   return { labels, current: current < 0 ? labels.length - 1 : current }
