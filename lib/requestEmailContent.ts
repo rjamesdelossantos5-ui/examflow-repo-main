@@ -56,7 +56,7 @@ export interface ComposedEmail {
 }
 
 type Tone = 'action' | 'info' | 'success' | 'danger' | 'warning'
-type Stage = 'teacher' | 'program_head' | 'payment' | 'exam'
+type Stage = 'teacher' | 'program_head' | 'fee_assessment' | 'receipt' | 'checking' | 'exam'
 
 interface Row {
   label: string
@@ -219,7 +219,7 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
             `The Program Head accepted ${r.studentName}'s paid special exam for ${title}.`,
             'Please assess the student’s fees.',
           ],
-          stage: 'payment',
+          stage: 'fee_assessment',
           button: { label: 'Assess fees', url: `${base}/registrar/assessment` },
         }
       }
@@ -230,7 +230,7 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
         heading: 'Your request was accepted',
         greeting: hiStudent,
         paragraphs: [`Your special exam request for ${title} was accepted by the Program Head.`],
-        stage: 'payment',
+        stage: 'fee_assessment',
         button: { label: 'View request', url: studentLink },
         next: 'Go to the Registrar for your fee assessment, pay at the Cashier, then upload your receipt in EXAMFLOW.',
       }
@@ -243,7 +243,7 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
         greeting: hiStudent,
         paragraphs: ['The Registrar assessed your special exam fees. You can now pay at the Cashier.'],
         callout: { label: 'Amount to pay', value: reason },
-        stage: 'payment',
+        stage: 'receipt',
         button: { label: 'Upload receipt', url: studentLink },
         next: 'Pay at the Cashier, then upload a photo of your official receipt in EXAMFLOW.',
       }
@@ -276,7 +276,7 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
           `${r.studentName} uploaded a payment receipt for ${title}.`,
           'It is waiting in your Second Approval queue.',
         ],
-        stage: 'payment',
+        stage: 'checking',
         button: { label: 'Check receipt', url: `${base}/program-head/receipts?req=${r.id}` },
       }
 
@@ -289,7 +289,7 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
         greeting: hiStudent,
         paragraphs: [`Your payment receipt for ${title} was not accepted.`],
         callout: { label: 'Reason', value: reason },
-        stage: 'payment',
+        stage: 'receipt',
         button: { label: 'Upload a new receipt', url: studentLink },
         next: 'Please upload a new receipt.',
       }
@@ -362,11 +362,13 @@ function examWhen(start: string | null, end: string | null): string | null {
 }
 
 function steps(r: RequestEmailInfo, stage: Stage): { labels: string[]; current: number } {
-  const labels = ['Submitted', 'Teacher', 'Program Head', ...(r.examType === 'paid' ? ['Payment'] : []), 'Exam']
+  const labels = ['Submitted', 'Teacher', 'Program Head', ...(r.examType === 'paid' ? ['Fee Assessment', 'Receipt', 'Checking'] : []), 'Exam']
   const name: Record<Stage, string> = {
     teacher: 'Teacher',
     program_head: 'Program Head',
-    payment: 'Payment',
+    fee_assessment: 'Fee Assessment',
+    receipt: 'Receipt',
+    checking: 'Checking',
     exam: 'Exam',
   }
   const current = labels.indexOf(name[stage])
