@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import Select from '@/components/Select'
 import SearchInput from '@/components/SearchInput'
+import Pagination, { usePagination } from '@/components/Pagination'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { updateSubject } from './actions'
 
@@ -55,6 +56,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
       (!q || [s.code, s.name, s.department ?? ''].some((v) => v.toLowerCase().includes(q))),
     )
   }, [subjects, query, dept])
+  const { items: pageSubjects, pagerProps } = usePagination(visible, `${query}|${dept}`)
 
   const teacherName = useMemo(() => new Map(teachers.map((t) => [t.id, t.name])), [teachers])
   const teacherOptions = useMemo(
@@ -143,7 +145,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
             </tr>
           </thead>
           <tbody className="divide-y ef-border">
-            {visible.map((s) => (
+            {pageSubjects.map((s) => (
               <tr
                 key={s.id}
                 onClick={() => show(s, false)}
@@ -176,6 +178,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
           </tbody>
         </table>
       </div>
+      <Pagination {...pagerProps} />
 
       {open && (
         <div className="ef-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={isPending ? undefined : close}>

@@ -6,6 +6,7 @@ import type { Profile, Department } from '@/lib/supabase/types'
 import { toggleUserActive, deleteUser, createUser, updateUser } from './actions'
 import Select from '@/components/Select'
 import SearchInput from '@/components/SearchInput'
+import Pagination, { usePagination } from '@/components/Pagination'
 import { Icon } from '@/components/Icon'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { initials } from '@/lib/initials'
@@ -502,6 +503,7 @@ export default function UserTable({
     const rank = (r: string) => (ROLE_ORDER.includes(r) ? ROLE_ORDER.indexOf(r) : ROLE_ORDER.length)
     return [...visible].sort((a, b) => rank(a.role) - rank(b.role))
   }, [visible])
+  const { items: pageRows, pagerProps } = usePagination(rows, `${query}|${roleFilter}`)
   const roleCounts = useMemo(() => {
     const c: Record<string, number> = {}
     for (const u of users) c[u.role] = (c[u.role] ?? 0) + 1
@@ -806,6 +808,7 @@ export default function UserTable({
           {users.length ? 'No user matches your search.' : 'No users found.'}
         </div>
       ) : (
+        <>
         <div className="ef-card rounded-xl overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -817,7 +820,7 @@ export default function UserTable({
               </tr>
             </thead>
             <tbody className="divide-y ef-border">
-              {rows.map((u) => {
+              {pageRows.map((u) => {
                 const teaches = classesByTeacher[u.id]?.length ?? 0
                 const isMe = u.id === currentUserId
                 const blocked = removalBlocked(u)
@@ -904,6 +907,8 @@ export default function UserTable({
             </tbody>
           </table>
         </div>
+        <Pagination {...pagerProps} />
+        </>
       )}
     </div>
   )
