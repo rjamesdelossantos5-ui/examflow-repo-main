@@ -39,6 +39,14 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString()
 }
 
+// "Oct 16, 2026, 2:35 PM" in the school's time zone, so the server and the
+// browser can't disagree about the time shown (same as the admin pages).
+const stampFmt = new Intl.DateTimeFormat('en-PH', {
+  timeZone: 'Asia/Manila',
+  year: 'numeric', month: 'short', day: 'numeric',
+  hour: 'numeric', minute: '2-digit',
+})
+
 export default async function RequestDetailPage({
   params,
   searchParams,
@@ -364,7 +372,7 @@ export default async function RequestDetailPage({
               />
               <p className="text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>{log.action}{log.actor_role === 'admin' && ' (by Admin)'}</p>
               <p className="text-xs ef-muted mt-0.5">
-                <span className="capitalize">{log.actor_role.replace(/_/g, ' ')}</span> · {timeAgo(log.created_at)}
+                <span className="capitalize">{log.actor_role.replace(/_/g, ' ')}</span> · {stampFmt.format(new Date(log.created_at))} · {timeAgo(log.created_at)}
               </p>
             </li>
           ))}
