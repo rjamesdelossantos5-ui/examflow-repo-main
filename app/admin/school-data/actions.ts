@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
+import { withoutAccountTag } from '@/lib/initials'
 import { PEOPLE_CHUNK_SIZE, readSchoolData, type ClassRow, type Program, type StaffRole } from '@/lib/schoolData'
 
 /**
@@ -140,7 +141,8 @@ export async function importPeopleChunk(people: PersonInput[]) {
     const email = clip(p.email, 254).toLowerCase()
     const isStudent = p.role === 'student'
     const details = {
-      full_name: clip(p.fullName, 200),
+      // Without the "(Student)" tag the school's file / Microsoft adds to names.
+      full_name: clip(withoutAccountTag(p.fullName), 200),
       email,
       role: p.role,
       department_id: isStudent ? programDept.get(clip(p.program, 20).toUpperCase()) ?? null : p.department ? deptId.get(clip(p.department, 120).toLowerCase()) ?? null : null,
