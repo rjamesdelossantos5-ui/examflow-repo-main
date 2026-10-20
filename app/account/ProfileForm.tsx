@@ -147,14 +147,18 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isPending}
-          className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-        >
-          {isPending ? 'Saving…' : 'Save Changes'}
-        </button>
+        {/* Only students have anything to save here (student number, course, year).
+            Staff see their name and email, which can't be edited on this page. */}
+        {isStudent && (
+          <button
+            type="submit"
+            disabled={isPending}
+            className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
+            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          >
+            {isPending ? 'Saving…' : 'Save Changes'}
+          </button>
+        )}
       </div>
     </form>
   )
