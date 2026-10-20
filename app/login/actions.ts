@@ -115,6 +115,11 @@ export async function signInWithMicrosoft() {
       // profile: without it, Azure sends no name, so the account's name was
       // its email address (see the name swap in app/auth/callback/route.ts).
       scopes: 'email profile',
+      // Logging out ends EXAMFLOW's session only; the person is still signed in
+      // at Microsoft, which would silently sign them straight back into the same
+      // account. select_account makes Microsoft always show its account picker,
+      // so another account can be chosen from the same browser.
+      queryParams: { prompt: 'select_account' },
     },
   })
 
