@@ -192,7 +192,7 @@ export default async function RequestDetailPage({
   }
 
   return (
-    <div className="max-w-2xl space-y-5">
+    <div className="mx-auto max-w-2xl space-y-5">
       {/* Opening the request counts as viewing it: the bell stops flagging it as new. */}
       <MarkViewed ids={[req.id]} />
       <Link href="/student" className="inline-flex items-center gap-1 text-sm ef-muted hover:underline">
