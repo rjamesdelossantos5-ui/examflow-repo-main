@@ -366,6 +366,76 @@ button:focus-visible,
   .ef-reveal { animation: ef-fade-in 0.3s ease-out both; }
 }
 
+/* ── Landing: the hero phone and the scroll-ins (app/page.tsx, app/Reveal.tsx) ──
+   Everything here is transform and opacity only, driven by CSS: no timers, no
+   scroll listeners, so it cannot lag. Resting state = the finished state, which
+   is also what reduced motion and a no-JS visitor see. */
+.ef-phone {
+  width: min(300px, 78vw);
+  aspect-ratio: 9 / 13.4;
+  padding: 10px;
+  border-radius: 40px;
+  box-shadow: 0 30px 60px -22px rgba(0, 0, 0, 0.5), 0 10px 20px -10px rgba(0, 0, 0, 0.35);
+}
+.ef-phone-screen { height: 100%; border-radius: 30px; overflow: hidden; display: flex; flex-direction: column; }
+
+.ef-ph-fill, .ef-ph-line { opacity: 1; }
+.ef-ph-line { transform: scaleX(1); transform-origin: left center; }
+.ef-ph-say-0, .ef-ph-say-1 { opacity: 0; }
+.ef-ph-stamp { opacity: 1; transform: rotate(-6deg); }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* One 9 s loop: Teacher stamps (18%), Program Head stamps (40%), then Scheduled
+     (46%) and the SCHEDULED stamp lands; everything resets quietly at 97%. */
+  .ef-ph-fill-1 { animation: ef-ph-f1 9s infinite var(--ease-out); }
+  .ef-ph-fill-2 { animation: ef-ph-f2 9s infinite var(--ease-out); }
+  .ef-ph-fill-3 { animation: ef-ph-f3 9s infinite var(--ease-out); }
+  .ef-ph-line   { animation: ef-ph-line 9s infinite var(--ease-out); }
+  .ef-ph-say-0  { animation: ef-ph-s0 9s infinite var(--ease-out); }
+  .ef-ph-say-1  { animation: ef-ph-s1 9s infinite var(--ease-out); }
+  .ef-ph-say-2  { animation: ef-ph-s2 9s infinite var(--ease-out); }
+  .ef-ph-stamp  { animation: ef-ph-stamp 9s infinite var(--ease-out); }
+}
+@keyframes ef-ph-f1 { 0%, 14% { opacity: 0; transform: scale(0.6); } 18%, 92% { opacity: 1; transform: scale(1); } 97%, 100% { opacity: 0; transform: scale(1); } }
+@keyframes ef-ph-f2 { 0%, 36% { opacity: 0; transform: scale(0.6); } 40%, 92% { opacity: 1; transform: scale(1); } 97%, 100% { opacity: 0; transform: scale(1); } }
+@keyframes ef-ph-f3 { 0%, 42% { opacity: 0; transform: scale(0.6); } 46%, 92% { opacity: 1; transform: scale(1); } 97%, 100% { opacity: 0; transform: scale(1); } }
+@keyframes ef-ph-line {
+  0%, 14% { transform: scaleX(0); opacity: 1; }
+  18%, 36% { transform: scaleX(0.3333); }
+  40%, 42% { transform: scaleX(0.6667); }
+  46%, 92% { transform: scaleX(1); opacity: 1; }
+  97%, 99.9% { transform: scaleX(1); opacity: 0; }
+  100% { transform: scaleX(0); opacity: 0; }
+}
+@keyframes ef-ph-s0 { 0% { opacity: 0; transform: translateY(4px); } 3%, 15% { opacity: 1; transform: none; } 18%, 100% { opacity: 0; transform: translateY(-4px); } }
+@keyframes ef-ph-s1 { 0%, 16% { opacity: 0; transform: translateY(4px); } 20%, 34% { opacity: 1; transform: none; } 38%, 100% { opacity: 0; transform: translateY(-4px); } }
+@keyframes ef-ph-s2 { 0%, 42% { opacity: 0; transform: translateY(4px); } 46%, 92% { opacity: 1; transform: none; } 97%, 100% { opacity: 0; transform: none; } }
+@keyframes ef-ph-stamp {
+  0%, 46% { opacity: 0; transform: rotate(-12deg) scale(1.6); }
+  49% { opacity: 1; transform: rotate(-6deg) scale(0.96); }
+  51%, 92% { opacity: 1; transform: rotate(-6deg) scale(1); }
+  97%, 100% { opacity: 0; transform: rotate(-6deg) scale(1); }
+}
+
+/* Scroll-ins: held back only while Reveal has armed the section and it has not
+   arrived yet; releasing the hold plays the transition. --i (set on each item)
+   staggers them. */
+.ef-rv-tick { transition: transform 260ms var(--ease-out), opacity 200ms var(--ease-out); transition-delay: calc(var(--i, 0) * 140ms + 250ms); }
+.ef-rv-node { transition: transform 300ms var(--ease-out), opacity 220ms var(--ease-out); transition-delay: calc(var(--i, 0) * 130ms + 350ms); }
+.ef-rv-route-h { transform-origin: left center; transition: transform 900ms var(--ease-out) 250ms; }
+.ef-rv-route-v { transform-origin: center top; transition: transform 900ms var(--ease-out) 250ms; }
+[data-armed]:not([data-in]) .ef-rv-tick { transform: scale(0.4); opacity: 0; }
+[data-armed]:not([data-in]) .ef-rv-node { transform: scale(0.6); opacity: 0; }
+[data-armed]:not([data-in]) .ef-rv-route-h { transform: scaleX(0); }
+[data-armed]:not([data-in]) .ef-rv-route-v { transform: scaleY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .ef-rv-tick, .ef-rv-node, .ef-rv-route-h, .ef-rv-route-v { transition: none; }
+  [data-armed]:not([data-in]) .ef-rv-tick,
+  [data-armed]:not([data-in]) .ef-rv-node { transform: none; opacity: 1; }
+  [data-armed]:not([data-in]) .ef-rv-route-h,
+  [data-armed]:not([data-in]) .ef-rv-route-v { transform: none; }
+}
+
 /* Scroll cue drift. Replaces Tailwind's `animate-bounce`, whose squash-and-
    stretch keyframes read as dated and toy-like. This travels a short distance
    on the strong in-out curve, so it decelerates at both ends the way a real
