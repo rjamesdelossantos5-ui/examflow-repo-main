@@ -148,7 +148,11 @@ export default async function RequestDetailPage({
 
   const logs = (req.progress_logs as { id: string; action: string; created_at: string; actor_role: UserRole }[]) ?? []
   // The timeline below leaves out the consent record (kept in the database).
-  const shownLogs = logs.filter((l) => shownInHistory(l.action))
+  // Oldest first. The query doesn't order the embedded log rows, so they come
+  // back in storage order, which put "Verified by Registrar" after the receipt.
+  const shownLogs = logs
+    .filter((l) => shownInHistory(l.action))
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   // The Program Head's reason, from the log line returnForReverification writes.
   const reverifyReason = reverifyRequested
     ? [...logs]

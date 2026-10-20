@@ -165,7 +165,10 @@ export default function RequestReviewPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const shownLogs = logs.filter((l) => shownInHistory(l.action))
+  // Oldest first: the embedded log rows are not ordered by the query.
+  const shownLogs = logs
+    .filter((l) => shownInHistory(l.action))
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   const viewerMedia = media.map((m) => ({
     id: m.id,
     media_type: m.media_type,

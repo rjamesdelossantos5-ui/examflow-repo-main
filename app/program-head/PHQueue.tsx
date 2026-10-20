@@ -240,7 +240,10 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const shownLogs = r.logs.filter((l) => shownInHistory(l.action))
+  // Oldest first: the embedded log rows are not ordered by the query.
+  const shownLogs = r.logs
+    .filter((l) => shownInHistory(l.action))
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   const viewerMedia = r.media.map((m) => ({
     id: m.id,
     media_type: m.media_type,
