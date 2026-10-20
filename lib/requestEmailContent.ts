@@ -451,7 +451,9 @@ function stepsHtml(s: { labels: string[]; current: number }, tone: Tone): string
   const cells = s.labels
     .map((_, i) => {
       const bg = i < s.current ? COLOR.navy : i === s.current ? currentColor : COLOR.line
-      return `<td style="padding:0 ${i === s.labels.length - 1 ? 0 : 3}px 0 0;"><div style="height:4px;line-height:4px;font-size:0;background:${bg};border-radius:2px;">&nbsp;</div></td>`
+      // An explicit width on every bar: with none, the table gives the spare width
+      // out by content size, and the last bar (no right padding, empty) got none.
+      return `<td width="${(100 / s.labels.length).toFixed(2)}%" style="width:${(100 / s.labels.length).toFixed(2)}%;padding:0 ${i === s.labels.length - 1 ? 0 : 3}px 0 0;"><div style="height:4px;line-height:4px;font-size:0;background:${bg};border-radius:2px;">&nbsp;</div></td>`
     })
     .join('')
   return `<p style="margin:0 0 10px;font-family:${FONT};font-size:13px;line-height:1.4;color:${COLOR.muted};">Step ${s.current + 1} of ${s.labels.length} <span style="color:${COLOR.text};font-weight:600;">· ${e(s.labels[s.current])}</span></p>
