@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useCallback, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import Select from '@/components/Select'
@@ -91,7 +91,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
     startTransition(async () => {
       const res = await updateSubject({ subjectId, code, name, teachers: picked })
       if (res.error) setError(res.error)
-      else { setEditing(false); setError(null) }
+      else { setEditing(false); setError(null); toastSuccess('Subject updated') }
     })
   }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useMemo, useState, useTransition } from 'react'
 import * as XLSX from 'xlsx'
 import SearchInput from '@/components/SearchInput'
@@ -69,6 +69,7 @@ export default function ParentList({ students, migrationMissing }: { students: L
       const res = await replaceParentList(grids)
       if (res.error) return setSaveError(res.error)
       setSaved(`Saved: ${res.students} student${res.students === 1 ? '' : 's'}, ${res.people} parent${res.people === 1 ? '' : 's'} and guardian${res.people === 1 ? '' : 's'}.`)
+      toastSuccess(`Parent list saved (${res.students} student${res.students === 1 ? '' : 's'})`)
       setFile(null)
       setInputKey((k) => k + 1)
     })

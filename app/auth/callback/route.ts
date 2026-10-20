@@ -5,12 +5,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ROLE_HOME } from '@/lib/role-home'
 import { recordLogin } from '@/lib/loginHistory'
 
-// 🔧 Same domain used everywhere else in the app.
-const ALLOWED_DOMAIN = process.env.SCHOOL_EMAIL_DOMAIN ?? '@yourschool.edu.ph'
-// Faculty sign in with this domain (students use ALLOWED_DOMAIN, @stamaria.sti.edu.ph).
-// endsWith on the "@…" form keeps the two apart: the student domain does not end
-// with the faculty one.
-const FACULTY_DOMAIN = process.env.FACULTY_EMAIL_DOMAIN ?? '@stamaria.sti.edu'
+// Student AND teacher accounts both use this domain (@stamaria.sti.edu.ph).
+const ALLOWED_DOMAIN = process.env.SCHOOL_EMAIL_DOMAIN ?? '@stamaria.sti.edu.ph'
+// Program Head accounts use this domain (@stamaria.sti.edu).
+// endsWith on the "@…" form keeps the two apart: the .edu.ph domain does not end
+// with the .edu one.
+const PROGRAM_HEAD_DOMAIN = process.env.FACULTY_EMAIL_DOMAIN ?? '@stamaria.sti.edu'
+
+// Inside ALLOWED_DOMAIN, the part before the @ tells student and teacher apart:
+//   student -> has a number   (casano.340503@stamaria.sti.edu.ph)
+//   teacher -> has no number  (jho.malaca@stamaria.sti.edu.ph)
+function looksLikeStudentEmail(email: string) {
+  const localPart = email.split('@')[0] ?? ''
+  return /\d/.test(localPart)
+}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -65,10 +73,13 @@ export async function GET(request: Request) {
 
   const email = (data.user.email ?? '').toLowerCase()
 
-  const isFacultyEmail = email.endsWith(FACULTY_DOMAIN)
+  const isProgramHeadEmail = email.endsWith(PROGRAM_HEAD_DOMAIN)
+  const isSchoolEmail = email.endsWith(ALLOWED_DOMAIN) // student or teacher
+  const isStudentEmail = isSchoolEmail && looksLikeStudentEmail(email)
+  const isTeacherEmail = isSchoolEmail && !isStudentEmail
 
-  // Reject any Microsoft account that isn't a school account (student or faculty).
-  if (!email.endsWith(ALLOWED_DOMAIN) && !isFacultyEmail) {
+  // Condition 1: reject any Microsoft account that isn't a school account.
+  if (!isSchoolEmail && !isProgramHeadEmail) {
     await supabase.auth.signOut()
     try {
       const admin = createAdminClient()
@@ -77,10 +88,11 @@ export async function GET(request: Request) {
       // Even if cleanup fails, still block them from proceeding below.
     }
     return respond(
-      '/login?error=' + encodeURIComponent(`Please sign in with your school Microsoft account (${ALLOWED_DOMAIN} or ${FACULTY_DOMAIN}).`)
+      '/login?error=' + encodeURIComponent(`Please sign in with your school Microsoft account (${ALLOWED_DOMAIN} or ${PROGRAM_HEAD_DOMAIN}).`)
     )
   }
 
+  // Condition 2: the account must have an active profile.
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, is_active, full_name')
@@ -93,23 +105,31 @@ export async function GET(request: Request) {
   }
 
   // New accounts are always created as 'student' (handle_new_user, see
-  // migration_role_escalation.sql). A faculty email that is still a bare student
-  // account becomes a Subject Teacher; a Program Head is promoted afterwards by
-  // the admin or the School Data import — the email can't tell them apart.
-  // Accounts that already have a staff role are left alone. Service role: a
-  // database guard stops everyone but an admin changing a role.
+  // migration_role_escalation.sql). The email decides what a bare student
+  // account becomes:
+  //   @stamaria.sti.edu                      -> Program Head
+  //   @stamaria.sti.edu.ph, no number        -> Subject Teacher
+  //   @stamaria.sti.edu.ph, with a number    -> stays Student
+  // Accounts that already have a staff role are left alone (never demoted).
+  // Service role: a database guard stops everyone but an admin changing a role.
   let role = profile.role
-  if (isFacultyEmail && role === 'student') {
+  let newRole: string | null = null
+  if (role === 'student') {
+    if (isProgramHeadEmail) newRole = 'program_head'
+    else if (isTeacherEmail) newRole = 'subject_teacher'
+  }
+
+  if (newRole) {
     const admin = createAdminClient()
     const { error: roleError } = admin
-      ? await admin.from('profiles').update({ role: 'subject_teacher' }).eq('id', data.user.id)
+      ? await admin.from('profiles').update({ role: newRole }).eq('id', data.user.id)
       : { error: new Error('SUPABASE_SERVICE_ROLE_KEY is not configured') }
     if (roleError) {
-      console.error('[auth/callback] faculty role update failed', roleError)
+      console.error('[auth/callback] role update failed', roleError)
       await supabase.auth.signOut()
-      return respond('/login?error=' + encodeURIComponent('Your faculty account could not be set up. Please contact the admin.'))
+      return respond('/login?error=' + encodeURIComponent('Your account could not be set up. Please contact the admin.'))
     }
-    role = 'subject_teacher'
+    role = newRole
   }
 
   // Accounts created before the login asked Microsoft for `profile` got their

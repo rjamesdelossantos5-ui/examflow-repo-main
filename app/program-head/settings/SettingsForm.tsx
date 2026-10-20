@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useCallback, useState, useTransition } from 'react'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { savePeriod, saveExamSchedule } from '../actions'
@@ -153,7 +153,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
     startTransition(async () => {
       const res = await savePeriod({ term, semester, submissionStart: effectiveStart, windowDays: days })
       if (res.error) onError(res.error)
-      else setSaved(true)
+      else { setSaved(true); toastSuccess('Submission window saved') }
     })
   }
 
@@ -328,7 +328,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
         examBring: bring,
       })
       if (res.error) onError(res.error)
-      else setSaved(true)
+      else { setSaved(true); toastSuccess('Exam schedule saved') }
     })
   }
 

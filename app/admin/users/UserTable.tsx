@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
 import { toggleUserActive, deleteUser, createUser, updateUser } from './actions'
@@ -537,6 +537,7 @@ export default function UserTable({
     startTransition(async () => {
       const res = await toggleUserActive(userId, !current)
       if (res.error) setError(res.error)
+      else toastSuccess(current ? 'User deactivated' : 'User activated')
     })
   }
 
@@ -546,7 +547,7 @@ export default function UserTable({
     startTransition(async () => {
       const res = await deleteUser(userId)
       if (res.error) setDeleteError(res.error)
-      else setToDelete(null)
+      else { setToDelete(null); toastSuccess('User deleted') }
     })
   }
 
@@ -568,6 +569,7 @@ export default function UserTable({
         closeCreate()
         form.reset()
         setError(null)
+        toastSuccess('User created')
       }
     })
   }
@@ -580,7 +582,7 @@ export default function UserTable({
     startTransition(async () => {
       const res = await updateUser(userId, fd)
       if (res.error) setEditError(res.error)
-      else closeEdit()
+      else { closeEdit(); toastSuccess('User updated') }
     })
   }
 

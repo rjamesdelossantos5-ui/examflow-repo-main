@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useCallback, useState, useTransition } from 'react'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { getResetPreview, resetRequests, getSchoolDataPreview, clearUnusedAccounts, clearSchoolStructure } from './actions'
@@ -91,6 +91,7 @@ export default function ResetPanel() {
         setProgress(null)
         setMode(null)
         setDone({ message: `Deleted ${requestsLine}.`, fileWarning: res.fileWarning ?? null })
+        toastSuccess('Requests reset')
         return
       }
 
@@ -112,6 +113,7 @@ export default function ResetPanel() {
         message: `Deleted ${plural(accounts, 'account')}, ${requestsLine}, and every subject, class, program and department. Import a School Data file to start again.`,
         fileWarning: res.fileWarning ?? null,
       })
+      toastSuccess('Accounts and school data cleared')
     })
   }
 

@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import MarkViewed from '@/components/MarkViewed'
+import { SuccessToast } from '@/components/Toaster'
 import { createClient } from '@/lib/supabase/server'
 import { attachSignedUrls } from '@/lib/supabase/getSignedUrls'
 import { getCurrentUser } from '@/lib/currentUser'
@@ -194,6 +195,12 @@ export default async function RequestDetailPage({
           creates the row, but the request is not submitted until the parent has
           been verified AND the student presses Submit. A green tick claiming
           otherwise is the single most misleading thing this page could show. */}
+      {submitted && (
+        <SuccessToast
+          message={pendingSubmission ? 'Details saved. Next, verify your parent or guardian.' : 'Request submitted'}
+          clearParam="submitted"
+        />
+      )}
       {submitted && (
         pendingSubmission ? (
           <div className="ef-toast rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">

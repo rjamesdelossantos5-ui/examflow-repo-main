@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import { updateToggleSetting } from './actions'
 
@@ -27,7 +27,7 @@ export default function ToggleSetting({
     startTransition(async () => {
       const res = await updateToggleSetting(settingKey, next)
       if (res.error) setError(res.error)
-      else setOn(next)
+      else { setOn(next); toastSuccess(next ? 'Setting turned on' : 'Setting turned off') }
     })
   }
 

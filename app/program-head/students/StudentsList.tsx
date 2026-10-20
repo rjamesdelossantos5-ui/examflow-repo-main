@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon } from '@/components/Icon'
-import { toastError } from '@/components/Toaster'
+import { toastError, toastSuccess } from '@/components/Toaster'
 import { exportSchoolFormat, type ExportHeader } from './exportExcel'
 import { deleteFinishedRequest } from '../actions'
 import { ordinalYear } from '@/lib/ordinal'
@@ -76,7 +76,10 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
       const res = await deleteFinishedRequest(id)
       setPendingDelete(null)
       if (res.error) toastError(res.error)
-      else setRows((rs) => rs.filter((r) => r.id !== id))
+      else {
+        setRows((rs) => rs.filter((r) => r.id !== id))
+        toastSuccess('Record deleted')
+      }
     })
   }
 
@@ -119,6 +122,7 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
       subject_code: r.subject_code,
       subject_name: r.subject_name,
     })), exportHeader)
+    toastSuccess('Excel file downloaded')
   }
 
   return (

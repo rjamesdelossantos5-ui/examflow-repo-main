@@ -58,7 +58,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ]
 
   return (
-    <DashboardLayout role="admin" userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
+    <DashboardLayout role="admin" navPosition="sidebar" userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
       {children}
     </DashboardLayout>
   )

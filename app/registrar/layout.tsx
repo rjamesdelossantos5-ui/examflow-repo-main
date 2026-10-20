@@ -34,7 +34,14 @@ export default async function RegistrarLayout({ children }: { children: React.Re
   ]
 
   return (
-    <DashboardLayout role={isAdmin ? 'admin' : 'registrar'} userName={profile.full_name} email={profile.email} navItems={nav} notifications={notifications}>
+    <DashboardLayout
+  role={isAdmin ? 'admin' : 'registrar'}
+  backHref={isAdmin ? '/admin/requests' : undefined}
+  userName={profile.full_name}
+  email={profile.email}
+  navItems={nav}
+  notifications={notifications}
+>
       {isAdmin && <AdminActingBanner asRole="Registrar" />}
       {children}
     </DashboardLayout>

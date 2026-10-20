@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import { markPaymentAssessed } from '../actions'
 import { totalFee, formatPeso } from '@/lib/fees'
@@ -57,6 +57,7 @@ export default function AssessmentList({
       // rather than waiting for a revalidate round-trip. Tracked by request,
       // not by student, so a subject accepted later still shows as awaiting.
       setDone((s) => new Set([...s, ...bill.subjects.map((sub) => sub.id)]))
+      toastSuccess('Payment assessed')
     })
   }
 

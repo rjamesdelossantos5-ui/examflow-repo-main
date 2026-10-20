@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import { formatPeso, MAX_SPECIAL_EXAM_FEE } from '@/lib/fees'
 import { updateSpecialExamFee } from './actions'
@@ -24,6 +24,7 @@ export default function FeeForm({ fee }: { fee: number }) {
       setSaved(res.fee!)
       setValue(String(res.fee))
       setMessage(`Saved — the fee is now ${formatPeso(res.fee!)} per subject.`)
+      toastSuccess('Exam fee saved')
     })
   }
 

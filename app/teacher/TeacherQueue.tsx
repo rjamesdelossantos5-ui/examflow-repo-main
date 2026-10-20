@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess, withSuccessToast } from '@/components/Toaster'
 import { useState, useEffect, useRef, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
@@ -98,7 +98,10 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
     startTransition(async () => {
       const res = await approveAll(ids)
       if (res.error) setError(res.error)
-      else setItems((prev) => prev.filter((r) => !ids.includes(r.id)))
+      else {
+        setItems((prev) => prev.filter((r) => !ids.includes(r.id)))
+        toastSuccess(ids.length === 1 ? 'Request approved' : `${ids.length} requests approved`)
+      }
     })
   }
 
@@ -182,7 +185,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                       status={f.status}
                       media={f.media}
                       logs={f.logs}
-                      onVerify={approveRequest}
+                      onVerify={withSuccessToast(approveRequest, 'Request approved')}
                       onDone={() => dropForm(f.id)}
                       verifyLabel="Approve & Forward to Program Head"
                       showDocuments={false}

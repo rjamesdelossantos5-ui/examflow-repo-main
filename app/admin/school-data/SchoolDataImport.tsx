@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useState, useTransition } from 'react'
 import * as XLSX from 'xlsx'
 import { readSchoolData, PEOPLE_CHUNK_SIZE, type SchoolData, type Issue } from '@/lib/schoolData'
@@ -79,6 +79,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
       setData(null)
       setGrids(null)
       setInputKey((k) => k + 1)
+      toastSuccess('File uploaded and checked')
     })
   }
 
@@ -89,6 +90,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
     startTransition(async () => {
       const res = await discardStagedImport(id)
       if (res.error) setRunError(res.error)
+      else toastSuccess('Staged file discarded')
     })
   }
 
@@ -127,6 +129,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
 
       await discardStagedImport(id)
       setResult({ created, updated, classes: cls.classes ?? 0, subjects: cls.subjects ?? 0, withoutTeacher: cls.withoutTeacher ?? 0, failures })
+      toastSuccess('School data imported')
     })
   }
 

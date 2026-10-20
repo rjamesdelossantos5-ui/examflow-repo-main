@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { updateProfile } from './actions'
 import { initials } from '@/lib/initials'
 import Select from '@/components/Select'
+import { toastSuccess } from '@/components/Toaster'
 import type { Profile } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -50,6 +51,7 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
     startTransition(async () => {
       const res = await updateProfile(fd)
       setProfileMsg(res.error ? { kind: 'err', text: res.error } : { kind: 'ok', text: res.ok ?? 'Saved.' })
+      if (!res.error) toastSuccess('Profile updated')
     })
   }
 
