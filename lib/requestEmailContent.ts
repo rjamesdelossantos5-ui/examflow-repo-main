@@ -12,9 +12,8 @@
  */
 
 export type RequestEmailEvent =
-  | 'submitted'          // student pressed Submit → Registrar verifies
+  | 'submitted'          // student pressed Submit → Teacher approves
   | 'reverified'         // parent verified again after a Program Head return → Program Head
-  | 'registrar_verified' // → Teacher, and Student (progress update)
   | 'teacher_approved'   // → Program Head (first approval), and Student (progress update)
   | 'rejected'           // any reviewer → Student
   | 'returned'           // Program Head returned it for re-verification → Student
@@ -57,7 +56,7 @@ export interface ComposedEmail {
 }
 
 type Tone = 'action' | 'info' | 'success' | 'danger' | 'warning'
-type Stage = 'registrar' | 'teacher' | 'program_head' | 'payment' | 'exam'
+type Stage = 'teacher' | 'program_head' | 'payment' | 'exam'
 
 interface Row {
   label: string
@@ -127,15 +126,15 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
       return {
         ...needed,
         subject: `New special exam request: ${r.studentName} — ${r.code}`,
-        heading: 'New request to verify',
-        greeting: 'Hello,',
+        heading: 'New request to approve',
+        greeting: r.teacherName ? `Hi ${r.teacherName},` : 'Hello,',
         paragraphs: [
           `${r.studentName} submitted a special exam request for ${title}.`,
-          'Their parent or guardian has been verified. It is waiting for you to verify it.',
+          'It is waiting for your approval.',
         ],
-        stage: 'registrar',
-        button: { label: 'Verify request', url: `${base}/registrar?req=${r.id}` },
-        next: 'Once you verify it, the subject teacher is asked to approve it.',
+        stage: 'teacher',
+        button: { label: 'Review request', url: `${base}/teacher?req=${r.id}` },
+        next: 'Once you approve it, it goes to the Program Head for first approval.',
       }
 
     case 'reverified':
@@ -150,37 +149,6 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
         ],
         stage: 'program_head',
         button: { label: 'Review request', url: `${base}/program-head?req=${r.id}` },
-      }
-
-    case 'registrar_verified':
-      if (audience === 'student') {
-        return {
-          tone: 'info',
-          badge: 'Verified',
-          subject: `Update: the Registrar verified your request for ${r.code}`,
-          heading: 'The Registrar verified your request',
-          greeting: hiStudent,
-          paragraphs: [
-            `The Registrar verified your special exam request for ${title}.`,
-            'It is now waiting for your subject teacher’s approval.',
-          ],
-          stage: 'teacher',
-          button: { label: 'View request', url: studentLink },
-          next: 'You don’t need to do anything right now. You’ll get an email when your teacher decides.',
-        }
-      }
-      return {
-        ...needed,
-        subject: `Waiting for your approval: ${r.studentName} — ${r.code}`,
-        heading: 'Waiting for your approval',
-        greeting: r.teacherName ? `Hi ${r.teacherName},` : 'Hello,',
-        paragraphs: [
-          `The Registrar verified ${r.studentName}'s special exam request for ${title}.`,
-          'It is waiting for your approval.',
-        ],
-        stage: 'teacher',
-        button: { label: 'Review request', url: `${base}/teacher?req=${r.id}` },
-        next: 'Once you approve it, it goes to the Program Head for first approval.',
       }
 
     case 'teacher_approved':
@@ -394,9 +362,8 @@ function examWhen(start: string | null, end: string | null): string | null {
 }
 
 function steps(r: RequestEmailInfo, stage: Stage): { labels: string[]; current: number } {
-  const labels = ['Submitted', 'Registrar', 'Teacher', 'Program Head', ...(r.examType === 'paid' ? ['Payment'] : []), 'Exam']
+  const labels = ['Submitted', 'Teacher', 'Program Head', ...(r.examType === 'paid' ? ['Payment'] : []), 'Exam']
   const name: Record<Stage, string> = {
-    registrar: 'Registrar',
     teacher: 'Teacher',
     program_head: 'Program Head',
     payment: 'Payment',

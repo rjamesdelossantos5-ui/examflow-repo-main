@@ -1,5 +1,5 @@
 // Decorative hero background: one printed form travels from the student to
-// the Registrar, the Teacher and the Program Head, and arrives on a phone as
+// the Teacher and the Program Head, and arrives on a phone as
 // "Scheduled". Gold means "done": each stop fills gold as the route reaches it.
 //
 // Pure SVG, no images, no client JS. The route draws once on page load and then
@@ -15,7 +15,6 @@ const NAVY = 'var(--sti-navy)'
 const GOLD = 'var(--sti-gold)'
 
 const STOPS = [
-  { x: 190, y: 285, label: 'Registrar', delay: '1s', glyph: 'stamp' },
   { x: 320, y: 215, label: 'Teacher', delay: '1.8s', glyph: 'check' },
   { x: 440, y: 150, label: 'Program Head', delay: '2.5s', glyph: 'calendar' },
 ] as const
@@ -28,16 +27,6 @@ const PHONE_ROWS = [
 
 function Glyph({ kind }: { kind: (typeof STOPS)[number]['glyph'] }) {
   const common = { stroke: NAVY, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
-  if (kind === 'stamp') {
-    return (
-      <g {...common}>
-        <circle cx="0" cy="-7" r="3.5" />
-        <path d="M0 -3.5V2" />
-        <rect x="-8" y="2" width="16" height="5" rx="1.5" />
-        <path d="M-9 11h18" />
-      </g>
-    )
-  }
   if (kind === 'check') {
     return (
       <g {...common}>
@@ -92,7 +81,7 @@ export default function HeroDrawing() {
         <path d={ROUTE} stroke={NAVY} strokeWidth="2" strokeLinecap="round" strokeDasharray="1 7" opacity="0.35" />
         <path d={ROUTE} pathLength={1} className="efh-draw" stroke={NAVY} strokeWidth="2" strokeLinecap="round" />
 
-        {/* Three stops; each turns gold when the route reaches it */}
+        {/* Two stops; each turns gold when the route reaches it */}
         {STOPS.map((s) => (
           <g key={s.label} transform={`translate(${s.x} ${s.y})`}>
             <circle r="21" fill="#fff" />

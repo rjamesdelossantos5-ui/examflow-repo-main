@@ -4,6 +4,7 @@ import { keepActive } from '@/lib/examSettings'
 import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
+import { withSubmissionGate } from '@/lib/submissionGate'
 import TeacherQueue from './TeacherQueue'
 
 export const metadata = { title: 'EXAMFLOW — Teacher Queue' }
@@ -13,17 +14,23 @@ export default async function TeacherPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  const { data: raw } = await supabase
-    .from('special_exam_requests')
-    .select(`
-      *,
-      profiles!student_id(full_name, student_number, course, year_level, section),
-      subjects!inner(subject_code, subject_name, teacher_id),
-      application_media(id, media_type, storage_path, file_name, mime_type),
-      progress_logs(id, action, created_at, actor_role)
-    `)
-    .eq('status', 'verified_by_registrar')
-    .order('submitted_at', { ascending: false })
+  // Only requests the teacher may see: parent verified AND the student pressed
+  // Submit. The rule lives in lib/submissionGate.ts so this queue, the nav badge
+  // and the notification bell cannot disagree.
+  const { data: raw } = await withSubmissionGate((gate) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .select(`
+        *,
+        profiles!student_id(full_name, student_number, course, year_level, section),
+        subjects!inner(subject_code, subject_name, teacher_id),
+        application_media(id, media_type, storage_path, file_name, mime_type),
+        progress_logs(id, action, created_at, actor_role)
+      `)
+      .eq('status', 'submitted')
+    if (gate) q = q.or(gate)
+    return q.order('submitted_at', { ascending: false })
+  })
 
   // RLS already filters by teacher. Media isn't shown to teachers, but we pass
   // it through; signed URLs are fetched lazily where documents are viewable.

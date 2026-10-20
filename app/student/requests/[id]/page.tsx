@@ -89,9 +89,9 @@ export default async function RequestDetailPage({
   // didit_status and were submitted the old way, so they are never "pending".
   const unconfirmed = !!req.didit_status && !req.student_confirmed_at
   // Returned by the Program Head for re-verification: already approved by the
-  // Registrar and the Teacher, so it is not "not submitted" — only the parent's
+  // Teacher, so it is not "not submitted" — only the parent's
   // verification was cleared. Nothing else leaves an 'approved_by_teacher'
-  // request unconfirmed (see lib/registrarGate.ts).
+  // request unconfirmed (see lib/submissionGate.ts).
   const reverifyRequested = req.status === 'approved_by_teacher' && unconfirmed
   const pendingSubmission = unconfirmed && !reverifyRequested
 
@@ -170,7 +170,7 @@ export default async function RequestDetailPage({
           documentType={(req.didit_document_type as string | null) ?? null}
           warnings={req.didit_warnings}
           confirmed={!req.didit_status || !!req.student_confirmed_at}
-          sendsTo={reverifyRequested ? 'Program Head' : 'Registrar'}
+          sendsTo={reverifyRequested ? 'Program Head' : 'Subject Teacher'}
           autoStart
         />
         <p className="mt-4 text-center text-xs ef-muted">
@@ -198,7 +198,7 @@ export default async function RequestDetailPage({
         pendingSubmission ? (
           <div className="ef-toast rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-200">
             Your details are saved — <strong>but this request has not been submitted yet.</strong> Verify your
-            parent or guardian below to send it to the Registrar.
+            parent or guardian below to send it to the Subject Teacher.
           </div>
         ) : (
           <div className="ef-toast rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
@@ -311,8 +311,8 @@ export default async function RequestDetailPage({
         // submitted the old way, so they count as confirmed — otherwise every
         // one of them would show an "unsubmitted" warning that isn't true.
         confirmed={!req.didit_status || !!req.student_confirmed_at}
-        // Returned by the Program Head: Submit sends it back to them, not the Registrar.
-        sendsTo={reverifyRequested ? 'Program Head' : 'Registrar'}
+        // Returned by the Program Head: Submit sends it back to them, not the Subject Teacher.
+        sendsTo={reverifyRequested ? 'Program Head' : 'Subject Teacher'}
         // Arrived straight from the submit form, which promised "Continue to
         // Parent Verification" — so open Didit rather than making the student
         // hunt for a button. Ignored when there is already a usable
@@ -364,7 +364,7 @@ export default async function RequestDetailPage({
         </ol>
       </div>
 
-      {/* Withdraw (only while still pending registrar review) */}
+      {/* Withdraw (only while still pending the teacher's review) */}
       {req.status === 'submitted' && (
         <div className="ef-card rounded-xl shadow-sm p-6">
           <DeleteRequestButton requestId={req.id} />

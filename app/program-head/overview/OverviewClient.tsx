@@ -30,8 +30,7 @@ const stageOf = (r: OverviewRow): Stage =>
 
 // 'scheduled' is intentionally omitted — scheduled requests drop off the overview.
 const STAGES: { status: Stage; label: string; badge?: string }[] = [
-  { status: 'submitted', label: 'Waiting for Registrar' },
-  { status: 'verified_by_registrar', label: 'Waiting for Teacher' },
+  { status: 'submitted', label: 'Waiting for Teacher' },
   { status: 'approved_by_teacher', label: 'Waiting for Program Head' },
   { status: 'to_assess', label: 'Waiting for assessment', badge: 'Awaiting assessment' },
   { status: 'to_pay', label: 'Waiting for payment', badge: 'Awaiting payment' },
@@ -47,12 +46,11 @@ const ROLE_LABEL: Record<string, string> = {
 }
 
 // Where each waiting form is acted on — the same page that role uses. ?req=
-// opens that request's panel straight away (Registrar, Teacher and Program
-// Head queues read it). The admin may open every step; a Program Head only
+// opens that request's panel straight away (Teacher and Program Head
+// queues read it). The admin may open every step; a Program Head only
 // their own two.
 const OPEN: Partial<Record<RequestStatus, { href: (id: string) => string; label: string; admin: boolean }>> = {
-  submitted: { href: (id) => `/registrar?req=${id}`, label: 'Open as Registrar', admin: true },
-  verified_by_registrar: { href: (id) => `/teacher?req=${id}`, label: 'Open as Teacher', admin: true },
+  submitted: { href: (id) => `/teacher?req=${id}`, label: 'Open as Teacher', admin: true },
   approved_by_teacher: { href: (id) => `/program-head?req=${id}`, label: 'Open', admin: false },
   accepted: { href: () => '/registrar/assessment', label: 'Payment assessment', admin: true },
   receipt_uploaded: { href: (id) => `/program-head/receipts?req=${id}`, label: 'Open', admin: false },
@@ -86,7 +84,7 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>All Requests Overview</h2>
         <p className="text-sm ef-muted">
           {viewer === 'admin'
-            ? 'Every form in every department, at the step it is waiting on. Open one to act on it exactly as the Registrar, Teacher or Program Head would — it is recorded as done by Admin.'
+            ? 'Every form in every department, at the step it is waiting on. Open one to act on it exactly as the Teacher, Program Head or Registrar would — it is recorded as done by Admin.'
             : 'Click a stage to filter.'}
         </p>
       </div>

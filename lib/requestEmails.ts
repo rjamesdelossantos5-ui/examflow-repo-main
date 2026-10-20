@@ -21,12 +21,13 @@ import {
  * function alive until the send finishes.
  *
  * Recipients mirror who can see each queue:
- *  - Registrar: every active registrar.
+ *  - Registrar: every active registrar — only when a paid request is accepted
+ *    and needs its fees assessed.
  *  - Teacher: the section's routed teacher, else the subject's own teacher.
  *  - Program Head: active Program Heads of the subject's department, plus any
  *    with no department (they see every department — lib/deptFilter.ts).
  *  - Student: the request's owner — at every decision, and a progress update
- *    after the Registrar verifies and after the teacher approves.
+ *    after the teacher approves.
  * Parents get nothing: EXAMFLOW has no parent email address on file.
  *
  * Looked up with the service-role client, because the person acting (say, a
@@ -144,13 +145,10 @@ async function send(admin: Admin, event: RequestEmailEvent, r: RequestRow, base:
 
   switch (event) {
     case 'submitted':
-      return toStaff(registrarEmails(admin), 'registrar')
+      return toStaff(teacherEmails(admin, r.teacherId), 'teacher')
     case 'reverified':
     case 'receipt_uploaded':
       return toStaff(programHeadEmails(admin, r.departmentId), 'program_head')
-    case 'registrar_verified':
-      await toStudent()
-      return toStaff(teacherEmails(admin, r.teacherId), 'teacher')
     case 'teacher_approved':
       await toStudent()
       return toStaff(programHeadEmails(admin, r.departmentId), 'program_head')

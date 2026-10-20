@@ -5,11 +5,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import { emailRequestEvent } from '@/lib/requestEmails'
-
-// Rejecting at the Teacher stage (this covers the Admin acting as the Teacher
-// too). Set to false to switch it off again. Keep this constant NOT exported: a
-// 'use server' file may only export async functions.
-const TEACHER_CAN_REJECT = true
+import { withSubmissionGate } from '@/lib/submissionGate'
 
 async function requireTeacher() {
   const supabase = await createClient()
@@ -34,12 +30,18 @@ export async function approveRequest(requestId: string) {
 
   // Status guard doubles as concurrency control — if it's no longer awaiting
   // the teacher, 0 rows update and we skip the phantom log / false success.
-  const { data: updated, error } = await supabase
-    .from('special_exam_requests')
-    .update({ status: 'approved_by_teacher' })
-    .eq('id', requestId)
-    .eq('status', 'verified_by_registrar')
-    .select('id')
+  // Gated like the queue: a new row is 'submitted' from the moment it is created,
+  // so without the gate a teacher could approve a form the student has not
+  // submitted (parent not yet verified).
+  const { data: updated, error } = await withSubmissionGate((gate) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .update({ status: 'approved_by_teacher' })
+      .eq('id', requestId)
+      .eq('status', 'submitted')
+    if (gate) q = q.or(gate)
+    return q.select('id')
+  })
 
   if (error) return { error: friendlyError('approveRequest', error, `We couldn't approve this request. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'This request was already handled by someone else.' }
@@ -73,12 +75,15 @@ export async function approveAll(requestIds: string[]) {
   const ownedIds = (owned ?? []).map((o) => o.id)
   if (!ownedIds.length) return { error: 'These requests are not in your queue.', count: 0 }
 
-  const { data: updated, error } = await supabase
-    .from('special_exam_requests')
-    .update({ status: 'approved_by_teacher' })
-    .in('id', ownedIds)
-    .eq('status', 'verified_by_registrar')
-    .select('id')
+  const { data: updated, error } = await withSubmissionGate((gate) => {
+    let q = supabase
+      .from('special_exam_requests')
+      .update({ status: 'approved_by_teacher' })
+      .in('id', ownedIds)
+      .eq('status', 'submitted')
+    if (gate) q = q.or(gate)
+    return q.select('id')
+  })
 
   if (error) return { error: friendlyError('approveAll', error, `We couldn't approve these requests. ${RETRY_HINT}`), count: 0 }
   const rows = updated ?? []
@@ -97,45 +102,4 @@ export async function approveAll(requestIds: string[]) {
 
   revalidatePath('/teacher')
   return { error: null, count: rows.length }
-}
-
-export async function rejectTeacherRequest(requestId: string, reason: string) {
-  // Server-side block: hiding the button alone wouldn't stop a direct call.
-  if (!TEACHER_CAN_REJECT) return { error: 'Rejecting is not available at the Teacher stage.' }
-
-  const ctx = await requireTeacher()
-  if (!ctx) return { error: 'Unauthorized' }
-  const { supabase, userId, role } = ctx
-
-  const sanitizedReason = String(reason).trim().slice(0, 1000)
-  if (!sanitizedReason) return { error: 'Rejection reason is required' }
-
-  // Same ownership guard as approveRequest.
-  const { data: owned } = await supabase.from('special_exam_requests').select('id').eq('id', requestId).maybeSingle()
-  if (!owned) return { error: 'This request is not in your queue.' }
-
-  // rejected_by_role records the STAGE (an admin rejecting here rejects as the
-  // Teacher), so the resubmit comes back to the Teacher. Only a request at the
-  // Teacher's stage can be rejected here.
-  const { data: updated, error } = await supabase
-    .from('special_exam_requests')
-    .update({ status: 'rejected', rejection_reason: sanitizedReason, rejected_by_role: 'subject_teacher' })
-    .eq('id', requestId)
-    .eq('status', 'verified_by_registrar')
-    .select('id')
-
-  if (error) return { error: friendlyError('rejectTeacherRequest', error, `We couldn't save this rejection. ${RETRY_HINT}`) }
-  if (!updated?.length) return { error: 'This request is no longer at the Teacher’s stage, so it can’t be rejected here.' }
-
-  await supabase.from('progress_logs').insert({
-    request_id: requestId,
-    actor_id: userId,
-    actor_role: role,
-    action: `Rejected by Subject Teacher: ${sanitizedReason}`,
-  })
-
-  after(() => emailRequestEvent('rejected', [requestId], { reason: sanitizedReason }))
-
-  revalidatePath('/teacher')
-  return { error: null }
 }

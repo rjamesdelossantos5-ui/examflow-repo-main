@@ -5,7 +5,7 @@ import type { UserRole } from '@/lib/supabase/types'
 import { getActivePeriodCached, activePeriodIdCached } from '@/lib/activePeriod'
 import { computeWindow, TERM_LABEL } from '@/lib/examSettings'
 import { getMyDeptSubjectIds } from '@/lib/myProfile'
-import { withRegistrarGate } from '@/lib/registrarGate'
+import { withSubmissionGate } from '@/lib/submissionGate'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -16,8 +16,8 @@ export async function countByStatus(
   supabase: SupabaseServer,
   status: string,
   subjectIds?: string[] | null,
-  /** Apply the Registrar gate (lib/registrarGate.ts), as the queue under this
-   *  badge does. The Program Head's First Approval needs it: a request returned
+  /** Apply the submission gate (lib/submissionGate.ts), as the queue under this
+   *  badge does. The Teacher's queue and the Program Head's First Approval need it: a request returned
    *  for re-verification stays 'approved_by_teacher' while the parent verifies
    *  again, and must not be counted until it is back. */
   gated = false,
@@ -37,27 +37,7 @@ export async function countByStatus(
     if (gate) q = q.or(gate)
     return q
   }
-  const { count } = gated ? await withRegistrarGate(run) : await run(null)
-  return count ?? 0
-}
-
-// The Registrar's nav badge. countByStatus('submitted') counted every row at
-// that status — including forms whose parent had not been verified and that the
-// student had not submitted — so the badge said 3 over an empty queue. This
-// counts through the same gate as the queue itself (lib/registrarGate.ts).
-export async function countRegistrarPending(supabase: SupabaseServer): Promise<number> {
-  const activeId = await activePeriodIdCached()
-  const { count } = await withRegistrarGate((gate) => {
-    let q = supabase
-      .from('special_exam_requests')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'submitted')
-    if (activeId) q = q.or(`period_id.is.null,period_id.eq.${activeId}`)
-    // A second .or() is ANDed with the first — PostgREST combines repeated or
-    // params, verified against this database before relying on it.
-    if (gate) q = q.or(gate)
-    return q
-  })
+  const { count } = gated ? await withSubmissionGate(run) : await run(null)
   return count ?? 0
 }
 
@@ -95,13 +75,12 @@ export async function countAwaitingAssessment(supabase: SupabaseServer): Promise
   return (await awaitingAssessment(supabase)).length
 }
 
-// Forms waiting on someone at any step (Registrar, Teacher, Program Head first
-// and second approval) — the admin's Requests nav-tab badge. Each count goes
+// Forms waiting on someone at any step (Teacher, Program Head first and second
+// approval) — the admin's Requests nav-tab badge. Each count goes
 // through the same gate as its queue, so the badge matches what is listed.
 export async function countWaitingForAnyone(supabase: SupabaseServer): Promise<number> {
   const counts = await Promise.all([
-    countRegistrarPending(supabase),
-    countByStatus(supabase, 'verified_by_registrar'),
+    countByStatus(supabase, 'submitted', null, true),
     countByStatus(supabase, 'approved_by_teacher', null, true),
     countByStatus(supabase, 'receipt_uploaded'),
   ])
@@ -158,7 +137,7 @@ export async function getNotifications(
     tone: NotificationItem['tone'],
     icon: NotificationItem['icon'],
     subjectIds?: string[] | null,
-    /** Apply the Registrar gate (lib/registrarGate.ts). Without it the bell
+    /** Apply the submission gate (lib/submissionGate.ts). Without it the bell
      *  announced "X submitted a request" for forms not yet submitted. */
     gated = false,
   ): Promise<NotificationItem[]> => {
@@ -175,7 +154,7 @@ export async function getNotifications(
       if (gate) q = q.or(gate)
       return q
     }
-    const { data } = gated ? await withRegistrarGate(run) : await run(null)
+    const { data } = gated ? await withSubmissionGate(run) : await run(null)
 
     const rows = (data ?? []) as unknown as QueueRow[]
     const viewed = await viewedAtMap(rows.map((r) => r.id))
@@ -190,23 +169,19 @@ export async function getNotifications(
   }
 
   if (role === 'registrar') {
-    const [submitted, toAssess] = await Promise.all([
-      queueItems('submitted', '/registrar', (name, code) => `${name} submitted a request for ${code}.`, 'info', 'inbox', null, true),
-      awaitingAssessment(supabase),
-    ])
+    const toAssess = await awaitingAssessment(supabase)
     // One alert per student: their accepted paid subjects are one bill.
-    const assessItems: NotificationItem[] = toAssess.map((s) => ({
+    return toAssess.map((s): NotificationItem => ({
       id: `assess-${s.studentId}`,
       text: `${s.name} — ${s.subjects} accepted paid subject${s.subjects === 1 ? '' : 's'} awaiting payment assessment.`,
       href: '/registrar/assessment',
       tone: 'warning',
       icon: 'receipt',
     }))
-    return [...submitted, ...assessItems]
   }
 
   if (role === 'subject_teacher') {
-    return queueItems('verified_by_registrar', '/teacher', (name, code) => `${name}'s request for ${code} is ready for your approval.`, 'info', 'inbox')
+    return queueItems('submitted', '/teacher', (name, code) => `${name} submitted a request for ${code} — it is ready for your approval.`, 'info', 'inbox', null, true)
   }
 
   if (role === 'program_head') {
@@ -226,13 +201,12 @@ export async function getNotifications(
   // department — each links to the page where that step is done, which the
   // admin may use as that role.
   if (role === 'admin') {
-    const [registrar, teacher, first, second] = await Promise.all([
-      queueItems('submitted', '/registrar', (name, code) => `${name} — ${code} is waiting for the Registrar.`, 'info', 'inbox', null, true),
-      queueItems('verified_by_registrar', '/teacher', (name, code) => `${name} — ${code} is waiting for the Teacher.`, 'info', 'inbox'),
+    const [teacher, first, second] = await Promise.all([
+      queueItems('submitted', '/teacher', (name, code) => `${name} — ${code} is waiting for the Teacher.`, 'info', 'inbox', null, true),
       queueItems('approved_by_teacher', '/program-head', (name, code) => `${name} — ${code} is waiting for the Program Head's first approval.`, 'info', 'inbox', null, true),
       queueItems('receipt_uploaded', '/program-head/receipts', (name, code) => `${name} uploaded a payment receipt for ${code}.`, 'warning', 'receipt'),
     ])
-    return [...registrar, ...teacher, ...first, ...second]
+    return [...teacher, ...first, ...second]
   }
 
   // Students: the latest status of each of their recent requests, newest change
@@ -256,7 +230,7 @@ export async function getNotifications(
       .from('special_exam_requests')
       .select('*, subjects(subject_code)')
       .eq('student_id', userId)
-      .in('status', ['accepted', 'scheduled', 'rejected', 'submitted', 'verified_by_registrar', 'approved_by_teacher', 'receipt_uploaded'])
+      .in('status', ['accepted', 'scheduled', 'rejected', 'submitted', 'approved_by_teacher', 'receipt_uploaded'])
       .order('updated_at', { ascending: false })
       .limit(MAX_ITEMS)
     const data = allData ?? []
@@ -322,7 +296,7 @@ export async function getNotifications(
         items.push({ unread, id: r.id, text: `Your request for ${code} was rejected.`, href, tone: 'danger', icon: 'x-circle' })
       // Returned by the Program Head for re-verification: still at first
       // approval, but the parent's verification was cleared. Nothing else leaves
-      // an 'approved_by_teacher' request unconfirmed (see lib/registrarGate.ts).
+      // an 'approved_by_teacher' request unconfirmed (see lib/submissionGate.ts).
       else if (r.status === 'approved_by_teacher' && r.didit_status && !r.student_confirmed_at)
         items.push({ unread, id: r.id, text: `Action needed: your Program Head asked your parent or guardian to verify again for ${code}.`, href, tone: 'warning', icon: 'user' })
     }

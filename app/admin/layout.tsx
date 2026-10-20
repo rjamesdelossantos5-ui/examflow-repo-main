@@ -23,8 +23,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!profile || profile.role !== 'admin') redirect('/login')
   // Ordered by how often the admin uses each tab, most used first.
   const nav = [
-    // Every form at every step; each opens on the Registrar, Teacher or Program
-    // Head page where that step is done, which the admin may act on directly.
+    // Every form at every step; each opens on the Teacher, Program Head or
+    // Registrar page where that step is done, which the admin may act on directly.
     // First tab and the admin's home (app/admin/page.tsx).
     { label: 'Requests', href: '/admin/requests', icon: 'inbox' as const, badge: waiting },
     // Same list and Excel export as the Program Head's Accepted Students.

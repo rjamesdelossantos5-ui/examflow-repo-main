@@ -33,15 +33,15 @@ const PREPARE = [
   { title: 'Your STI Microsoft account', note: 'You log in to EXAMFLOW with it.' },
   { title: 'Your parent or guardian, with a valid ID', note: 'They verify with a live face check and a photo of their ID, on your phone.' },
   { title: 'For a waived exam: your document', note: 'Medical certificate, death certificate, or another supporting document. JPG, PNG or PDF, up to 5 MB.' },
-  { title: 'Time for one visit to the Registrar', note: 'The printed special exam form is collected there to finish your application.' },
+  { title: 'Time for one visit to the Registrar', note: 'Get the printed special exam form there and fill it in too. The Registrar counts exam takers from it, and the Cashier marks it if you pay.' },
 ]
 
 const STEPS = [
   { title: 'Fill the form', body: 'Pick the subject, then waived or paid. Attach your document if it is waived.' },
   { title: 'Your parent or guardian verifies', body: 'They do the face and ID check. Then you press Submit.' },
-  { title: 'Three signatures, in order', body: 'The Registrar verifies, your teacher approves, the Program Head accepts. You can follow each one from your dashboard.' },
+  { title: 'Two signatures, in order', body: 'Your teacher approves, then the Program Head accepts. You can follow each one from your dashboard.' },
   { title: 'Your exam is scheduled', body: 'Waived: right after the Program Head accepts. Paid: after you pay at the Cashier and your uploaded receipt is checked.' },
-  { title: 'Collect the printed form', body: 'Get it at the Registrar’s office.' },
+  { title: 'Collect the printed form', body: 'Get it at the Registrar’s office and fill it in. If your exam is paid, the Cashier marks it when you pay.' },
 ]
 
 const H2_STYLE = { fontStretch: '125%', fontSize: 'clamp(1.9rem, 3.6vw, 2.75rem)', letterSpacing: '-0.02em' } as const
@@ -83,7 +83,7 @@ export default function LandingPage() {
             Missed an exam?
           </h1>
           <p className="ef-reveal mt-6 text-lg sm:text-xl leading-relaxed max-w-[44ch]" style={{ color: INK_SOFT, animationDelay: '90ms' }}>
-            Request your special exam here. It goes to the Registrar, your teacher and your Program Head in order,
+            Request your special exam here. It goes to your teacher and your Program Head in order,
             and you can follow every step from your phone.
           </p>
           <div className="ef-reveal mt-10 flex flex-wrap items-center gap-x-6 gap-y-4" style={{ animationDelay: '180ms' }}>

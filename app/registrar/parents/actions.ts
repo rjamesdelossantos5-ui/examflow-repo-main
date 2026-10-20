@@ -49,7 +49,6 @@ export async function replaceParentList(grids: Record<string, unknown[][]>) {
   if (delErr) return { error: friendlyError('replaceParentList.cleanup', delErr, `The new list was saved, but the old one could not be removed. ${RETRY_HINT}`), students: 0, people: 0 }
 
   revalidatePath('/registrar/parents')
-  revalidatePath('/registrar')
   revalidatePath('/program-head')
   return { error: null, students: list.rows.length, people: records.length }
 }

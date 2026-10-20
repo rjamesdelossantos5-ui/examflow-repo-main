@@ -29,8 +29,8 @@ export default async function TeacherHistoryPage() {
 
   // Only the current term (dropped off when the PH activates the next term).
   const rows: HistoryRow[] = keepActive(data ?? [], activeId)
-    // A form the Registrar rejected never reached the teacher — it stays in the
-    // Registrar's history, not here. Only show rejections the teacher made.
+    // Only show rejections the teacher made (older rows — the teacher can no
+    // longer reject), not the Program Head's.
     .filter((r) => r.status !== 'rejected' || r.rejected_by_role === 'subject_teacher')
     .map((r) => ({
       id: r.id as string,

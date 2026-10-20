@@ -45,7 +45,7 @@ interface Props {
   onVerify?: (id: string) => Promise<{ error: string | null }>
   onReject?: (id: string, reason: string) => Promise<{ error: string | null }>
   verifyLabel?: string
-  /** The status at which THIS reviewer can act. Registrar = 'submitted', Teacher = 'verified_by_registrar'. */
+  /** The status at which THIS reviewer can act. Teacher = 'submitted'. */
   actionableStatus?: RequestStatus
   showRejectedBy?: string
   /** Teachers don't verify the parent documents, so hide that section for them. */
@@ -57,7 +57,7 @@ interface Props {
   /** Didit parent identity result. Omit to hide the section entirely — a request
    *  submitted before this feature existed simply has nothing to show. */
   verification?: VerificationProps
-  /** The name on the parent's ID against the Registrar's parent list (Registrar only). */
+  /** The name on the parent's ID against the Registrar's parent list (Program Head only). */
   parentCheck?: ParentCheck | null
 }
 
@@ -86,7 +86,7 @@ function VerificationLine({ status, livenessScore, faceMatchScore, documentType 
     : !s || s === 'not started' ? { icon: 'clock', color: 'var(--muted)', label: 'Not verified yet' }
     : { icon: 'clock', color: 'var(--status-info)', label: 'In progress' }
 
-  // The ID type and the scores are not shown here: the Registrar only needs the
+  // The ID type and the scores are not shown here: the reviewer only needs the
   // verdict. (The props stay so the caller's shape doesn't change.)
   void livenessScore; void faceMatchScore; void documentType
 
@@ -242,11 +242,6 @@ export default function RequestReviewPanel({
               {isPending ? 'Processing…' : verifyLabel}
             </button>
           )}
-          {status === 'verified_by_registrar' && actionableStatus === 'submitted' && (
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'var(--status-success)' }}>
-              <Icon name="check" className="w-4 h-4" /> Verified, sent to the teacher
-            </span>
-          )}
           {status === 'rejected' && (
             <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'var(--status-danger)' }}>
               <Icon name="x-circle" className="w-4 h-4" /> Rejected
@@ -320,7 +315,7 @@ export default function RequestReviewPanel({
           shown; the ID image and selfie are never stored here (see
           supabase/migration_didit.sql). The name read off the ID is shown only
           beside the Registrar's parent list (parentCheck), because comparing
-          the two is the Registrar's check. */}
+          the two is the Program Head's check. */}
       {verification && (
         <Section title="Parent check">
           <div className="space-y-4">

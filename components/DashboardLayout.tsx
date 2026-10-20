@@ -37,7 +37,7 @@ export default function DashboardLayout({ role, userId, userName, email, navItem
   const liveFilter = role === 'student' && userId ? `student_id=eq.${userId}` : undefined
 
   // Pick the single most-specific matching nav item (longest matching href),
-  // so /registrar/history doesn't also light up /registrar.
+  // so /teacher/history does not also light up /teacher.
   const activeHref = navItems
     .filter((it) => pathname === it.href || pathname.startsWith(it.href + '/'))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href

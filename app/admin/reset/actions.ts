@@ -146,7 +146,7 @@ export async function resetRequests() {
   // Every surface that lists requests, for all five roles.
   for (const p of [
     '/admin', '/admin/analytics', '/student', '/student/history',
-    '/registrar', '/registrar/history', '/registrar/assessment',
+    '/registrar/assessment', '/registrar/parents',
     '/teacher', '/teacher/history',
     '/program-head', '/program-head/receipts', '/program-head/overview', '/program-head/students',
   ]) revalidatePath(p)

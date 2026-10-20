@@ -12,15 +12,15 @@ interface Props {
   documentType: string | null
   warnings: unknown
   /** True once the student has pressed "Submit Request" — i.e. the request has
-   *  actually been sent to the Registrar. Passing verification alone does not
+   *  actually been sent to the Subject Teacher. Passing verification alone does not
    *  submit it. */
   confirmed: boolean
   /** Set when the student arrived straight from the submit form (?verify=1).
    *  Opens Didit on mount instead of waiting for a button press. */
   autoStart?: boolean
   /** Who Submit sends the request to. 'Program Head' when they returned it for
-   *  re-verification — it skips the Registrar and Teacher, who already approved it. */
-  sendsTo?: 'Registrar' | 'Program Head'
+   *  re-verification — it skips the Teacher, who already approved it. */
+  sendsTo?: 'Subject Teacher' | 'Program Head'
 }
 
 /** Mirrors lib/didit.ts — matching is case-insensitive because Didit's own docs
@@ -49,7 +49,7 @@ function phaseOf(status: string | null): Phase {
 
 export default function VerifyParent({
   requestId, status, livenessScore, faceMatchScore, documentType, warnings, confirmed, autoStart,
-  sendsTo = 'Registrar',
+  sendsTo = 'Subject Teacher',
 }: Props) {
   const [error, setError] = useState<string | null>(null)
   useErrorToast(error)

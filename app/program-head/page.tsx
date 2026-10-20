@@ -6,7 +6,7 @@ import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import { keepMyDepartment } from '@/lib/deptFilter'
-import { withRegistrarGate } from '@/lib/registrarGate'
+import { withSubmissionGate } from '@/lib/submissionGate'
 import { REVERIFY_LOG_PREFIX } from '@/lib/rejectReasons'
 import { parentChecks } from '@/lib/parentList'
 import PHQueue from './PHQueue'
@@ -27,12 +27,12 @@ export default async function ProgramHeadPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
-  // Gated like the Registrar's queue (lib/registrarGate.ts). Every request that
+  // Gated like the Teacher's queue (lib/submissionGate.ts). Every request that
   // reaches first approval passed that gate once — but one the Program Head
   // returns for re-verification stays 'approved_by_teacher' with its
   // verification cleared, and must stay out of here until the parent passes
   // again and the student presses Submit.
-  const { data: raw } = await withRegistrarGate((gate) => {
+  const { data: raw } = await withSubmissionGate((gate) => {
     let q = supabase
       .from('special_exam_requests')
       .select(`

@@ -3,7 +3,7 @@ import { keepActive } from '@/lib/examSettings'
 import { activePeriodIdCached } from '@/lib/activePeriod'
 import { keepMyDepartment } from '@/lib/deptFilter'
 import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
-import { withRegistrarGate } from '@/lib/registrarGate'
+import { withSubmissionGate } from '@/lib/submissionGate'
 import type { OverviewRow } from './OverviewClient'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
@@ -18,10 +18,10 @@ export async function loadOverviewRows(supabase: SupabaseServer, departmentId: s
   // Drop forms whose exam date has already passed before listing (see helper).
   await purgeExpiredExams(supabase)
 
-  // Same gate as the Registrar's queue (lib/registrarGate.ts). Without it this
+  // Same gate as the Teacher's queue (lib/submissionGate.ts). Without it this
   // listed forms the parent had not verified and the student had not submitted
-  // as "Waiting for Registrar" — false, they are waiting on the student.
-  const { data } = await withRegistrarGate((gate) => {
+  // as "Waiting for Teacher" — false, they are waiting on the student.
+  const { data } = await withSubmissionGate((gate) => {
     let q = supabase
       .from('special_exam_requests')
       .select(`

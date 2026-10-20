@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
 import MarkViewed from '@/components/MarkViewed'
 import { Icon } from '@/components/Icon'
-import { approveRequest, approveAll, rejectTeacherRequest } from './actions'
+import { approveRequest, approveAll } from './actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 interface RequestRow {
@@ -50,8 +50,8 @@ function groupByStudent(rows: RequestRow[]): Group[] {
  * from the list immediately (optimistic) — the server round trip happens in
  * the background via the actions in ./actions.
  *
- * The teacher can also reject a form. The panel is given no reason presets, so
- * the teacher types the reason themselves in a plain text box.
+ * The teacher can only approve. There is no reject here: only the Program Head
+ * can reject, and only the Program Head sees the parent-list check.
  */
 export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const reqParam = useSearchParams().get('req')
@@ -92,7 +92,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   // "Approve all N forms" — one click approves every still-pending form of
   // the selected student (single DB update via approveAll).
   function approveGroup(g: Group) {
-    const ids = g.forms.filter((f) => f.status === 'verified_by_registrar').map((f) => f.id)
+    const ids = g.forms.filter((f) => f.status === 'submitted').map((f) => f.id)
     if (!ids.length) return
     setError(null)
     startTransition(async () => {
@@ -124,7 +124,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
         {/* Student list: one panel, one row per student */}
         <div className={`ef-card rounded-xl shadow-sm overflow-hidden divide-y ef-border ${groups.length === 0 ? 'hidden' : ''}`}>
           {groups.map((g) => {
-            const pending = g.forms.filter((f) => f.status === 'verified_by_registrar').length
+            const pending = g.forms.filter((f) => f.status === 'submitted').length
             const anyResub = g.forms.some((f) => f.resubmitted)
             const selected = selectedKey === g.key
             return (
@@ -157,14 +157,14 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
           <div className="md:sticky md:top-20" ref={detailRef}>
             {active ? (
               <div className="space-y-3">
-                {active.forms.filter((f) => f.status === 'verified_by_registrar').length > 1 && (
+                {active.forms.filter((f) => f.status === 'submitted').length > 1 && (
                   <button
                     onClick={() => approveGroup(active)}
                     disabled={isPending}
                     className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
                     style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                   >
-                    {isPending ? 'Approving…' : `Approve all ${active.forms.filter((f) => f.status === 'verified_by_registrar').length} forms`}
+                    {isPending ? 'Approving…' : `Approve all ${active.forms.filter((f) => f.status === 'submitted').length} forms`}
                   </button>
                 )}
                 {active.forms.map((f) => (
@@ -183,10 +183,8 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                       media={f.media}
                       logs={f.logs}
                       onVerify={approveRequest}
-                      onReject={rejectTeacherRequest}
                       onDone={() => dropForm(f.id)}
                       verifyLabel="Approve & Forward to Program Head"
-                      actionableStatus="verified_by_registrar"
                       showDocuments={false}
                     />
                   </div>

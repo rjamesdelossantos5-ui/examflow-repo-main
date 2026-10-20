@@ -146,8 +146,8 @@ export default function PHQueue({
         <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">{emptyText}</div>
       )}
 
-      {/* A narrow list and a wide review, the same as the Registrar's and
-          Teacher's pages. */}
+      {/* A narrow list and a wide review, the same as the Teacher's
+          page. */}
       <div className="grid md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)] gap-5 items-start">
         <div className={`ef-card rounded-xl shadow-sm overflow-hidden divide-y ef-border ${groups.length === 0 ? 'hidden' : ''}`}>
           {groups.map((g) => {
@@ -315,10 +315,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
             >
               {isExcused ? 'Waived' : 'Paid'}
             </span>
-            {/* The two signatures already on it */}
-            <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--status-success)' }}>
-              <Icon name="check" className="w-3.5 h-3.5" /> Registrar verified
-            </span>
+            {/* The signature already on it */}
             <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--status-success)' }}>
               <Icon name="check" className="w-3.5 h-3.5" /> Teacher approved
             </span>
@@ -392,8 +389,8 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
         <div className="mt-4 space-y-3 rounded-lg p-4" style={{ border: '1px solid var(--border)' }}>
           {rejectMode === 'reverify' && (
             <p className="text-xs ef-muted">
-              The parent or guardian verifies again, and the request comes straight back to you — not to the Registrar
-              or the Teacher. These photos are deleted.
+              The parent or guardian verifies again, and the request comes straight back to you — not to
+              the Teacher. These photos are deleted.
             </p>
           )}
           <RejectReasonPicker
@@ -472,7 +469,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
 }
 
 // A section's title: sentence case, quiet, with a hairline above the section.
-// Same as the Registrar/Teacher review panel's, so the three roles match.
+// Same as the Teacher review panel's, so the roles match.
 function PHSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="pt-5 mt-5 border-t ef-border">

@@ -17,7 +17,7 @@ export interface HistoryRow {
 }
 
 /**
- * Reviewed-history table shared by Registrar and Teacher. Rejected rows are
+ * Reviewed-history table (Teacher). Rejected rows are
  * clickable and expand to show the rejection reason.
  */
 export default function ReviewHistoryTable({ title, rows }: { title: string; rows: HistoryRow[] }) {

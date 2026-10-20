@@ -2,7 +2,6 @@ export type UserRole = 'admin' | 'registrar' | 'subject_teacher' | 'program_head
 export type ExamType = 'paid' | 'excused'
 export type RequestStatus =
   | 'submitted'
-  | 'verified_by_registrar'
   | 'approved_by_teacher'
   | 'accepted'
   | 'receipt_uploaded'

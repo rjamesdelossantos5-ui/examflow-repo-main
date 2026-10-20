@@ -296,7 +296,7 @@ export async function refreshParentVerification(requestId: string) {
 
 /**
  * The final step: the student confirms submission after their parent has passed
- * verification. This is what actually puts the request in front of the Registrar.
+ * verification. This is what actually puts the request in front of the Subject Teacher.
  *
  * Splitting it from form-filling is what makes the button labels honest. Filling
  * in the form creates the row — Didit needs something to attach a session to —
@@ -317,7 +317,7 @@ export async function confirmSubmission(requestId: string) {
   if (!req) return { error: 'Request not found' }
   if (req.student_confirmed_at) return { error: null } // already submitted; nothing to do
 
-  // The gate. A student cannot reach the Registrar by calling this directly —
+  // The gate. A student cannot reach the Teacher by calling this directly —
   // the parent has to have passed first.
   if (!isApproved(req.didit_status)) {
     return { error: 'Your parent or guardian must be verified before this can be submitted.' }
@@ -337,7 +337,7 @@ export async function confirmSubmission(requestId: string) {
   // result arrived; this covers a copy that did not happen).
   await shareVerificationWithGroup(admin, requestId)
   // Returned by the Program Head for re-verification (returnForReverification):
-  // it was submitted long ago and is already past the Registrar and Teacher,
+  // it was submitted long ago and is already past the Teacher,
   // so it keeps its original submitted_at and goes back to the Program Head.
   const returnedByPH = req.status === 'approved_by_teacher'
   const { data: saved, error } = await admin
@@ -375,7 +375,7 @@ export async function confirmSubmission(requestId: string) {
       actor_role: 'student',
       action: returnedByPH
         ? 'Parent verified again — sent back to the Program Head'
-        : 'Submitted to the Registrar after parent verification',
+        : 'Submitted to the Subject Teacher after parent verification',
     })),
   )
 
@@ -384,6 +384,6 @@ export async function confirmSubmission(requestId: string) {
 
   revalidatePath(`/student/requests/${requestId}`)
   revalidatePath('/student')
-  revalidatePath(returnedByPH ? '/program-head' : '/registrar')
+  revalidatePath(returnedByPH ? '/program-head' : '/teacher')
   return { error: null }
 }

@@ -63,7 +63,7 @@ export default async function StudentPage() {
     const unconfirmed = !!r.didit_status && !r.student_confirmed_at
     // The Program Head returned it for re-verification: still at first
     // approval, with the parent's verification cleared. Nothing else leaves an
-    // 'approved_by_teacher' request unconfirmed (see lib/registrarGate.ts).
+    // 'approved_by_teacher' request unconfirmed (see lib/submissionGate.ts).
     const reverify = r.status === 'approved_by_teacher' && unconfirmed
     return {
       id: r.id as string,

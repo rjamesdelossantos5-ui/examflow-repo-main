@@ -9,7 +9,7 @@ import type { RequestStatus } from '@/lib/supabase/types'
 // The "In Progress" bucket = every status that isn't finished (scheduled) or
 // rejected. Kept in sync with the stat card below.
 const IN_PROGRESS: RequestStatus[] = [
-  'submitted', 'verified_by_registrar', 'approved_by_teacher', 'accepted', 'receipt_uploaded',
+  'submitted', 'approved_by_teacher', 'accepted', 'receipt_uploaded',
 ]
 
 type Filter = 'all' | 'inProgress' | 'scheduled' | 'rejected'
@@ -42,7 +42,6 @@ export interface StudentRequest {
 function cardStatus(status: RequestStatus): { label: string; tone: string } {
   switch (status) {
     case 'submitted': return { label: 'Submitted', tone: 'var(--status-neutral)' }
-    case 'verified_by_registrar': return { label: 'In Review', tone: 'var(--status-info)' }
     case 'approved_by_teacher': return { label: 'In Review', tone: 'var(--status-info)' }
     case 'accepted': return { label: 'Awaiting Receipt', tone: 'var(--status-warning)' }
     case 'receipt_uploaded': return { label: 'Receipt In Review', tone: 'var(--status-warning)' }

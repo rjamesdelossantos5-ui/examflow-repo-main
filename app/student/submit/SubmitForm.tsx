@@ -664,7 +664,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 They need to be with you now, with a valid ID, for a quick face and ID check.
               </p>
               <p className="text-sm ef-muted mt-1">
-                Your request goes to the Registrar only after this passes.
+                Your request goes to your Subject Teacher only after this passes.
               </p>
               <div className="mt-6 flex justify-end gap-2">
                 <button

@@ -4,27 +4,6 @@
 
 export const OTHER = 'Other'
 
-// Registrar checks the student's details against school records. Only reasons
-// the student can fix on "Edit & Resubmit": no ID reasons (the parent's ID comes
-// from the face check, which only the Program Head can send back — see
-// PH_REVERIFY) and no document reasons (only the Program Head sees the
-// certificate).
-export const REGISTRAR_REJECT = [
-  'Wrong or incomplete student details',
-  'Student number does not match school records',
-  'Wrong subject or section selected',
-  OTHER,
-]
-
-// Teacher approves the subject / validity of the absence — not the paperwork.
-export const TEACHER_REJECT = [
-  'Not enrolled in this subject',
-  'Absence not valid for a special exam',
-  'Insufficient justification',
-  'Already took the exam',
-  OTHER,
-]
-
 // Program Head reviews the excuse certificate (medical / death cert) for an
 // excused request, so certificate-related reasons live here.
 export const PH_REJECT_EXCUSED = [

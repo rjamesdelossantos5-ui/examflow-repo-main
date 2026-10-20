@@ -73,8 +73,8 @@ export async function syncDiditResult(
   }
 
   // A student who verified with their own ID is no longer declined here: the
-  // Registrar sees "Same name as the student" next to the request and decides
-  // (checkParentName in lib/didit.ts, shown on app/registrar).
+  // Program Head sees "Same name as the student" next to the request and decides
+  // (checkParentName in lib/didit.ts, shown on app/program-head).
   const summary = summarizeDecision(decision)
 
   const fields: DiditFields = {

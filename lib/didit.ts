@@ -457,7 +457,7 @@ function sameName(a: NameParts, b: NameParts): boolean {
  * Known false positive: a parent whose name is the student's in every word
  * compared (a father whose son's record omits "Jr.", a mother and daughter with
  * the same given name) matches too — which is why it is only a warning for the
- * Registrar (checkParentName), never an automatic decline.
+ * Program Head (checkParentName), never an automatic decline.
  */
 export function isStudentsOwnId(idName: string | null, studentNames: Array<string | null | undefined>): boolean {
   if (!idName) return false
@@ -465,7 +465,7 @@ export function isStudentsOwnId(idName: string | null, studentNames: Array<strin
   return studentNames.some((n) => !!n && sameName(id, nameParts(n)))
 }
 
-/** A parent or guardian on the Registrar's list. */
+/** A parent or guardian on the Registrar's uploaded list. */
 export interface ParentOnFile {
   name: string
   /** 'Father', 'Mother', or the guardian's relationship ('Grandmother', 'Guardian', …). */
@@ -473,8 +473,7 @@ export interface ParentOnFile {
 }
 
 /**
- * What the Registrar and the Program Head are told about the name on the
- * parent's ID, with the names on file beside it for their own comparison.
+ * What the Program Head is told about the name on the parent's ID, with the names on file beside it for their own comparison.
  *  - no_name:    Didit gave no name (not verified yet, or it read none)
  *  - own:        the ID is in the student's own name — they likely verified themselves
  *  - match:      the ID matches someone on the list (`matched`)

@@ -15,7 +15,7 @@ export default function RegistrarError({
       message="This is usually a temporary connection problem. Please try again — no submissions were lost."
       digest={error.digest}
       onRetry={unstable_retry}
-      homeHref="/registrar"
+      homeHref="/registrar/assessment"
     />
   )
 }

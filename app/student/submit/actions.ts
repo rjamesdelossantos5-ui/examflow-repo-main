@@ -204,7 +204,7 @@ export async function submitRequest(formData: FormData) {
         status: 'submitted',
         // Written HERE, in the same statement that creates the row, so a request
         // can never exist unstamped. As a separate best-effort UPDATE afterwards,
-        // any failure left didit_status NULL — which the Registrar queue reads as
+        // any failure left didit_status NULL — which the Teacher queue reads as
         // "legacy row, nothing to verify" and shows immediately. Fail-open on the
         // wrong side of a gate whose whole job is to hold the request back.
         didit_status: 'Not Started',
@@ -296,13 +296,13 @@ async function finishSubmission(supabase: DB, req: { id: string }, userId: strin
   // This stamp is what separates a new request from a legacy one. Both have no
   // Didit session yet, so didit_session_id can't tell them apart — but a request
   // submitted before this feature has didit_status NULL, and one submitted after
-  // has 'Not Started'. The Registrar's queue keeps showing NULL (nothing to
+  // has 'Not Started'. The Teacher's queue keeps showing NULL (nothing to
   // verify, nothing to wait for) and hides 'Not Started' until it turns
-  // 'Approved'. See app/registrar/page.tsx.
+  // 'Approved'. See lib/submissionGate.ts.
   //
   // Best-effort on purpose: if migration_didit.sql hasn't been run the column
   // doesn't exist and this fails, leaving the request unstamped and therefore
-  // visible to the Registrar — i.e. exactly the old behaviour. Failing the other
+  // visible to the Teacher — i.e. exactly the old behaviour. Failing the other
   // way would block every submission on an unrun migration.
   //
   // Service-role client: through the student's own client this was always a
@@ -373,21 +373,19 @@ interface ResubmitFields {
 
 // Where a resubmitted request re-enters the pipeline.
 //
-// The pipeline is: submitted → (registrar) verified_by_registrar → (teacher)
-// approved_by_teacher → (program head) accepted/scheduled. A resubmit used to
-// always restart at 'submitted', which sent it back through the registrar and
-// the teacher even when the Program Head was the one who rejected it — three
-// reviews to fix one blurry photo.
+// The pipeline is: submitted → (teacher) approved_by_teacher → (program head)
+// accepted/scheduled. A resubmit used to always restart at 'submitted', which
+// sent it back through the teacher even when the Program Head was the one who
+// rejected it — two reviews to fix one blurry photo.
 //
-// So it now returns to whoever rejected it: the reviewers who already approved
-// it don't re-review the same thing. The exception is when the student changes
+// So it now returns to whoever rejected it: the reviewer who already approved
+// it doesn't re-review the same thing. Only the Program Head rejects now; a
+// request rejected earlier by anyone else (older rows) restarts at 'submitted'. The exception is when the student changes
 // WHAT they are asking for — a different subject, exam type, or section. Those
 // earlier approvals were for a different request (and a new section means a new
 // teacher entirely), so they no longer mean anything and it starts over.
-const STAGE_AFTER_REJECTER: Record<string, 'submitted' | 'verified_by_registrar' | 'approved_by_teacher'> = {
-  registrar: 'submitted',                  // back to the registrar
-  subject_teacher: 'verified_by_registrar', // back to the teacher
-  program_head: 'approved_by_teacher',      // back to the program head
+const STAGE_AFTER_REJECTER: Record<string, 'submitted' | 'approved_by_teacher'> = {
+  program_head: 'approved_by_teacher', // back to the program head
 }
 
 function resumeStatus(
@@ -395,7 +393,7 @@ function resumeStatus(
   fields: ResubmitFields,
   newSection: string | null,
   hasSnapshotCols: boolean,
-): 'submitted' | 'verified_by_registrar' | 'approved_by_teacher' {
+): 'submitted' | 'approved_by_teacher' {
   const sectionChanged = hasSnapshotCols
     && String(newSection ?? '').trim() !== String(oldRow.snap_section ?? '').trim()
   if (fields.subjectId !== oldRow.subject_id || fields.examType !== oldRow.exam_type || sectionChanged) {

@@ -32,13 +32,13 @@ function B({ children }: { children: React.ReactNode }) {
   return <strong className="font-bold" style={{ color: 'var(--pn-ink)' }}>{children}</strong>
 }
 
-// Matches what each role's screens show (RegistrarQueue/TeacherQueue pass
+// Matches what each role's screens show (TeacherQueue passes
 // showDocuments={false}; only PHQueue shows documents and the Didit photos).
 const ACCESS = [
   { who: 'You', what: <>only your own requests.</> },
-  { who: 'Registrar', what: <>your details and form, and the result of the parent or guardian check, including the name on the ID and how it compares with the parent list. Not your documents.</> },
+  { who: 'Registrar', what: <>your name and student details and the subjects you are paying for, to work out your fees for a paid exam. Not your form, your documents or the parent or guardian check.</> },
   { who: 'Subject teacher', what: <>only requests for subjects they teach. Teachers <em>cannot</em> see your documents or the parent or guardian check.</> },
-  { who: 'Program head', what: <>requests for their department&apos;s subjects at their approval stage, including your supporting document, your receipt, and the parent or guardian&apos;s ID and face photos.</> },
+  { who: 'Program head', what: <>requests for their department&apos;s subjects at their approval stage, including your supporting document, your receipt, the parent or guardian&apos;s ID and face photos, and how the name on the ID compares with the parent list.</> },
   { who: 'Administrator', what: <>every request, with the same view as any of the roles above, plus account management, statistics and sign-in records.</> },
 ]
 

@@ -17,7 +17,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   const [profile, notifications, pending] = await Promise.all([
     getMyProfileMeta(),
     getNotifications(supabase, user.id, 'subject_teacher'),
-    countByStatus(supabase, 'verified_by_registrar'),
+    countByStatus(supabase, 'submitted', null, true),
   ])
 
   if (!profile || !['subject_teacher', 'admin'].includes(profile.role)) redirect('/login')

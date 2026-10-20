@@ -4,7 +4,6 @@ import type { RequestStatus } from '@/lib/supabase/types'
 // same status always looks the same (student, registrar, teacher, PH views).
 const CONFIG: Record<RequestStatus, { label: string; classes: string }> = {
   submitted:              { label: 'Submitted',              classes: 'bg-blue-100 text-blue-700' },
-  verified_by_registrar:  { label: 'Verified by Registrar',  classes: 'bg-purple-100 text-purple-700' },
   approved_by_teacher:    { label: 'Approved by Teacher',    classes: 'bg-indigo-100 text-indigo-700' },
   accepted:               { label: 'Accepted',               classes: 'bg-yellow-100 text-yellow-700' },
   receipt_uploaded:       { label: 'Receipt Uploaded',        classes: 'bg-orange-100 text-orange-700' },

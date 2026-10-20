@@ -90,7 +90,7 @@ export default function SubmissionStatusBanner(props: Props) {
       >
         <Icon name="clock" className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'var(--status-warning)' }} />
         <p className="text-2xs font-medium" style={{ color: 'var(--card-foreground)' }}>
-          Please get the printed form from the Registrar&apos;s office — submitting here alone does not finish your request.
+          Please also get the printed form from the Registrar&apos;s office and fill it in. The Registrar counts exam takers from it, and the Cashier marks it when you pay. Submitting here alone does not finish your request.
         </p>
       </div>
 

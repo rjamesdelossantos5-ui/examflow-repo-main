@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { emailRequestEvent } from '@/lib/requestEmails'
 import { getActivePeriod, TERM_LABEL, SEMESTER_LABEL } from '@/lib/examSettings'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
-import { withRegistrarGate } from '@/lib/registrarGate'
+import { withSubmissionGate } from '@/lib/submissionGate'
 import { deleteSession, getSessionDecision, photoUrl } from '@/lib/didit'
 import { reviewableSession } from '@/lib/verificationReview'
 import { VERIFICATION_PHOTOS, type VerificationPhoto } from '@/lib/verificationPhotos'
@@ -28,7 +28,7 @@ async function deleteVerificationPhotos(supabase: Awaited<ReturnType<typeof crea
       .from('special_exam_requests')
       .select('id')
       .eq('didit_session_id', id)
-      .in('status', ['submitted', 'verified_by_registrar', 'approved_by_teacher'])
+      .in('status', ['submitted', 'approved_by_teacher'])
       .limit(1)
     if (stillUsed?.length) return
     await deleteSession(id)
@@ -75,7 +75,7 @@ export async function acceptRequest(requestId: string, scheduleStr: string) {
   // Gated like the First Approval queue: a request returned for re-verification
   // stays 'approved_by_teacher' while the parent verifies again, and must not
   // be accepted from a panel that was open before it was returned.
-  const { data: updated, error } = await withRegistrarGate((gate) => {
+  const { data: updated, error } = await withSubmissionGate((gate) => {
     let q = supabase
       .from('special_exam_requests')
       .update({ status: nextStatus, final_schedule: finalSchedule })
@@ -119,7 +119,7 @@ export async function acceptAll(requestIds: string[]) {
   if (!ids.length) return { error: 'Nothing to accept.', count: 0 }
 
   // Gated like the First Approval queue — see acceptRequest.
-  const { data: forms } = await withRegistrarGate((gate) => {
+  const { data: forms } = await withSubmissionGate((gate) => {
     let q = supabase
       .from('special_exam_requests')
       .select('id, exam_type, didit_session_id')
@@ -176,8 +176,8 @@ export async function acceptAll(requestIds: string[]) {
  * Not a rejection: the request stays at first approval ('approved_by_teacher')
  * and only the verification is cleared. The student sees the reason, their
  * parent verifies again, the student presses Submit, and it comes straight back
- * to this queue — never to the Registrar or the Teacher, who already approved
- * it. Until then the First Approval gate (lib/registrarGate.ts) keeps it out of
+ * to this queue — never to the Teacher, who already approved
+ * it. Until then the First Approval gate (lib/submissionGate.ts) keeps it out of
  * the queue, the badge and the bell.
  *
  * "Edit & Resubmit" cannot do this: it refuses a form with nothing changed, and

@@ -13,7 +13,7 @@ const TONE: Record<'good' | 'warn' | 'bad' | 'plain', { icon: IconName; color: s
 /**
  * The name on the parent's ID next to the parents/guardians on the Registrar's
  * list, with a verdict (checkParentName in lib/didit.ts). Shown to the
- * Registrar and the Program Head. Advice only — they decide.
+ * Program Head only. Advice only — they decide.
  *
  * A plain line with an icon, not a tinted box: colour marks only the verdict.
  */

@@ -5,7 +5,7 @@ import { loadOverviewRows } from '@/app/program-head/overview/loadOverview'
 export const metadata = { title: 'EXAMFLOW Admin — Requests' }
 
 // Every form in every department and the step it waits on. Each one opens on
-// the Registrar, Teacher or Program Head page where that step is done; the
+// the Teacher, Program Head or Registrar page where that step is done; the
 // admin is allowed on all of them (proxy.ts, and each role's layout and server
 // actions accept 'admin'), and what the admin does is logged as Admin.
 export default async function AdminRequestsPage() {
