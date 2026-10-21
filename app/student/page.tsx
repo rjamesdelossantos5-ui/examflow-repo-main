@@ -40,13 +40,14 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
     .maybeSingle(),
   ])
 
+    // Only what a student can fill in on My Account. Department and section are
+    // set by the School Data import and have no field there, so counting them
+    // left this banner up for ever for anyone the import hadn't covered.
     const profileIncomplete =
     !!details &&
     (!details.student_number ||
-    !details.department_id ||
     !details.course ||
-    !details.year_level ||
-    !details.section)
+    !details.year_level)
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const cookieStore = await cookies()
@@ -200,7 +201,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
        <Link href="/account" className="font-semibold underline">
           My Account
        </Link>{' '}
-          and fill in your student number, department, course, year level and section.
+          and fill in your student number, course and year level.
     </div>
 )}
 
