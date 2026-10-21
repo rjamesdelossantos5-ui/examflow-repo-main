@@ -21,6 +21,13 @@ function fmtDate(iso: string | null) {
   if (!iso) return null
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
+// The date, plus the time when the Program Head set one (midnight = none set).
+function fmtWhen(iso: string | null) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (d.getHours() === 0 && d.getMinutes() === 0) return fmtDate(iso)
+  return `${fmtDate(iso)}, ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+}
 
 /**
  * Compact status strip at the top of the student dashboard. Three tight rows:
@@ -47,8 +54,8 @@ export default function SubmissionStatusBanner(props: Props) {
   const TBA = 'TBA'
   const examRange = props.examDay
     ? props.examEndDay
-      ? `${fmtDate(props.examDay)} → ${fmtDate(props.examEndDay)}`
-      : fmtDate(props.examDay)
+      ? `${fmtWhen(props.examDay)} → ${fmtWhen(props.examEndDay)}`
+      : fmtWhen(props.examDay)
     : hasTerm ? TBA : null
 
   function handleDismiss() {

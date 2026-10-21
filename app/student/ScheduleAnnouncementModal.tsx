@@ -19,7 +19,11 @@ interface Props {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+  const d = new Date(iso)
+  const date = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+  // The time too, when the Program Head set one (midnight = none set).
+  if (d.getHours() === 0 && d.getMinutes() === 0) return date
+  return `${date}, ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
 }
 
 // One-time popup for "the Program Head just set/changed the exam schedule".

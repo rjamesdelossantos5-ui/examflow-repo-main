@@ -482,8 +482,8 @@ export async function savePeriod(input: PeriodInput) {
 }
 
 interface ScheduleInput {
-  examStart: string // ISO, date-only (midnight local)
-  examEnd: string // ISO, date-only ('' = single day)
+  examStart: string // ISO; midnight local when no start time was chosen
+  examEnd: string // ISO; midnight local when no end time was chosen ('' = single day)
   examLocation: string
   examBring: string
 }
