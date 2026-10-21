@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { ACTIVE_COOKIE, IDLE_MS, asSessionCookie } from '@/lib/sessionCookie'
 
 const ROLE_HOME: Record<string, string> = {
   admin: '/admin',
@@ -53,7 +54,7 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, asSessionCookie(value, options))
           )
         },
       },
@@ -63,6 +64,28 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
+
+  // Inactivity limit (see lib/sessionCookie.ts). The page keeps ACTIVE_COOKIE
+  // up to date while the person is using it. A signed-in request whose last
+  // activity is older than IDLE_MS is signed out here, which also covers a phone
+  // browser that was left open or whose page timers were paused. With no cookie
+  // yet (just signed in) it starts now; with nobody signed in a leftover one is
+  // cleared so the next sign-in starts fresh.
+  const lastActive = Number(request.cookies.get(ACTIVE_COOKIE)?.value)
+  if (!user) {
+    if (request.cookies.has(ACTIVE_COOKIE)) supabaseResponse.cookies.delete(ACTIVE_COOKIE)
+  } else if (Number.isFinite(lastActive) && lastActive > 0 && Date.now() - lastActive > IDLE_MS) {
+    await supabase.auth.signOut()
+    const res = NextResponse.redirect(
+      new URL('/login?error=' + encodeURIComponent('You were signed out after 15 minutes of inactivity. Please sign in again.'), request.url),
+    )
+    // The sign-out's cookie removals live on supabaseResponse; carry them over.
+    supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c))
+    res.cookies.delete(ACTIVE_COOKIE)
+    return res
+  } else if (!request.cookies.has(ACTIVE_COOKIE)) {
+    supabaseResponse.cookies.set(ACTIVE_COOKIE, String(Date.now()), { path: '/', sameSite: 'lax' })
+  }
 
   // Fully public and never redirected away from: a person must be able to read
   // what will be collected BEFORE signing in, and a signed-in student opening it

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ROLE_HOME } from '@/lib/role-home'
 import { recordLogin } from '@/lib/loginHistory'
+import { asSessionCookie } from '@/lib/sessionCookie'
 import { withoutAccountTag } from '@/lib/initials'
 
 // Student AND teacher accounts both use this domain (@stamaria.sti.edu.ph).
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
           pendingCookies = cookiesToSet
           cookiesToSet.forEach(({ name, value, options }) => {
             try {
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, asSessionCookie(value, options))
             } catch {
               // fine to ignore here; the values below on the response are what matter
             }
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
   function respond(location: string) {
     const res = NextResponse.redirect(`${origin}${location}`)
     pendingCookies.forEach(({ name, value, options }) => {
-      res.cookies.set(name, value, options as never)
+      res.cookies.set(name, value, asSessionCookie(value, options) as never)
     })
     return res
   }

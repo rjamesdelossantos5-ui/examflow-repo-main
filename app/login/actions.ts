@@ -6,6 +6,7 @@ import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { ROLE_HOME } from '@/lib/role-home'
 import { recordLogin } from '@/lib/loginHistory'
+import { ACTIVE_COOKIE } from '@/lib/sessionCookie'
 
 // The address the person is actually on — localhost, a phone on the same Wi-Fi,
 // a Vercel preview or the live site — so Microsoft sends them back there. A fixed
@@ -133,7 +134,18 @@ export async function signInWithMicrosoft() {
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  ;(await cookies()).delete(ACTIVE_COOKIE)
   revalidatePath('/', 'layout')
   // Straight to the landing page's login popup.
   redirect('/?login=1')
+}
+
+// Called by components/IdleLogout.tsx once the page has seen IDLE_MS without
+// activity. Same as logout(), but the login popup says why.
+export async function idleLogout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  ;(await cookies()).delete(ACTIVE_COOKIE)
+  revalidatePath('/', 'layout')
+  redirect('/login?error=' + encodeURIComponent('You were signed out after 15 minutes of inactivity. Please sign in again.'))
 }

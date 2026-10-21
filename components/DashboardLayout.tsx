@@ -7,6 +7,7 @@ import UserMenu from './UserMenu'
 import NotificationBell, { type NotificationItem } from './NotificationBell'
 import LiveRefresh from './LiveRefresh'
 import Toaster from './Toaster'
+import IdleLogout from './IdleLogout'
 import { Icon, type IconName } from './Icon'
 import { ROLE_HOME } from '@/lib/nav'
 import type { UserRole } from '@/lib/supabase/types'
@@ -127,6 +128,7 @@ export default function DashboardLayout({
       <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
         <LiveRefresh filter={liveFilter} />
         <Toaster />
+        <IdleLogout />
 
         {/* Brand bar — sticky so the sidebar (top-16) always sits right under it */}
         <header className="sticky top-0 z-50" style={{ backgroundColor: 'var(--header)' }}>
@@ -215,6 +217,7 @@ export default function DashboardLayout({
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       <LiveRefresh filter={liveFilter} />
       <Toaster />
+      <IdleLogout />
       {/* Brand bar */}
       <header className="relative z-50" style={{ backgroundColor: 'var(--header)' }}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
