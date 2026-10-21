@@ -4,9 +4,9 @@ import { ACTIVE_COOKIE, IDLE_MS, asSessionCookie } from '@/lib/sessionCookie'
 
 const ROLE_HOME: Record<string, string> = {
   admin: '/admin',
-  registrar: '/registrar',
-  subject_teacher: '/teacher',
-  program_head: '/program-head',
+  registrar: '/registrar/dashboard',
+  subject_teacher: '/teacher/dashboard',
+  program_head: '/program-head/dashboard',
   student: '/student',
 }
 

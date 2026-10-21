@@ -65,7 +65,7 @@ function timeAgo(iso: string): string {
 
 // One summary tile. Doubles as a filter toggle — clicking sets the filter, and
 // the active one gets a gold ring (same affordance as the PH Overview cards).
-function StatCard({ label, value, accent, icon, active, onClick }: {
+export function StatCard({ label, value, accent, icon, active, onClick }: {
   label: string; value: number; accent: string; icon: IconName; active: boolean; onClick: () => void
 }) {
   return (
