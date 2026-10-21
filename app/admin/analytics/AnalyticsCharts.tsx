@@ -8,7 +8,6 @@ import { Icon, type IconName } from '@/components/Icon'
 import type { ExamStatRow } from '@/lib/examAnalytics'
 
 type Dimension = 'department' | 'subject' | 'examType'
-type ChartKind = 'pie' | 'bar'
 
 const DIMENSIONS: { value: Dimension; label: string }[] = [
   { value: 'department', label: 'Department' },
@@ -66,7 +65,6 @@ function StatTile({ label, value, icon, accent }: { label: string; value: number
 
 export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
   const [dimension, setDimension] = useState<Dimension>('department')
-  const [chartKind, setChartKind] = useState<ChartKind>('pie')
   const reducedMotion = useReducedMotion()
 
   const totals = useMemo(() => ({
@@ -93,6 +91,9 @@ export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
     const distinct = new Set(rows.map((r) => keyFor(r, dimension))).size
     return distinct - chartData.length + (chartData.some((d) => d.name === 'Other') ? 1 : 0)
   }, [rows, dimension, chartData])
+
+  // Both charts share one height so they line up; it grows with the bar count.
+  const chartHeight = Math.max(260, chartData.length * 44)
 
   const tooltipStyle = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--card-foreground)', fontSize: 13 }
 
@@ -134,24 +135,6 @@ export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
               ))}
             </div>
 
-            {/* Chart type toggle */}
-            <div className="inline-flex rounded-full border ef-border p-0.5 self-start sm:self-auto">
-              {(['pie', 'bar'] as const).map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  onClick={() => setChartKind(kind)}
-                  className={`ef-press px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition-colors flex items-center gap-1.5 ${
-                    chartKind === kind ? '' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
-                  }`}
-                  style={chartKind === kind ? { background: 'var(--sti-navy)', color: '#fff' } : { color: 'var(--card-foreground)' }}
-                  aria-pressed={chartKind === kind}
-                >
-                  <Icon name={kind === 'pie' ? 'chart' : 'list'} className="w-3.5 h-3.5" />
-                  {kind} chart
-                </button>
-              ))}
-            </div>
           </div>
 
           {groupedCount > 0 && (
@@ -160,10 +143,11 @@ export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
             </p>
           )}
 
-          {/* Chart */}
-          <div style={{ width: '100%', height: Math.max(260, chartData.length * 44) }}>
-            <ResponsiveContainer>
-              {chartKind === 'pie' ? (
+          {/* Both charts at once: pie on the left, bar on the right (stacked on
+              narrow screens). Same data and colours, so a slice and its bar match. */}
+          <div className="grid gap-6 lg:grid-cols-2 items-center">
+            <div style={{ width: '100%', height: chartHeight }}>
+              <ResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={chartData}
@@ -180,7 +164,10 @@ export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
                   </Pie>
                   <Tooltip contentStyle={tooltipStyle} formatter={(value, name) => [`${value} student${value === 1 ? '' : 's'}`, name]} />
                 </PieChart>
-              ) : (
+              </ResponsiveContainer>
+            </div>
+            <div style={{ width: '100%', height: chartHeight }}>
+              <ResponsiveContainer>
                 <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
                   <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--muted)', fontSize: 12 }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
                   <YAxis
@@ -198,8 +185,8 @@ export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
                     ))}
                   </Bar>
                 </BarChart>
-              )}
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Data table below the chart — same numbers, screen-reader and
