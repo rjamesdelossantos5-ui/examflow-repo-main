@@ -153,8 +153,10 @@ export async function importPeopleChunk(people: PersonInput[]) {
       is_active: true,
     }
 
-    const { data: existing } = await supabase.from('profiles').select('id, role').eq('email', email).maybeSingle()
+    const { data: existing } = await supabase.from('profiles').select('id, role, archived_at').eq('email', email).maybeSingle()
     if (existing?.role === 'admin') { failures.push({ email, reason: 'is an admin account — left unchanged' }); continue }
+    // The import sets is_active: true, which would quietly un-block an archived login.
+    if (existing?.archived_at) { failures.push({ email, reason: 'is archived — restore it in Admin → Users first' }); continue }
 
     if (existing) {
       const { error } = await supabase.from('profiles').update(details).eq('id', existing.id)
