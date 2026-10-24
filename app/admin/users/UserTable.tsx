@@ -842,11 +842,12 @@ export default function UserTable({
         <button
           type="button"
           onClick={() => setShowArchived((v) => !v)}
-          aria-pressed={showArchived}
+          aria-label={showArchived ? 'Back to users' : `Show archived accounts (${archivedCount})`}
           className="px-3 py-2 rounded-lg text-sm font-semibold border ef-border transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           style={{ color: 'var(--card-foreground)', ...(showArchived ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)', borderColor: 'transparent' } : {}) }}
         >
-          Archived ({archivedCount})
+          {/* While the archive is open the same button takes you back to the users. */}
+          {showArchived ? '← Back to users' : `Archived (${archivedCount})`}
         </button>
         <span className="text-xs ef-muted tabular-nums">{visible.length} of {listed.length}</span>
       </div>
