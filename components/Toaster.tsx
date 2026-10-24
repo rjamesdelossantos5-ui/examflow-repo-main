@@ -3,7 +3,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 
 /**
- * Pop-ups, bottom-right, gone after a few seconds: red for errors, green for
+ * Pop-ups, gone after a few seconds (top-left and larger on desktop, bottom-right on smaller screens): red for errors, green for
  * successes.
  *
  * Most screens already show an error as a banner at the top of the page, which a
@@ -130,7 +130,7 @@ export default function Toaster() {
 
   return (
     <div
-      className="fixed z-[200] right-4 bottom-4 flex flex-col gap-2 w-[calc(100vw-2rem)] max-w-sm pointer-events-none"
+      className="fixed z-[200] right-4 bottom-4 lg:right-auto lg:bottom-auto lg:left-4 lg:top-20 flex flex-col gap-2 w-[calc(100vw-2rem)] max-w-sm lg:max-w-lg pointer-events-none"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       {items.map((t) => {
@@ -140,7 +140,7 @@ export default function Toaster() {
             key={t.id}
             role={success ? 'status' : 'alert'}
             aria-live={success ? 'polite' : 'assertive'}
-            className="ef-toast pointer-events-auto flex items-start gap-3 rounded-lg px-4 py-3 text-sm shadow-lg border"
+            className="ef-toast pointer-events-auto flex items-start gap-3 rounded-lg px-4 py-3 text-sm lg:px-5 lg:py-4 lg:text-base shadow-lg border"
             style={{
               background: 'var(--card)',
               color: 'var(--card-foreground)',
@@ -151,7 +151,7 @@ export default function Toaster() {
             {success && (
               <svg
                 viewBox="0 0 24 24"
-                className="w-5 h-5 shrink-0 mt-px"
+                className="w-5 h-5 lg:w-6 lg:h-6 shrink-0 mt-px"
                 fill="none"
                 stroke="var(--status-success, #16a34a)"
                 strokeWidth={2.25}
