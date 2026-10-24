@@ -52,6 +52,8 @@ export interface ClassOption {
   name: string
   /** Who teaches it now, or null when nobody does. */
   teacher: string | null
+  /** That teacher's account id, so Edit can tick the classes a person already has. */
+  teacherId?: string | null
 }
 
 /**
@@ -240,6 +242,7 @@ function RoleFields({
   sections,
   courseNames,
   classOptions,
+  initialClassIds,
   initial,
   lockedStudentNumber,
 }: {
@@ -250,8 +253,10 @@ function RoleFields({
   sections: string[]
   /** Program code → full name, e.g. BSIT → Bachelor of Science in IT. */
   courseNames: Record<string, string>
-  /** Classes a new teacher can be given. Only the Create form passes it. */
+  /** Classes a teacher can be given. */
   classOptions?: ClassOption[]
+  /** Edit only: the classes this teacher already has, ticked when the form opens. */
+  initialClassIds?: string[]
   initial?: Profile
   /** Set when the number comes from the person's school email: shown, not editable. */
   lockedStudentNumber?: string
@@ -290,7 +295,9 @@ function RoleFields({
       {role === 'program_head' && (
         <p className="col-span-2 text-xs text-gray-500">They review the requests for subjects in this department.</p>
       )}
-      {role === 'subject_teacher' && classOptions && classOptions.length > 0 && <TeacherClassPicker classes={classOptions} />}
+      {role === 'subject_teacher' && classOptions && classOptions.length > 0 && (
+        <TeacherClassPicker classes={classOptions} initialPicked={initialClassIds} editing={!!initial} />
+      )}
       {role === 'subject_teacher' && !(classOptions && classOptions.length > 0) && (
         <p className="col-span-2 text-xs text-gray-500">
           Their sections and subjects come from the Classes sheet of the School Data file — one row per class with this
@@ -323,8 +330,8 @@ function RoleFields({
  * The picked ids are sent as `class_ids`. Taking a class over replaces its
  * current teacher; requests already sent keep the teacher they were sent to.
  */
-function TeacherClassPicker({ classes }: { classes: ClassOption[] }) {
-  const [picked, setPicked] = useState<Set<string>>(new Set())
+function TeacherClassPicker({ classes, initialPicked = [], editing = false }: { classes: ClassOption[]; initialPicked?: string[]; editing?: boolean }) {
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(initialPicked))
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
   const shown = q ? classes.filter((c) => [c.code, c.name, c.section].some((v) => v.toLowerCase().includes(q))) : classes
@@ -338,7 +345,7 @@ function TeacherClassPicker({ classes }: { classes: ClassOption[] }) {
 
   return (
     <div className="col-span-2">
-      <label className={labelClass}>Classes they teach (optional) — {picked.size} selected</label>
+      <label className={labelClass}>Classes they teach{editing ? '' : ' (optional)'} — {picked.size} selected</label>
       {/* Enter in the search box must not submit the whole form. */}
       <input
         type="search"
@@ -354,14 +361,21 @@ function TeacherClassPicker({ classes }: { classes: ClassOption[] }) {
             <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} className="mt-1" />
             <span className="min-w-0">
               <span className="font-mono text-xs">{c.code}</span> {c.name} · {c.section}
-              <span className="block text-xs text-gray-500">{c.teacher ? `Now taught by ${c.teacher} — picking it takes it over` : 'No teacher yet'}</span>
+              <span className="block text-xs text-gray-500">{initialPicked.includes(c.id) ? 'They teach this class now' : c.teacher ? `Now taught by ${c.teacher} — picking it takes it over` : 'No teacher yet'}</span>
             </span>
           </label>
         ))}
         {shown.length === 0 && <p className="px-3 py-4 text-center text-xs text-gray-500">No class matches your search.</p>}
       </div>
       {[...picked].map((id) => <input key={id} type="hidden" name="class_ids" value={id} />)}
-      <p className="mt-1 text-xs text-gray-500">Requests already sent keep their current teacher. Classes can also be changed later on the Subjects page.</p>
+      {/* Tells Edit's save that this list was on screen, so an empty list means
+          "no classes" and not "the list was never shown". */}
+      {editing && <input type="hidden" name="class_ids_sent" value="1" />}
+      <p className="mt-1 text-xs text-gray-500">
+        {editing
+          ? 'Untick a class to take it off this teacher; tick one to give it to them. Requests already sent keep their current teacher. For many people at once, use the Classes sheet of the School Data file.'
+          : 'Requests already sent keep their current teacher. Classes can also be changed later on the Subjects page.'}
+      </p>
     </div>
   )
 }
@@ -469,7 +483,6 @@ export default function UserTable({
   departments,
   classesByTeacher,
   currentUserId,
-  adminRemovalOn,
   sections,
   courseNames,
   classOptions,
@@ -488,14 +501,7 @@ export default function UserTable({
   classesByTeacher: Record<string, TeacherClass[]>
   /** The signed-in admin — their own row gets no Deactivate/Archive. */
   currentUserId: string | null
-  /** "Allow removing admin accounts" in Admin → Settings. */
-  adminRemovalOn: boolean
 }) {
-  // Mirrors blockedAccountRemoval in ./actions, which is the real check.
-  const removalBlocked = (u: Profile) =>
-    u.role === 'admin' && !adminRemovalOn
-      ? 'Admin account — turn on "Allow removing admin accounts" in Settings to change this.'
-      : null
   const [showCreate, setShowCreate] = useState(false)
   const [error, setError] = useState<string | null>(null)
   useErrorToast(error)
@@ -506,6 +512,12 @@ export default function UserTable({
   // Archived accounts are kept out of the main list and shown on their own.
   const [showArchived, setShowArchived] = useState(false)
   const archivedCount = useMemo(() => users.filter((u) => u.archived_at).length, [users])
+  // The last-admin rule: with only one active admin, that account can't be
+  // demoted, deactivated or archived. Mirrors lastAdminBlock in ./actions, which
+  // is the real check.
+  const activeAdmins = useMemo(() => users.filter((u) => u.role === 'admin' && u.is_active && !u.archived_at).length, [users])
+  const isOnlyAdmin = (u: Profile) => activeAdmins <= 1 && u.role === 'admin' && u.is_active && !u.archived_at
+  const ONLY_ADMIN_MSG = 'This is the only admin account. Give another account the admin role first.'
   const listed = useMemo(() => users.filter((u) => !!u.archived_at === showArchived), [users, showArchived])
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -675,38 +687,38 @@ export default function UserTable({
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-user-title"
-            className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-[578px] p-8 max-h-[90vh] overflow-y-auto"
+            className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-[578px] md:max-w-3xl p-8 md:p-10 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="edit-user-title" className="text-lg font-bold" style={{ color: 'var(--sti-navy)' }}>Edit User</h3>
-            <p className="text-xs text-gray-500 mt-1 mb-4 break-all">
+            <h3 id="edit-user-title" className="text-lg md:text-2xl font-bold" style={{ color: 'var(--sti-navy)' }}>Edit User</h3>
+            <p className="text-xs md:text-sm text-gray-500 mt-1 mb-4 md:mb-6 break-all">
               {toEdit.email} — the email is their login, so it can&apos;t be changed here.
             </p>
             {/* key: a fresh form per person, so one person's values never
                 linger in another's. */}
-            <form key={toEdit.id} onSubmit={handleEdit} className="grid grid-cols-2 gap-3">
+            <form key={toEdit.id} onSubmit={handleEdit} className="grid grid-cols-2 gap-3 md:gap-5 md:text-base">
               <div className="col-span-2">
                 <label className={labelClass}>Full Name *</label>
                 <input name="full_name" required defaultValue={toEdit.full_name} className={inputClass} />
               </div>
-              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} initial={toEdit} lockedStudentNumber={lockedStudentNumbers[toEdit.id]} />
+              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} classOptions={classOptions} initialClassIds={classOptions.filter((c) => c.teacherId === toEdit.id).map((c) => c.id)} initial={toEdit} lockedStudentNumber={lockedStudentNumbers[toEdit.id]} />
               {toEdit.role === 'subject_teacher' && editRole !== 'subject_teacher' && editTeaches > 0 && (
                 <p className="col-span-2 rounded-md px-3 py-2 text-xs bg-amber-50 border border-amber-200 text-amber-800">
                   They teach {editTeaches} class{editTeaches === 1 ? '' : 'es'}. Those stay assigned to them — and new requests
                   for them still go to this person — until you pick another teacher on the Subjects page.
                 </p>
               )}
-              <p className="col-span-2 text-xs text-gray-500">
+              <p className="col-span-2 text-xs md:text-sm text-gray-500">
                 If this person is in the School Data file, the next import sets these details from the file again.
               </p>
               {editError && (
                 <p className="col-span-2 rounded-md px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700">{editError}</p>
               )}
-              <div className="col-span-2 flex justify-end gap-2 mt-2">
+              <div className="col-span-2 flex justify-end gap-2 md:gap-3 mt-2 md:mt-4">
                 <button type="button" onClick={closeEdit} disabled={isPending}
-                  className="px-4 py-2 text-sm rounded border disabled:opacity-50">Cancel</button>
+                  className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded border disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={isPending}
-                  className="px-4 py-2 text-sm rounded font-semibold disabled:opacity-50"
+                  className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded font-semibold disabled:opacity-50"
                   style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
                   {isPending ? 'Saving…' : 'Save changes'}
                 </button>
@@ -773,37 +785,37 @@ export default function UserTable({
             aria-modal="true"
             aria-labelledby="archive-user-title"
             aria-describedby="archive-user-desc"
-            className="ef-dialog ef-card rounded-lg shadow-xl max-w-md w-full p-6"
+            className="ef-dialog ef-card rounded-lg md:rounded-2xl shadow-xl max-w-md md:max-w-xl w-full p-6 md:p-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="archive-user-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Archive this account?</h3>
+            <h3 id="archive-user-title" className="font-bold text-lg md:text-2xl" style={{ color: 'var(--card-foreground)' }}>Archive this account?</h3>
 
             {/* Who it is: name and email, the role as a small tag. No box. */}
-            <div className="mt-4 flex items-start justify-between gap-3">
+            <div className="mt-4 md:mt-6 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold break-words" style={{ color: 'var(--card-foreground)' }}>{toArchive.full_name}</p>
-                {toArchive.email !== toArchive.full_name && <p className="text-xs ef-muted break-all mt-0.5">{toArchive.email}</p>}
+                <p className="text-sm md:text-lg font-semibold break-words" style={{ color: 'var(--card-foreground)' }}>{toArchive.full_name}</p>
+                {toArchive.email !== toArchive.full_name && <p className="text-xs md:text-sm ef-muted break-all mt-0.5">{toArchive.email}</p>}
               </div>
-              <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'color-mix(in srgb, var(--muted) 16%, transparent)', color: 'var(--card-foreground)' }}>
+              <span className="shrink-0 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold" style={{ background: 'color-mix(in srgb, var(--muted) 16%, transparent)', color: 'var(--card-foreground)' }}>
                 {ROLE_LABELS[toArchive.role] ?? toArchive.role}
               </span>
             </div>
 
-            <p id="archive-user-desc" className="mt-4 text-sm ef-muted">
+            <p id="archive-user-desc" className="mt-4 md:mt-6 text-sm md:text-base ef-muted">
               They can no longer log in and leave this list. Their data is kept, and you can restore the account from the Archived view.
             </p>
 
             {archiveError && (
-              <p role="alert" className="mt-4 text-sm" style={{ color: 'var(--status-danger)' }}>{archiveError}</p>
+              <p role="alert" className="mt-4 text-sm md:text-base" style={{ color: 'var(--status-danger)' }}>{archiveError}</p>
             )}
 
-            <div className="mt-6 flex justify-end gap-2">
+            <div className="mt-6 md:mt-8 flex justify-end gap-2 md:gap-3">
               <button
                 type="button"
                 onClick={closeArchive}
                 disabled={isPending}
                 autoFocus
-                className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-50"
+                className="px-4 py-2.5 md:px-6 md:py-3 rounded-lg text-sm md:text-base font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-50"
                 style={{ color: 'var(--card-foreground)' }}
               >
                 Cancel
@@ -812,7 +824,7 @@ export default function UserTable({
                 type="button"
                 onClick={confirmArchive}
                 disabled={isPending}
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90 disabled:opacity-60"
+                className="px-5 py-2.5 md:px-7 md:py-3 rounded-lg text-sm md:text-base font-semibold text-white transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90 disabled:opacity-60"
                 style={{ backgroundColor: 'var(--status-danger)' }}
               >
                 {isPending ? 'Archiving…' : 'Archive account'}
@@ -828,11 +840,12 @@ export default function UserTable({
         <button
           type="button"
           onClick={() => setShowArchived((v) => !v)}
-          aria-pressed={showArchived}
+          aria-label={showArchived ? 'Back to users' : `Show archived accounts (${archivedCount})`}
           className="px-3 py-2 rounded-lg text-sm font-semibold border ef-border transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
           style={{ color: 'var(--card-foreground)', ...(showArchived ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)', borderColor: 'transparent' } : {}) }}
         >
-          Archived ({archivedCount})
+          {/* While the archive is open the same button takes you back to the users. */}
+          {showArchived ? '← Back to users' : `Archived (${archivedCount})`}
         </button>
         <span className="text-xs ef-muted tabular-nums">{visible.length} of {listed.length}</span>
       </div>
@@ -857,7 +870,6 @@ export default function UserTable({
               {pageRows.map((u) => {
                 const teaches = classesByTeacher[u.id]?.length ?? 0
                 const isMe = u.id === currentUserId
-                const blocked = removalBlocked(u)
                 return (
                   <tr key={u.id} className="transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
                     <td className="px-4 py-3">
@@ -916,24 +928,22 @@ export default function UserTable({
                           { label: 'Restore', onSelect: () => handleRestore(u.id), disabled: isPending },
                         ] : [
                           { label: 'Edit', onSelect: () => openEdit(u), disabled: isPending },
-                          ...(isMe
-                            ? []
-                            : [
-                                {
-                                  label: u.is_active ? 'Deactivate' : 'Activate',
-                                  onSelect: () => handleToggle(u.id, u.is_active),
-                                  // Activating is always allowed; deactivating may be blocked.
-                                  disabled: isPending || (u.is_active && !!blocked),
-                                  title: u.is_active ? blocked ?? undefined : undefined,
-                                },
-                                {
-                                  label: 'Archive',
-                                  danger: true,
-                                  onSelect: () => { setArchiveError(null); setToArchive(u) },
-                                  disabled: isPending || !!blocked,
-                                  title: blocked ?? undefined,
-                                },
-                              ]),
+                          // The only active admin can't be deactivated or archived;
+                          // with two or more, anyone (yourself included) can.
+                          // The server enforces the same rule (lastAdminBlock).
+                          {
+                            label: u.is_active ? 'Deactivate' : 'Activate',
+                            onSelect: () => handleToggle(u.id, u.is_active),
+                            disabled: isPending || (u.is_active && isOnlyAdmin(u)),
+                            title: u.is_active && isOnlyAdmin(u) ? ONLY_ADMIN_MSG : undefined,
+                          },
+                          {
+                            label: 'Archive',
+                            danger: true,
+                            onSelect: () => { setArchiveError(null); setToArchive(u) },
+                            disabled: isPending || isOnlyAdmin(u),
+                            title: isOnlyAdmin(u) ? ONLY_ADMIN_MSG : undefined,
+                          },
                         ]}
                       />
                     </td>

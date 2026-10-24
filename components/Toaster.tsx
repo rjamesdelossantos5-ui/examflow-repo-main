@@ -130,7 +130,7 @@ export default function Toaster() {
 
   return (
     <div
-      className="fixed z-[200] right-4 bottom-4 lg:right-auto lg:bottom-auto lg:left-4 lg:top-20 flex flex-col gap-2 w-[calc(100vw-2rem)] max-w-sm lg:max-w-lg pointer-events-none"
+      className="fixed z-[200] right-4 bottom-4 lg:right-auto lg:bottom-8 lg:left-1/2 lg:-translate-x-1/2 flex flex-col gap-3 lg:gap-3 w-[calc(100vw-2rem)] max-w-sm lg:w-[min(44rem,calc(100vw-4rem))] lg:max-w-none pointer-events-none"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       {items.map((t) => {
@@ -140,7 +140,7 @@ export default function Toaster() {
             key={t.id}
             role={success ? 'status' : 'alert'}
             aria-live={success ? 'polite' : 'assertive'}
-            className="ef-toast pointer-events-auto flex items-start gap-3 rounded-lg px-4 py-3 text-sm lg:px-5 lg:py-4 lg:text-base shadow-lg border"
+            className="ef-toast pointer-events-auto flex items-start gap-3 rounded-lg px-4 py-3 text-sm lg:gap-4 lg:rounded-xl lg:px-7 lg:py-5 lg:text-lg shadow-lg border"
             style={{
               background: 'var(--card)',
               color: 'var(--card-foreground)',
@@ -151,7 +151,7 @@ export default function Toaster() {
             {success && (
               <svg
                 viewBox="0 0 24 24"
-                className="w-5 h-5 lg:w-6 lg:h-6 shrink-0 mt-px"
+                className="w-5 h-5 lg:w-7 lg:h-7 shrink-0 mt-px"
                 fill="none"
                 stroke="var(--status-success, #16a34a)"
                 strokeWidth={2.25}
@@ -168,7 +168,7 @@ export default function Toaster() {
               type="button"
               onClick={() => dismiss(t.id)}
               aria-label="Dismiss"
-              className="shrink-0 leading-none text-lg ef-muted hover:opacity-70"
+              className="shrink-0 leading-none text-lg lg:text-2xl ef-muted hover:opacity-70"
             >
               ×
             </button>

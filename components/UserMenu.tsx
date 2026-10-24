@@ -127,16 +127,16 @@ export default function UserMenu({
             role="dialog"
             aria-modal="true"
             aria-labelledby="sign-out-title"
-            className="ef-dialog ef-card rounded-lg shadow-xl max-w-sm w-full p-6"
+            className="ef-dialog ef-card rounded-lg md:rounded-2xl shadow-xl max-w-sm md:max-w-lg w-full p-6 md:p-10"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="sign-out-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Sign out?</h3>
-            <p className="text-sm ef-muted mt-1">You can sign back in anytime and pick up where you left off.</p>
-            <div className="mt-6 flex justify-end gap-2">
+            <h3 id="sign-out-title" className="font-bold text-lg md:text-3xl" style={{ color: 'var(--card-foreground)' }}>Sign out?</h3>
+            <p className="text-sm md:text-lg ef-muted mt-1 md:mt-3">You can sign back in anytime and pick up where you left off.</p>
+            <div className="mt-6 md:mt-10 flex justify-end gap-2 md:gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmLogout(false)}
-                className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                className="px-4 py-2.5 md:px-7 md:py-3.5 rounded-lg text-sm md:text-lg font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                 style={{ color: 'var(--card-foreground)' }}
               >
                 Cancel
@@ -144,7 +144,7 @@ export default function UserMenu({
               <form action={logout}>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90"
+                  className="px-5 py-2.5 md:px-9 md:py-3.5 rounded-lg text-sm md:text-lg font-semibold transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90"
                   style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                 >
                   Sign out

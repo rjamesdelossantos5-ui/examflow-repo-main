@@ -8,6 +8,7 @@ import SubmitButton from '@/components/SubmitButton'
 import { Icon } from '@/components/Icon'
 import { compressImage } from '@/lib/compressImage'
 import Select from '@/components/Select'
+import MultiSelect from '@/components/MultiSelect'
 import PrivacyNoticeSheet from '@/components/PrivacyNoticeSheet'
 import { withoutAccountTag } from '@/lib/initials'
 import { isValidPhone } from '@/lib/validation'
@@ -452,20 +453,15 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 ) : subjectOptions.length === 0 ? (
                   <p className="text-sm ef-muted">{yearNum ? `No subjects for Year ${yearNum} yet.` : 'No subjects for that course yet.'}</p>
                 ) : (
-                  <ul className="rounded-lg border ef-border divide-y max-h-72 overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
-                    {subjectOptions.map((o) => {
-                      const on = picked.includes(o.id)
-                      const full = !on && picked.length >= MAX_SUBJECTS
-                      return (
-                        <li key={o.id}>
-                          <label className={`flex items-start gap-3 px-3 py-2.5 text-sm ${full ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} style={{ color: 'var(--card-foreground)' }}>
-                            <input type="checkbox" checked={on} disabled={full} onChange={() => togglePicked(o.id)} className="mt-0.5 w-4 h-4 accent-[var(--sti-gold)]" />
-                            <span>{o.code} — {o.name}</span>
-                          </label>
-                        </li>
-                      )
-                    })}
-                  </ul>
+                  <MultiSelect
+                    options={subjectOptions.map((o) => ({ value: o.id, label: `${o.code} — ${o.name}` }))}
+                    values={picked}
+                    onToggle={togglePicked}
+                    max={MAX_SUBJECTS}
+                    placeholder="— Select subjects —"
+                    className={selectClass}
+                    style={selectStyle}
+                  />
                 )}
                 <p className="mt-1 text-xs ef-muted">{picked.length} of {MAX_SUBJECTS} selected</p>
               </div>

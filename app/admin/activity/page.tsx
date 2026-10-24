@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { HIDDEN_PREFIXES } from '@/lib/historyFilter'
 import ActivityTable, { type ActivityRow } from './ActivityTable'
 
 export const metadata = { title: 'EXAMFLOW Admin — User Activity' }
@@ -13,7 +14,7 @@ const LIMIT = 1000
 // with it. Sign-ins are not here — they are in Login History.
 export default async function UserActivityPage() {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('progress_logs')
     .select(`
       id, actor_role, action, notes, created_at,
@@ -23,6 +24,11 @@ export default async function UserActivityPage() {
         subjects(subject_code)
       )
     `)
+  // The consent record stays in the database but is not listed here (the same
+  // lines every request's own history leaves out). Filtered in the query so the
+  // hidden rows don't use up the LIMIT below.
+  for (const prefix of HIDDEN_PREFIXES) query = query.not('action', 'like', `${prefix}%`)
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(LIMIT)
 

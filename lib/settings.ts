@@ -10,9 +10,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export const TOGGLE_SETTINGS = {
   /** Shows Admin → Reset Test Data and lets its actions run. */
   testReset: 'test_reset_enabled',
-  /** Lets an admin deactivate, delete or change the role of ANOTHER admin
-   *  account. An admin can never do that to their own account. */
-  adminAccountRemoval: 'admin_account_removal_enabled',
 } as const
 
 export type ToggleSettingKey = (typeof TOGGLE_SETTINGS)[keyof typeof TOGGLE_SETTINGS]

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 
 export interface SelectOption {
@@ -50,14 +51,55 @@ export default function Select({
   const current = isControlled ? value! : internal
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+  // Where the open list is drawn, in window coordinates. The list is drawn at
+  // the top level of the page (a portal), not inside this component: inside a
+  // pop-up or a scrolling table, an absolutely placed list was clipped by that
+  // box and made it grow a scrollbar of its own.
+  const [pos, setPos] = useState<{ left: number; width: number; top?: number; bottom?: number; maxHeight: number } | null>(null)
+
+  function toggle() {
+    if (open) return setOpen(false)
+    const r = buttonRef.current?.getBoundingClientRect()
+    if (r) {
+      const below = window.innerHeight - r.bottom - 8
+      const above = r.top - 8
+      // Opens upward when there is little room below and more above.
+      const up = below < 200 && above > below
+      setPos({
+        left: r.left,
+        width: r.width,
+        maxHeight: Math.min(240, up ? above : below),
+        ...(up ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }),
+      })
+    }
+    setOpen(true)
+  }
 
   useEffect(() => {
+    if (!open) return
     function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (ref.current?.contains(t) || listRef.current?.contains(t)) return
+      setOpen(false)
     }
+    // The list is fixed to the window, so it would be left behind by any scroll
+    // or resize of what it belongs to. Scrolling inside the list itself is fine.
+    function onScroll(e: Event) {
+      if (listRef.current && e.target instanceof Node && listRef.current.contains(e.target)) return
+      setOpen(false)
+    }
+    const close = () => setOpen(false)
     document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [])
+    document.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [open])
 
   function select(v: string) {
     if (!isControlled) setInternal(v)
@@ -85,8 +127,9 @@ export default function Select({
 
       <button
         type="button"
+        ref={buttonRef}
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className={`${className} flex items-center justify-between text-left disabled:opacity-50 disabled:cursor-not-allowed`}
         style={style}
       >
@@ -94,11 +137,21 @@ export default function Select({
         <Icon name="chevron-down" className={`w-4 h-4 shrink-0 ml-2 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
+      {open && pos && createPortal(
         <ul
+          ref={listRef}
           role="listbox"
-          className="absolute z-30 mt-1 w-full max-h-60 overflow-y-auto rounded-lg shadow-lg ef-card"
-          style={{ border: '1px solid var(--border)' }}
+          className="overflow-y-auto rounded-lg shadow-lg ef-card"
+          style={{
+            position: 'fixed',
+            zIndex: 300, // above every pop-up (they use up to z-[200])
+            left: pos.left,
+            width: pos.width,
+            top: pos.top,
+            bottom: pos.bottom,
+            maxHeight: pos.maxHeight,
+            border: '1px solid var(--border)',
+          }}
         >
           {options.length === 0 && <li className="px-3 py-2 text-sm ef-muted">No options</li>}
           {options.map((o) => (
@@ -119,7 +172,8 @@ export default function Select({
               </button>
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   )

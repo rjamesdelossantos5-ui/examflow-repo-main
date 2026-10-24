@@ -109,9 +109,11 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
       )}
 
       {/* The two forms side by side on wide screens; stacked on phones. */}
-      <div className="grid lg:grid-cols-2 gap-6 items-stretch">
-        <WindowForm active={active} periods={periods} onError={setError} isPending={isPending} startTransition={startTransition} />
+      {/* items-start: each card is only as tall as its own content. They used to
+          stretch to match, which left a gap above the term card's button. */}
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
         <ScheduleForm active={active} onError={setError} isPending={isPending} startTransition={startTransition} />
+        <WindowForm active={active} periods={periods} onError={setError} isPending={isPending} startTransition={startTransition} />
       </div>
     </div>
   )

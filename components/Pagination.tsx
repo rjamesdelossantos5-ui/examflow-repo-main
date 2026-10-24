@@ -43,18 +43,19 @@ export default function Pagination({ page, pages, total, size, onPage, onSize }:
   const from = (page - 1) * size + 1
   const to = Math.min(page * size, total)
   const btn =
-    'px-3 py-1.5 rounded-lg border ef-border text-xs font-semibold transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed'
+    'px-4 py-2 md:px-5 md:py-2.5 rounded-lg border ef-border text-sm md:text-base font-semibold transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-40 disabled:cursor-not-allowed'
 
+  // Centred under the table: the count on one line, the controls on the next.
   return (
-    <nav aria-label="Pagination" className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs ef-muted">
+    <nav aria-label="Pagination" className="mt-5 flex flex-col items-center gap-3 text-center text-sm md:text-base ef-muted">
       <span className="tabular-nums">Showing {from}–{to} of {total}</span>
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <label className="flex items-center gap-2">
           Rows per page
           <select
             value={size}
             onChange={(e) => onSize(Number(e.target.value))}
-            className="rounded-lg border ef-border px-2 py-1.5 text-xs cursor-pointer"
+            className="rounded-lg border ef-border px-3 py-2 md:py-2.5 text-sm md:text-base cursor-pointer"
             style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
           >
             {SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
