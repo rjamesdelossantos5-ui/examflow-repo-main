@@ -14,7 +14,7 @@
 //    phone browser is left open or its timers were paused.
 
 /** Longest a signed-in person may be inactive. */
-export const IDLE_MS = 15 * 60 * 1000
+export const IDLE_MS = 60 * 60 * 1000
 
 /** Cookie holding the time of the person's last activity (ms since epoch). */
 export const ACTIVE_COOKIE = 'ef-active'

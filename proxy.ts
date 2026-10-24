@@ -77,7 +77,7 @@ export async function proxy(request: NextRequest) {
   } else if (Number.isFinite(lastActive) && lastActive > 0 && Date.now() - lastActive > IDLE_MS) {
     await supabase.auth.signOut()
     const res = NextResponse.redirect(
-      new URL('/login?error=' + encodeURIComponent('You were signed out after 15 minutes of inactivity. Please sign in again.'), request.url),
+      new URL('/login?error=' + encodeURIComponent('You were signed out after 1 hour of inactivity. Please sign in again.'), request.url),
     )
     // The sign-out's cookie removals live on supabaseResponse; carry them over.
     supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c))

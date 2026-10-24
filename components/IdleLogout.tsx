@@ -6,7 +6,7 @@ import { ACTIVE_COOKIE, IDLE_MS } from '@/lib/sessionCookie'
 import { toastError } from '@/components/Toaster'
 
 /**
- * Signs the person out after IDLE_MS (15 minutes) without activity. Renders
+ * Signs the person out after IDLE_MS (1 hour) without activity. Renders
  * nothing. Mounted once in DashboardLayout, so it covers every role.
  *
  * "Activity" is a mouse move, click, key press, scroll or touch. The time of the

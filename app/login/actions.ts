@@ -147,5 +147,5 @@ export async function idleLogout() {
   await supabase.auth.signOut()
   ;(await cookies()).delete(ACTIVE_COOKIE)
   revalidatePath('/', 'layout')
-  redirect('/login?error=' + encodeURIComponent('You were signed out after 15 minutes of inactivity. Please sign in again.'))
+  redirect('/login?error=' + encodeURIComponent('You were signed out after 1 hour of inactivity. Please sign in again.'))
 }
