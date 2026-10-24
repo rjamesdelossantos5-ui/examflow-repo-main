@@ -512,6 +512,12 @@ export default function UserTable({
   // Archived accounts are kept out of the main list and shown on their own.
   const [showArchived, setShowArchived] = useState(false)
   const archivedCount = useMemo(() => users.filter((u) => u.archived_at).length, [users])
+  // The last-admin rule: with only one active admin, that account can't be
+  // demoted, deactivated or archived. Mirrors lastAdminBlock in ./actions, which
+  // is the real check.
+  const activeAdmins = useMemo(() => users.filter((u) => u.role === 'admin' && u.is_active && !u.archived_at).length, [users])
+  const isOnlyAdmin = (u: Profile) => activeAdmins <= 1 && u.role === 'admin' && u.is_active && !u.archived_at
+  const ONLY_ADMIN_MSG = 'This is the only admin account. Give another account the admin role first.'
   const listed = useMemo(() => users.filter((u) => !!u.archived_at === showArchived), [users, showArchived])
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -922,21 +928,22 @@ export default function UserTable({
                           { label: 'Restore', onSelect: () => handleRestore(u.id), disabled: isPending },
                         ] : [
                           { label: 'Edit', onSelect: () => openEdit(u), disabled: isPending },
-                          ...(isMe
-                            ? []
-                            : [
-                                {
-                                  label: u.is_active ? 'Deactivate' : 'Activate',
-                                  onSelect: () => handleToggle(u.id, u.is_active),
-                                  disabled: isPending,
-                                },
-                                {
-                                  label: 'Archive',
-                                  danger: true,
-                                  onSelect: () => { setArchiveError(null); setToArchive(u) },
-                                  disabled: isPending,
-                                },
-                              ]),
+                          // The only active admin can't be deactivated or archived;
+                          // with two or more, anyone (yourself included) can.
+                          // The server enforces the same rule (lastAdminBlock).
+                          {
+                            label: u.is_active ? 'Deactivate' : 'Activate',
+                            onSelect: () => handleToggle(u.id, u.is_active),
+                            disabled: isPending || (u.is_active && isOnlyAdmin(u)),
+                            title: u.is_active && isOnlyAdmin(u) ? ONLY_ADMIN_MSG : undefined,
+                          },
+                          {
+                            label: 'Archive',
+                            danger: true,
+                            onSelect: () => { setArchiveError(null); setToArchive(u) },
+                            disabled: isPending || isOnlyAdmin(u),
+                            title: isOnlyAdmin(u) ? ONLY_ADMIN_MSG : undefined,
+                          },
                         ]}
                       />
                     </td>

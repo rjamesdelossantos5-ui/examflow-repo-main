@@ -45,12 +45,29 @@ function readProfileFields(formData: FormData) {
 }
 
 /**
- * Whether the signed-in admin may deactivate or archive `userId`. Never their
- * own account — that could leave no admin at all. Any other account, including
- * another admin's, is allowed. Returns the error to show, or null if allowed.
+ * The last-admin rule. There must always be an admin who can sign in, so the
+ * ONLY active admin account can't be demoted, deactivated or archived. With two
+ * or more active admins, any of them may be (including the one doing it).
+ * Promoting an account to admin is never blocked. "Active" = role admin, active
+ * and not archived. Returns the error to show, or null if allowed.
+ *
+ * `done` completes "so it can't be …": 'demoted', 'deactivated' or 'archived'.
  */
-function blockedAccountRemoval(meId: string, userId: string, what: string): string | null {
-  return userId === meId ? `You can't ${what} your own account.` : null
+async function lastAdminBlock(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  done: string,
+): Promise<string | null> {
+  // archived_at only exists after migration_archive_users.sql; without it nobody is archived.
+  const withArchive = await supabase.from('profiles').select('id').eq('role', 'admin').eq('is_active', true).is('archived_at', null)
+  const admins = withArchive.error
+    ? (await supabase.from('profiles').select('id').eq('role', 'admin').eq('is_active', true)).data
+    : withArchive.data
+  const ids = (admins ?? []).map((a) => a.id as string)
+  if (ids.length <= 1 && ids.includes(userId)) {
+    return `This is the only admin account, so it can't be ${done}. Give another account the admin role first.`
+  }
+  return null
 }
 
 export async function createUser(formData: FormData) {
@@ -148,8 +165,12 @@ export async function updateUser(userId: string, formData: FormData) {
     const { data: target } = await supabase.from('profiles').select('email').eq('id', userId).maybeSingle()
     studentNumber = studentNumberFromEmail(target?.email as string | undefined) ?? studentNumber
   }
-  // Changing your own role would lock you out of this page.
-  if (userId === me.id && role !== 'admin') return { error: "You can't remove your own admin role." }
+  // Taking the admin role away (from anyone, yourself included) needs another
+  // active admin to remain. Making someone an admin is always allowed.
+  if (role !== 'admin') {
+    const blocked = await lastAdminBlock(supabase, userId, 'demoted')
+    if (blocked) return { error: blocked }
+  }
 
   const { data: updated, error } = await supabase
     .from('profiles')
@@ -196,9 +217,9 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
   const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
   if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
 
-  // Re-activating is always fine; deactivating follows the removal rules.
+  // Re-activating is always fine; deactivating follows the last-admin rule.
   if (!isActive) {
-    const blocked = blockedAccountRemoval(me.id, userId, 'deactivate')
+    const blocked = await lastAdminBlock(supabase, userId, 'deactivated')
     if (blocked) return { error: blocked }
   }
 
@@ -226,7 +247,7 @@ export async function archiveUser(userId: string) {
   const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
   if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
 
-  const blocked = blockedAccountRemoval(me.id, userId, 'archive')
+  const blocked = await lastAdminBlock(supabase, userId, 'archived')
   if (blocked) return { error: blocked }
 
   const { data: updated, error } = await supabase
