@@ -109,7 +109,7 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
       )}
 
       {/* The two forms side by side on wide screens; stacked on phones. */}
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
+      <div className="grid lg:grid-cols-2 gap-6 items-stretch">
         <WindowForm active={active} periods={periods} onError={setError} isPending={isPending} startTransition={startTransition} />
         <ScheduleForm active={active} onError={setError} isPending={isPending} startTransition={startTransition} />
       </div>
@@ -179,7 +179,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
   }
 
   return (
-    <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5">
+    <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5 flex flex-col">
       <div>
         <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>Current term &amp; submission window</h3>
         <p className="text-sm ef-muted">Which term the school is processing special exams for, and when students can submit. Leave the date blank to set the term now and add the window later.</p>
@@ -258,7 +258,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
         </div>
       )}
 
-      <button type="submit" disabled={isPending} className="px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+      <button type="submit" disabled={isPending} className="mt-auto px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 self-start" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
         {isPending ? 'Saving…' : effectiveStart ? (alreadySet ? 'Change window' : 'Save & set active') : 'Set as current term'}
       </button>
 
@@ -377,7 +377,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
       : null
 
   return (
-    <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5">
+    <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5 flex flex-col">
       <div>
         <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>Special exam schedule</h3>
         <p className="text-sm ef-muted">The one date the special exam is held for the active term. Runs over 1–2 days.</p>
@@ -426,7 +426,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
         <textarea value={bring} onChange={(e) => setBring(e.target.value)} disabled={!active} rows={3} placeholder="e.g. Valid ID, blue pen, official receipt…" className={`${input} resize-none`} />
       </div>
 
-      <button type="submit" disabled={isPending || !active} className="px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+      <button type="submit" disabled={isPending || !active} className="mt-auto px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 self-start" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
         {isPending ? 'Saving…' : alreadySet ? 'Change schedule' : 'Set schedule'}
       </button>
 
