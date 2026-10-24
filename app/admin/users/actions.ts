@@ -6,7 +6,6 @@ import { createAdminClient, SERVICE_KEY_MISSING } from '@/lib/supabase/admin'
 import { isValidEmail, isValidName, isValidStudentNumber, isValidCode } from '@/lib/validation'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import type { UserRole } from '@/lib/supabase/types'
-import { isSettingOn, TOGGLE_SETTINGS } from '@/lib/settings'
 import { studentNumberFromEmail } from '@/lib/studentNumber'
 
 const ALLOWED_ROLES: UserRole[] = ['admin', 'registrar', 'subject_teacher', 'program_head', 'student']
@@ -46,23 +45,12 @@ function readProfileFields(formData: FormData) {
 }
 
 /**
- * Whether the signed-in admin may deactivate or delete `userId`. Never their
- * own account — that could leave no admin at all. Another admin's account only
- * while "Allow removing admin accounts" is on in Admin → Settings
- * (lib/settings.ts). Returns the error to show, or null if allowed.
+ * Whether the signed-in admin may deactivate or archive `userId`. Never their
+ * own account — that could leave no admin at all. Any other account, including
+ * another admin's, is allowed. Returns the error to show, or null if allowed.
  */
-async function blockedAccountRemoval(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  meId: string,
-  userId: string,
-  what: string,
-): Promise<string | null> {
-  if (userId === meId) return `You can't ${what} your own account.`
-  const { data: target } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
-  if (target?.role === 'admin' && !(await isSettingOn(supabase, TOGGLE_SETTINGS.adminAccountRemoval))) {
-    return `This is an admin account. To ${what} it, turn on "Allow removing admin accounts" in Admin → Settings.`
-  }
-  return null
+function blockedAccountRemoval(meId: string, userId: string, what: string): string | null {
+  return userId === meId ? `You can't ${what} your own account.` : null
 }
 
 export async function createUser(formData: FormData) {
@@ -162,14 +150,6 @@ export async function updateUser(userId: string, formData: FormData) {
   }
   // Changing your own role would lock you out of this page.
   if (userId === me.id && role !== 'admin') return { error: "You can't remove your own admin role." }
-  // Taking the admin role away from someone else removes an admin, so it needs
-  // the same Settings switch as deactivating or deleting one.
-  if (role !== 'admin') {
-    const { data: target } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
-    if (target?.role === 'admin' && !(await isSettingOn(supabase, TOGGLE_SETTINGS.adminAccountRemoval))) {
-      return { error: 'This is an admin account. To change its role, turn on "Allow removing admin accounts" in Admin → Settings.' }
-    }
-  }
 
   const { data: updated, error } = await supabase
     .from('profiles')
@@ -218,7 +198,7 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
 
   // Re-activating is always fine; deactivating follows the removal rules.
   if (!isActive) {
-    const blocked = await blockedAccountRemoval(supabase, me.id, userId, 'deactivate')
+    const blocked = blockedAccountRemoval(me.id, userId, 'deactivate')
     if (blocked) return { error: blocked }
   }
 
@@ -246,7 +226,7 @@ export async function archiveUser(userId: string) {
   const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
   if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
 
-  const blocked = await blockedAccountRemoval(supabase, me.id, userId, 'archive')
+  const blocked = blockedAccountRemoval(me.id, userId, 'archive')
   if (blocked) return { error: blocked }
 
   const { data: updated, error } = await supabase

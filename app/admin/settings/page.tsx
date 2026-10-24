@@ -10,10 +10,9 @@ export const metadata = { title: 'EXAMFLOW Admin — Settings' }
 // special-exam fee (lib/fees.ts) and the safety switches (lib/settings.ts).
 export default async function AdminSettingsPage() {
   const supabase = await createClient()
-  const [fee, testReset, adminRemoval] = await Promise.all([
+  const [fee, testReset] = await Promise.all([
     getSpecialExamFee(supabase),
     isSettingOn(supabase, TOGGLE_SETTINGS.testReset),
-    isSettingOn(supabase, TOGGLE_SETTINGS.adminAccountRemoval),
   ])
 
   return (
@@ -45,17 +44,6 @@ export default async function AdminSettingsPage() {
           <>
             Shows the <strong>Reset Test Data</strong> tab, which can delete every request, uploaded file and imported
             school data. Turn it on only while testing, and keep it off once the school is using EXAMFLOW.
-          </>
-        }
-      />
-      <ToggleSetting
-        settingKey={TOGGLE_SETTINGS.adminAccountRemoval}
-        title="Allow removing admin accounts"
-        initialOn={adminRemoval}
-        description={
-          <>
-            Lets an admin deactivate, delete or change the role of <strong>another</strong> admin account. Nobody can
-            do this to their own account, whatever this is set to.
           </>
         }
       />

@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import UserTable, { type TeacherClass, type ClassOption } from './UserTable'
 import { getCurrentUser } from '@/lib/currentUser'
-import { isSettingOn, TOGGLE_SETTINGS } from '@/lib/settings'
 import { studentNumberFromEmail } from '@/lib/studentNumber'
 
 export const metadata = { title: 'EXAMFLOW Admin — Users' }
@@ -9,7 +8,7 @@ export const metadata = { title: 'EXAMFLOW Admin — Users' }
 export default async function UsersPage() {
   const supabase = await createClient()
 
-  const [{ data: users }, { data: departments }, { data: offerings }, { data: allClasses }, { data: programRows }, me, adminRemovalOn] = await Promise.all([
+  const [{ data: users }, { data: departments }, { data: offerings }, { data: allClasses }, { data: programRows }, me] = await Promise.all([
     supabase.from('profiles').select('*').order('full_name'),
     supabase.from('departments').select('*').order('name'),
     supabase.from('class_offerings').select('section, teacher_id, subjects(subject_code, subject_name)').not('teacher_id', 'is', null),
@@ -17,7 +16,6 @@ export default async function UsersPage() {
     supabase.from('class_offerings').select('id, section, teacher_id, subjects(subject_code, subject_name)'),
     supabase.from('program_departments').select('program, name'),
     getCurrentUser(),
-    isSettingOn(supabase, TOGGLE_SETTINGS.adminAccountRemoval),
   ])
 
   // What each teacher teaches, shown when their name is clicked.
@@ -62,7 +60,6 @@ export default async function UsersPage() {
         lockedStudentNumbers={lockedStudentNumbers}
         classesByTeacher={classesByTeacher}
         currentUserId={me?.id ?? null}
-        adminRemovalOn={adminRemovalOn}
       />
     </div>
   )

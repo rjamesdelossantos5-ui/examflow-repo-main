@@ -483,7 +483,6 @@ export default function UserTable({
   departments,
   classesByTeacher,
   currentUserId,
-  adminRemovalOn,
   sections,
   courseNames,
   classOptions,
@@ -502,14 +501,7 @@ export default function UserTable({
   classesByTeacher: Record<string, TeacherClass[]>
   /** The signed-in admin — their own row gets no Deactivate/Archive. */
   currentUserId: string | null
-  /** "Allow removing admin accounts" in Admin → Settings. */
-  adminRemovalOn: boolean
 }) {
-  // Mirrors blockedAccountRemoval in ./actions, which is the real check.
-  const removalBlocked = (u: Profile) =>
-    u.role === 'admin' && !adminRemovalOn
-      ? 'Admin account — turn on "Allow removing admin accounts" in Settings to change this.'
-      : null
   const [showCreate, setShowCreate] = useState(false)
   const [error, setError] = useState<string | null>(null)
   useErrorToast(error)
@@ -872,7 +864,6 @@ export default function UserTable({
               {pageRows.map((u) => {
                 const teaches = classesByTeacher[u.id]?.length ?? 0
                 const isMe = u.id === currentUserId
-                const blocked = removalBlocked(u)
                 return (
                   <tr key={u.id} className="transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
                     <td className="px-4 py-3">
@@ -937,16 +928,13 @@ export default function UserTable({
                                 {
                                   label: u.is_active ? 'Deactivate' : 'Activate',
                                   onSelect: () => handleToggle(u.id, u.is_active),
-                                  // Activating is always allowed; deactivating may be blocked.
-                                  disabled: isPending || (u.is_active && !!blocked),
-                                  title: u.is_active ? blocked ?? undefined : undefined,
+                                  disabled: isPending,
                                 },
                                 {
                                   label: 'Archive',
                                   danger: true,
                                   onSelect: () => { setArchiveError(null); setToArchive(u) },
-                                  disabled: isPending || !!blocked,
-                                  title: blocked ?? undefined,
+                                  disabled: isPending,
                                 },
                               ]),
                         ]}
