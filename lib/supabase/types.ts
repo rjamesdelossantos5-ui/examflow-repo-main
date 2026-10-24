@@ -21,6 +21,8 @@ export interface Profile {
   year_level: number | null
   section: string | null
   is_active: boolean
+  /** Set when an admin archived the account; null/absent = not archived. */
+  archived_at?: string | null
   can_override?: boolean
   created_at: string
 }

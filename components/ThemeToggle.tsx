@@ -28,7 +28,7 @@ export default function ThemeToggle({ variant = 'menu' }: { variant?: 'menu' | '
 
   // Avoid hydration mismatch flicker
   const label = !mounted ? 'Theme' : dark ? 'Light mode' : 'Dark mode'
-  const icon = dark ? '☀️' : '🌙'
+  const icon = dark ? '☼' : '☾'
 
   if (variant === 'icon') {
     return (

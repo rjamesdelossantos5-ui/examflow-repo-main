@@ -7,6 +7,7 @@ import UserMenu from './UserMenu'
 import NotificationBell, { type NotificationItem } from './NotificationBell'
 import LiveRefresh from './LiveRefresh'
 import Toaster from './Toaster'
+import IdleLogout from './IdleLogout'
 import { Icon, type IconName } from './Icon'
 import { ROLE_HOME } from '@/lib/nav'
 import type { UserRole } from '@/lib/supabase/types'
@@ -76,6 +77,10 @@ export default function DashboardLayout({
   const drawerOpen = drawerOpenedOn === pathname
   const setDrawerOpen = (open: boolean) => setDrawerOpenedOn(open ? pathname : null)
 
+  // Desktop only (lg and up): the burger hides the sidebar so the page gets the
+  // full width, and shows it again. Not remembered across reloads.
+  const [collapsed, setCollapsed] = useState(false)
+
   const brand = (
     <Link
       href={ROLE_HOME[role] ?? '/'}
@@ -123,6 +128,7 @@ export default function DashboardLayout({
       <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
         <LiveRefresh filter={liveFilter} />
         <Toaster />
+        <IdleLogout />
 
         {/* Brand bar — sticky so the sidebar (top-16) always sits right under it */}
         <header className="sticky top-0 z-50" style={{ backgroundColor: 'var(--header)' }}>
@@ -137,6 +143,17 @@ export default function DashboardLayout({
               >
                 <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                   {drawerOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCollapsed((c) => !c)}
+                className="hidden lg:block -ml-1 p-2 rounded-md text-white hover:bg-white/10 transition-colors"
+                aria-label={collapsed ? 'Show menu' : 'Hide menu'}
+                aria-expanded={!collapsed}
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <path d="M4 7h16M4 12h16M4 17h16" />
                 </svg>
               </button>
               {brandArea}
@@ -154,7 +171,7 @@ export default function DashboardLayout({
           <aside
             className={`fixed lg:sticky top-16 left-0 z-40 lg:z-30 w-64 shrink-0 h-[calc(100vh-4rem)] overflow-y-auto transition-transform duration-200 lg:translate-x-0 ${
               drawerOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
+            } ${collapsed ? 'lg:hidden' : ''}`}
             style={{ backgroundColor: 'var(--header)', borderRight: '1px solid rgba(255,255,255,0.08)' }}
           >
             <nav className="flex flex-col gap-1 p-3">
@@ -200,6 +217,7 @@ export default function DashboardLayout({
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       <LiveRefresh filter={liveFilter} />
       <Toaster />
+      <IdleLogout />
       {/* Brand bar */}
       <header className="relative z-50" style={{ backgroundColor: 'var(--header)' }}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">

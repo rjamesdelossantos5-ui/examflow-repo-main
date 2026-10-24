@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import SearchInput from '@/components/SearchInput'
 import Select from '@/components/Select'
+import Pagination, { usePagination } from '@/components/Pagination'
 
 export interface ActivityRow {
   id: string
@@ -39,6 +40,7 @@ export default function ActivityTable({ rows, capped }: { rows: ActivityRow[]; c
       (!q || [r.name, r.email, r.action, r.subject, r.student].some((v) => v && v.toLowerCase().includes(q))),
     )
   }, [rows, query, role])
+  const { items: pageRows, pagerProps } = usePagination(visible, `${query}|${role}`)
 
   return (
     <div className="space-y-3">
@@ -67,7 +69,7 @@ export default function ActivityTable({ rows, capped }: { rows: ActivityRow[]; c
             </tr>
           </thead>
           <tbody className="divide-y ef-border">
-            {visible.map((r) => (
+            {pageRows.map((r) => (
               <tr key={r.id} className="align-top">
                 <td className="px-4 py-2.5 whitespace-nowrap tabular-nums" style={{ color: 'var(--card-foreground)' }}>{r.when}</td>
                 <td className="px-4 py-2.5">
@@ -91,6 +93,7 @@ export default function ActivityTable({ rows, capped }: { rows: ActivityRow[]; c
           </tbody>
         </table>
       </div>
+      <Pagination {...pagerProps} />
     </div>
   )
 }

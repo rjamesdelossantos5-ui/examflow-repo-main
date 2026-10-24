@@ -7,6 +7,7 @@ import { isValidEmail, isValidName, isValidStudentNumber, isValidCode } from '@/
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import type { UserRole } from '@/lib/supabase/types'
 import { isSettingOn, TOGGLE_SETTINGS } from '@/lib/settings'
+import { studentNumberFromEmail } from '@/lib/studentNumber'
 
 const ALLOWED_ROLES: UserRole[] = ['admin', 'registrar', 'subject_teacher', 'program_head', 'student']
 
@@ -152,7 +153,13 @@ export async function updateUser(userId: string, formData: FormData) {
 
   const fields = readProfileFields(formData)
   if (fields.error !== null) return { error: fields.error }
-  const { fullName, role, departmentId, studentNumber, course, yearLevel, section } = fields
+  const { fullName, role, departmentId, course, yearLevel, section } = fields
+  let studentNumber = fields.studentNumber
+  // A school-email student's number comes from the email, not from this form.
+  if (role === 'student') {
+    const { data: target } = await supabase.from('profiles').select('email').eq('id', userId).maybeSingle()
+    studentNumber = studentNumberFromEmail(target?.email as string | undefined) ?? studentNumber
+  }
   // Changing your own role would lock you out of this page.
   if (userId === me.id && role !== 'admin') return { error: "You can't remove your own admin role." }
   // Taking the admin role away from someone else removes an admin, so it needs
@@ -203,7 +210,12 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
   return { error: null }
 }
 
-export async function deleteUser(userId: string) {
+/**
+ * Accounts are archived, never deleted from here: the profile and everything
+ * linked to it stay, the login is blocked (is_active = false) and the account
+ * leaves the main list. restoreUser brings it back.
+ */
+export async function archiveUser(userId: string) {
   const supabase = await createClient()
 
   const { data: { user: me } } = await supabase.auth.getUser()
@@ -212,14 +224,37 @@ export async function deleteUser(userId: string) {
   const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
   if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
 
-  const blocked = await blockedAccountRemoval(supabase, me.id, userId, 'delete')
+  const blocked = await blockedAccountRemoval(supabase, me.id, userId, 'archive')
   if (blocked) return { error: blocked }
 
-  const admin = createAdminClient()
-  if (!admin) return { error: SERVICE_KEY_MISSING }
+  const { data: updated, error } = await supabase
+    .from('profiles')
+    .update({ archived_at: new Date().toISOString(), is_active: false })
+    .eq('id', userId)
+    .select('id')
+  if (error) return { error: friendlyError('archiveUser', error, `We couldn't archive this account. ${RETRY_HINT}`) }
+  if (!updated?.length) return { error: 'This account no longer exists.' }
 
-  const { error } = await admin.auth.admin.deleteUser(userId)
-  if (error) return { error: friendlyError('deleteUser', error, `We couldn't delete this account. ${RETRY_HINT}`) }
+  revalidatePath('/admin/users')
+  return { error: null }
+}
+
+export async function restoreUser(userId: string) {
+  const supabase = await createClient()
+
+  const { data: { user: me } } = await supabase.auth.getUser()
+  if (!me) return { error: 'Unauthorized' }
+
+  const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
+  if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
+
+  const { data: updated, error } = await supabase
+    .from('profiles')
+    .update({ archived_at: null, is_active: true })
+    .eq('id', userId)
+    .select('id')
+  if (error) return { error: friendlyError('restoreUser', error, `We couldn't restore this account. ${RETRY_HINT}`) }
+  if (!updated?.length) return { error: 'This account no longer exists.' }
 
   revalidatePath('/admin/users')
   return { error: null }

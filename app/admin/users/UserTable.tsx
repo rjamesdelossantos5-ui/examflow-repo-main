@@ -3,9 +3,10 @@
 import { useErrorToast, toastSuccess } from '@/components/Toaster'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { Profile, Department } from '@/lib/supabase/types'
-import { toggleUserActive, deleteUser, createUser, updateUser } from './actions'
+import { toggleUserActive, archiveUser, restoreUser, createUser, updateUser } from './actions'
 import Select from '@/components/Select'
 import SearchInput from '@/components/SearchInput'
+import Pagination, { usePagination } from '@/components/Pagination'
 import { Icon } from '@/components/Icon'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { initials } from '@/lib/initials'
@@ -240,6 +241,7 @@ function RoleFields({
   courseNames,
   classOptions,
   initial,
+  lockedStudentNumber,
 }: {
   role: string
   onRoleChange: (role: string) => void
@@ -251,6 +253,8 @@ function RoleFields({
   /** Classes a new teacher can be given. Only the Create form passes it. */
   classOptions?: ClassOption[]
   initial?: Profile
+  /** Set when the number comes from the person's school email: shown, not editable. */
+  lockedStudentNumber?: string
 }) {
   const usesDepartment = role === 'subject_teacher' || role === 'program_head'
   return (
@@ -297,7 +301,14 @@ function RoleFields({
         <>
           <div>
             <label className={labelClass}>Student Number *</label>
-            <input name="student_number" required defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
+            {lockedStudentNumber ? (
+              <>
+                <input name="student_number" value={lockedStudentNumber} readOnly className={`${inputClass} opacity-60 cursor-not-allowed`} />
+                <p className="text-xs text-gray-500 mt-1">From their school email.</p>
+              </>
+            ) : (
+              <input name="student_number" required defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
+            )}
           </div>
           <StudentClassFields sections={sections} courseNames={courseNames} initial={initial} />
         </>
@@ -462,8 +473,11 @@ export default function UserTable({
   sections,
   courseNames,
   classOptions,
+  lockedStudentNumbers,
 }: {
   users: Profile[]
+  /** User id → student number taken from their school email; not editable. */
+  lockedStudentNumbers: Record<string, string>
   departments: Department[]
   /** Every section that has classes — the choices for a student's section. */
   sections: string[]
@@ -472,7 +486,7 @@ export default function UserTable({
   /** Every class, for giving a new teacher their classes. */
   classOptions: ClassOption[]
   classesByTeacher: Record<string, TeacherClass[]>
-  /** The signed-in admin — their own row gets no Deactivate/Delete. */
+  /** The signed-in admin — their own row gets no Deactivate/Archive. */
   currentUserId: string | null
   /** "Allow removing admin accounts" in Admin → Settings. */
   adminRemovalOn: boolean
@@ -489,24 +503,29 @@ export default function UserTable({
   // email, student number or section, and narrow by role.
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
+  // Archived accounts are kept out of the main list and shown on their own.
+  const [showArchived, setShowArchived] = useState(false)
+  const archivedCount = useMemo(() => users.filter((u) => u.archived_at).length, [users])
+  const listed = useMemo(() => users.filter((u) => !!u.archived_at === showArchived), [users, showArchived])
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return users.filter((u) =>
+    return listed.filter((u) =>
       (!roleFilter || u.role === roleFilter) &&
       (!q || [u.full_name, u.email, u.student_number, u.section].some((v) => (v ?? '').toLowerCase().includes(q))),
     )
-  }, [users, query, roleFilter])
+  }, [listed, query, roleFilter])
   // One table, sorted by role (ROLE_ORDER) and then by name, which the page
   // already orders by. A role not in ROLE_ORDER sorts last; nobody is hidden.
   const rows = useMemo(() => {
     const rank = (r: string) => (ROLE_ORDER.includes(r) ? ROLE_ORDER.indexOf(r) : ROLE_ORDER.length)
     return [...visible].sort((a, b) => rank(a.role) - rank(b.role))
   }, [visible])
+  const { items: pageRows, pagerProps } = usePagination(rows, `${query}|${roleFilter}|${showArchived}`)
   const roleCounts = useMemo(() => {
     const c: Record<string, number> = {}
-    for (const u of users) c[u.role] = (c[u.role] ?? 0) + 1
+    for (const u of listed) c[u.role] = (c[u.role] ?? 0) + 1
     return c
-  }, [users])
+  }, [listed])
   const [isPending, startTransition] = useTransition()
 
   const [newRole, setNewRole] = useState('')
@@ -526,12 +545,12 @@ export default function UserTable({
   const closeViewing = useCallback(() => setViewing(null), [])
   useEscapeKey(closeViewing, !!viewing)
 
-  // The account waiting for a Delete confirmation (null = dialog closed).
-  const [toDelete, setToDelete] = useState<Profile | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  useErrorToast(deleteError)
-  const closeDelete = useCallback(() => { setToDelete(null); setDeleteError(null) }, [])
-  useEscapeKey(closeDelete, !!toDelete && !isPending)
+  // The account waiting for an Archive confirmation (null = dialog closed).
+  const [toArchive, setToArchive] = useState<Profile | null>(null)
+  const [archiveError, setArchiveError] = useState<string | null>(null)
+  useErrorToast(archiveError)
+  const closeArchive = useCallback(() => { setToArchive(null); setArchiveError(null) }, [])
+  useEscapeKey(closeArchive, !!toArchive && !isPending)
 
   function handleToggle(userId: string, current: boolean) {
     startTransition(async () => {
@@ -541,13 +560,21 @@ export default function UserTable({
     })
   }
 
-  function confirmDelete() {
-    if (!toDelete) return
-    const userId = toDelete.id
+  function confirmArchive() {
+    if (!toArchive) return
+    const userId = toArchive.id
     startTransition(async () => {
-      const res = await deleteUser(userId)
-      if (res.error) setDeleteError(res.error)
-      else { setToDelete(null); toastSuccess('User deleted') }
+      const res = await archiveUser(userId)
+      if (res.error) setArchiveError(res.error)
+      else { setToArchive(null); toastSuccess('User archived') }
+    })
+  }
+
+  function handleRestore(userId: string) {
+    startTransition(async () => {
+      const res = await restoreUser(userId)
+      if (res.error) setError(res.error)
+      else toastSuccess('User restored')
     })
   }
 
@@ -648,7 +675,7 @@ export default function UserTable({
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-user-title"
-            className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
+            className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-[578px] p-8 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="edit-user-title" className="text-lg font-bold" style={{ color: 'var(--sti-navy)' }}>Edit User</h3>
@@ -662,7 +689,7 @@ export default function UserTable({
                 <label className={labelClass}>Full Name *</label>
                 <input name="full_name" required defaultValue={toEdit.full_name} className={inputClass} />
               </div>
-              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} initial={toEdit} />
+              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} initial={toEdit} lockedStudentNumber={lockedStudentNumbers[toEdit.id]} />
               {toEdit.role === 'subject_teacher' && editRole !== 'subject_teacher' && editTeaches > 0 && (
                 <p className="col-span-2 rounded-md px-3 py-2 text-xs bg-amber-50 border border-amber-200 text-amber-800">
                   They teach {editTeaches} class{editTeaches === 1 ? '' : 'es'}. Those stay assigned to them — and new requests
@@ -738,42 +765,42 @@ export default function UserTable({
         </div>
       )}
 
-      {/* Delete confirmation */}
-      {toDelete && (
-        <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={isPending ? undefined : closeDelete}>
+      {/* Archive confirmation */}
+      {toArchive && (
+        <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={isPending ? undefined : closeArchive}>
           <div
             role="alertdialog"
             aria-modal="true"
-            aria-labelledby="delete-user-title"
-            aria-describedby="delete-user-desc"
+            aria-labelledby="archive-user-title"
+            aria-describedby="archive-user-desc"
             className="ef-dialog ef-card rounded-lg shadow-xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="delete-user-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Delete this account?</h3>
+            <h3 id="archive-user-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Archive this account?</h3>
 
             {/* Who it is: name and email, the role as a small tag. No box. */}
             <div className="mt-4 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold break-words" style={{ color: 'var(--card-foreground)' }}>{toDelete.full_name}</p>
-                {toDelete.email !== toDelete.full_name && <p className="text-xs ef-muted break-all mt-0.5">{toDelete.email}</p>}
+                <p className="text-sm font-semibold break-words" style={{ color: 'var(--card-foreground)' }}>{toArchive.full_name}</p>
+                {toArchive.email !== toArchive.full_name && <p className="text-xs ef-muted break-all mt-0.5">{toArchive.email}</p>}
               </div>
               <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'color-mix(in srgb, var(--muted) 16%, transparent)', color: 'var(--card-foreground)' }}>
-                {ROLE_LABELS[toDelete.role] ?? toDelete.role}
+                {ROLE_LABELS[toArchive.role] ?? toArchive.role}
               </span>
             </div>
 
-            <p id="delete-user-desc" className="mt-4 text-sm ef-muted">
-              Their login and profile are removed for good. If they are in the School Data file, importing it again creates a new account for them.
+            <p id="archive-user-desc" className="mt-4 text-sm ef-muted">
+              They can no longer log in and leave this list. Their data is kept, and you can restore the account from the Archived view.
             </p>
 
-            {deleteError && (
-              <p role="alert" className="mt-4 text-sm" style={{ color: 'var(--status-danger)' }}>{deleteError}</p>
+            {archiveError && (
+              <p role="alert" className="mt-4 text-sm" style={{ color: 'var(--status-danger)' }}>{archiveError}</p>
             )}
 
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={closeDelete}
+                onClick={closeArchive}
                 disabled={isPending}
                 autoFocus
                 className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-50"
@@ -783,12 +810,12 @@ export default function UserTable({
               </button>
               <button
                 type="button"
-                onClick={confirmDelete}
+                onClick={confirmArchive}
                 disabled={isPending}
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90 disabled:opacity-60"
                 style={{ backgroundColor: 'var(--status-danger)' }}
               >
-                {isPending ? 'Deleting…' : 'Delete account'}
+                {isPending ? 'Archiving…' : 'Archive account'}
               </button>
             </div>
           </div>
@@ -797,15 +824,25 @@ export default function UserTable({
 
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <SearchInput value={query} onChange={setQuery} placeholder="Search name, email, student no. or section…" label="Search users" />
-        <RoleFilterMenu value={roleFilter} onChange={setRoleFilter} counts={roleCounts} total={users.length} />
-        <span className="text-xs ef-muted tabular-nums">{visible.length} of {users.length}</span>
+        <RoleFilterMenu value={roleFilter} onChange={setRoleFilter} counts={roleCounts} total={listed.length} />
+        <button
+          type="button"
+          onClick={() => setShowArchived((v) => !v)}
+          aria-pressed={showArchived}
+          className="px-3 py-2 rounded-lg text-sm font-semibold border ef-border transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+          style={{ color: 'var(--card-foreground)', ...(showArchived ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)', borderColor: 'transparent' } : {}) }}
+        >
+          Archived ({archivedCount})
+        </button>
+        <span className="text-xs ef-muted tabular-nums">{visible.length} of {listed.length}</span>
       </div>
 
       {visible.length === 0 ? (
         <div className="ef-card rounded-xl px-4 py-8 text-center text-sm ef-muted">
-          {users.length ? 'No user matches your search.' : 'No users found.'}
+          {listed.length ? 'No user matches your search.' : showArchived ? 'No archived accounts.' : 'No users found.'}
         </div>
       ) : (
+        <>
         <div className="ef-card rounded-xl overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -817,7 +854,7 @@ export default function UserTable({
               </tr>
             </thead>
             <tbody className="divide-y ef-border">
-              {rows.map((u) => {
+              {pageRows.map((u) => {
                 const teaches = classesByTeacher[u.id]?.length ?? 0
                 const isMe = u.id === currentUserId
                 const blocked = removalBlocked(u)
@@ -851,7 +888,7 @@ export default function UserTable({
                             {/* No Status column: only the exception is marked. */}
                             {!u.is_active && (
                               <span className="text-2xs font-semibold px-1.5 py-0.5 rounded ef-muted" style={{ border: '1px solid var(--border)' }}>
-                                Inactive
+                                {u.archived_at ? 'Archived' : 'Inactive'}
                               </span>
                             )}
                           </div>
@@ -875,7 +912,9 @@ export default function UserTable({
                     <td className="px-2 py-3 text-right">
                       <RowMenu
                         label={u.full_name}
-                        items={[
+                        items={u.archived_at ? [
+                          { label: 'Restore', onSelect: () => handleRestore(u.id), disabled: isPending },
+                        ] : [
                           { label: 'Edit', onSelect: () => openEdit(u), disabled: isPending },
                           ...(isMe
                             ? []
@@ -888,9 +927,9 @@ export default function UserTable({
                                   title: u.is_active ? blocked ?? undefined : undefined,
                                 },
                                 {
-                                  label: 'Delete',
+                                  label: 'Archive',
                                   danger: true,
-                                  onSelect: () => { setDeleteError(null); setToDelete(u) },
+                                  onSelect: () => { setArchiveError(null); setToArchive(u) },
                                   disabled: isPending || !!blocked,
                                   title: blocked ?? undefined,
                                 },
@@ -904,6 +943,8 @@ export default function UserTable({
             </tbody>
           </table>
         </div>
+        <Pagination {...pagerProps} />
+        </>
       )}
     </div>
   )

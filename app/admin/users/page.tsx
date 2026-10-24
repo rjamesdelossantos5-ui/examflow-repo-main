@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import UserTable, { type TeacherClass, type ClassOption } from './UserTable'
 import { getCurrentUser } from '@/lib/currentUser'
 import { isSettingOn, TOGGLE_SETTINGS } from '@/lib/settings'
+import { studentNumberFromEmail } from '@/lib/studentNumber'
 
 export const metadata = { title: 'EXAMFLOW Admin — Users' }
 
@@ -40,6 +41,13 @@ export default async function UsersPage() {
     return { id: o.id as string, section: o.section as string, code: sub?.subject_code ?? '—', name: sub?.subject_name ?? '', teacher: o.teacher_id ? nameById.get(o.teacher_id as string) ?? 'another teacher' : null }
   }).sort((a, b) => a.code.localeCompare(b.code) || a.section.localeCompare(b.section))
   const courseNames = Object.fromEntries((programRows ?? []).filter((p) => p.name).map((p) => [p.program as string, p.name as string]))
+  // Accounts whose school email carries the student number: it comes from the
+  // email, so the Edit form shows it read-only (same rule as My Account).
+  const lockedStudentNumbers: Record<string, string> = {}
+  for (const u of users ?? []) {
+    const n = studentNumberFromEmail(u.email as string)
+    if (n) lockedStudentNumbers[u.id as string] = n
+  }
 
   return (
     <div className="space-y-6">
@@ -51,6 +59,7 @@ export default async function UsersPage() {
         sections={sections}
         classOptions={classOptions}
         courseNames={courseNames}
+        lockedStudentNumbers={lockedStudentNumbers}
         classesByTeacher={classesByTeacher}
         currentUserId={me?.id ?? null}
         adminRemovalOn={adminRemovalOn}

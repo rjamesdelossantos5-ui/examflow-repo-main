@@ -1,17 +1,16 @@
 /**
- * Reads the school data workbook — one .xlsx, five sheets — that the admin
- * uploads on /admin/school-data. The real enrollment records are
- * confidential, so the school allowed a made-up but complete dataset instead:
+ * Reads the school data workbook — one .xlsx, four sheets — that the admin
+ * uploads on /admin/school-data. Students are not in the file: their accounts
+ * are created when they first sign in with Microsoft.
  *
  *   Departments  Department
  *   Programs     Program Code · Program Name · Department
  *   Staff        Full Name · Email · Role · Department
- *   Students     Student Number · Full Name · Email · Program Code · Year Level · Section
  *   Classes      Section · Subject Code · Subject Name · Teacher Email
  *
  * Every sheet is checked against the others (a class's teacher must be on the
- * Staff sheet, a student's section must have classes, …) so the admin fixes
- * the file once instead of configuring anything in the app. Tertiary only.
+ * Staff sheet, a class's program must be on the Programs sheet, …) so the admin
+ * fixes the file once instead of configuring anything in the app. Tertiary only.
  * Pure — no database, no imports — so it runs in the browser and can be tested
  * on its own.
  */
@@ -26,7 +25,6 @@ export type StaffRole = 'subject_teacher' | 'registrar' | 'program_head'
 
 export interface Program { code: string; name: string; department: string }
 export interface Staff { fullName: string; email: string; role: StaffRole; department: string | null }
-export interface Student { studentNumber: string; fullName: string; email: string; program: string; yearLevel: number; section: string }
 export interface ClassRow { section: string; program: string; yearLevel: number | null; code: string; subjectName: string; teacherEmail: string }
 export interface Issue { sheet: string; row: number | null; message: string }
 
@@ -34,7 +32,6 @@ export interface SchoolData {
   departments: string[]
   programs: Program[]
   staff: Staff[]
-  students: Student[]
   classes: ClassRow[]
   /** Subject code → name (the most common spelling in the file). */
   subjectNames: Record<string, string>
@@ -46,7 +43,6 @@ export const SHEETS = {
   Departments: ['Department'],
   Programs: ['Program Code', 'Program Name', 'Department'],
   Staff: ['Full Name', 'Email', 'Role', 'Department'],
-  Students: ['Student Number', 'Full Name', 'Email', 'Program Code', 'Year Level', 'Section'],
   Classes: ['Section', 'Subject Code', 'Subject Name', 'Teacher Email'],
 } as const
 type SheetName = keyof typeof SHEETS
@@ -138,7 +134,7 @@ export function readSchoolData(grids: Record<string, unknown[][]>): SchoolData {
     programs.push(p)
   }
 
-  // Staff and students share one email space: an email is one account.
+  // An email is one account: it can appear once on the Staff sheet.
   const emailOwner = new Map<string, string>()
   const claim = (sheet: string, row: number, email: string) => {
     if (!EMAIL.test(email)) { err(sheet, row, `"${email}" is not an email address.`); return false }
@@ -188,37 +184,12 @@ export function readSchoolData(grids: Record<string, unknown[][]>): SchoolData {
     subjectNames[code] = ranked[0].name
     if (ranked.length > 1) warnings.push({ sheet: 'Classes', row: null, message: `${code} has ${ranked.length} different names (${ranked.map((r) => r.name).join(' / ')}); “${ranked[0].name}” is used.` })
   }
-  const sectionsWithClasses = new Set(classes.map((c) => c.section))
-
-  // Students
-  const students: Student[] = []
-  const numbers = new Map<string, number>()
-  for (const { row, v } of readSheet('Students', grids, errors)) {
-    const email = v.Email.toLowerCase()
-    const program = v['Program Code'].toUpperCase().replace(/[^A-Z]/g, '')
-    const section = v.Section.toUpperCase()
-    const yearLevel = Number(v['Year Level'])
-    const studentNumber = v['Student Number'].replace(/\s+/g, '')
-    if (!v['Full Name']) { err('Students', row, 'Full Name is empty.'); continue }
-    if (!/^[0-9-]{4,20}$/.test(studentNumber)) { err('Students', row, `Student Number "${v['Student Number']}" must be digits.`); continue }
-    if (numbers.has(studentNumber)) { err('Students', row, `Student Number ${studentNumber} is already on row ${numbers.get(studentNumber)}.`); continue }
-    if (!programByCode.has(program)) { err('Students', row, `Program ${program || '(empty)'} is not on the Programs sheet.`); continue }
-    if (!Number.isInteger(yearLevel) || yearLevel < 1 || yearLevel > 5) { err('Students', row, `Year Level "${v['Year Level']}" must be 1 to 5.`); continue }
-    if (programOf(section) !== program) { err('Students', row, `Section ${section} doesn't belong to ${program}.`); continue }
-    if (!sectionsWithClasses.has(section)) { err('Students', row, `Section ${section} has no classes on the Classes sheet.`); continue }
-    if (!claim('Students', row, email)) continue
-    numbers.set(studentNumber, row)
-    students.push({ studentNumber, fullName: v['Full Name'], email, program, yearLevel, section })
-  }
 
   // Worth knowing, but not blocking.
   const teaching = new Set(classes.map((c) => c.teacherEmail))
   for (const s of staff) {
     if (s.role === 'subject_teacher' && !teaching.has(s.email)) warnings.push({ sheet: 'Staff', row: null, message: `${s.fullName} teaches no class on the Classes sheet.` })
   }
-  const withStudents = new Set(students.map((s) => s.section))
-  const empty = [...sectionsWithClasses].filter((s) => !withStudents.has(s))
-  if (empty.length) warnings.push({ sheet: 'Classes', row: null, message: `${empty.length} section${empty.length === 1 ? ' has' : 's have'} classes but no students: ${empty.slice(0, 8).join(', ')}${empty.length > 8 ? ', …' : ''}.` })
 
-  return { departments, programs, staff, students, classes, subjectNames, errors, warnings }
+  return { departments, programs, staff, classes, subjectNames, errors, warnings }
 }

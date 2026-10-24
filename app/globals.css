@@ -311,7 +311,7 @@ button:focus-visible,
 .dark .border-t,
 .dark .border-gray-200,
 .dark .border-gray-300,
-.dark .divide-y > :not([hidden]) ~ :not([hidden]) {
+.dark .divide-y > :not([hidden]) {
   border-color: var(--border) !important;
 }
 

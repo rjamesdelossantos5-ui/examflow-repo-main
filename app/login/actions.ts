@@ -6,6 +6,7 @@ import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { ROLE_HOME } from '@/lib/role-home'
 import { recordLogin } from '@/lib/loginHistory'
+import { ACTIVE_COOKIE } from '@/lib/sessionCookie'
 
 // The address the person is actually on — localhost, a phone on the same Wi-Fi,
 // a Vercel preview or the live site — so Microsoft sends them back there. A fixed
@@ -21,6 +22,14 @@ async function siteOrigin(): Promise<string> {
   const host = h.get('host') ?? ''
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
   return `${proto}://${host}`
+}
+
+const RATE_LIMITED = 'Too many login attempts. Please wait a few minutes, then try again.'
+
+// Supabase answers 429 / over_request_rate_limit when sign-ins come too fast;
+// that is not a wrong password and must not be reported as one.
+function isRateLimited(error: { status?: number; code?: string } | null): boolean {
+  return error?.status === 429 || error?.code === 'over_request_rate_limit'
 }
 
 export async function login(formData: FormData) {
@@ -39,6 +48,7 @@ export async function login(formData: FormData) {
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
+  if (isRateLimited(error)) return redirect('/login?error=' + encodeURIComponent(RATE_LIMITED))
   if (error || !data.user) {
     return redirect('/login?error=Invalid+email+or+password')
   }
@@ -77,6 +87,7 @@ export async function signIn(formData: FormData): Promise<{ error: string } | vo
   if (!email || !password) return { error: 'Please fill in all fields.' }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (isRateLimited(error)) return { error: RATE_LIMITED }
   if (error || !data.user) return { error: 'Invalid email or password.' }
 
   const { data: profile } = await supabase
@@ -115,6 +126,11 @@ export async function signInWithMicrosoft() {
       // profile: without it, Azure sends no name, so the account's name was
       // its email address (see the name swap in app/auth/callback/route.ts).
       scopes: 'email profile',
+      // Logging out ends EXAMFLOW's session only; the person is still signed in
+      // at Microsoft, which would silently sign them straight back into the same
+      // account. select_account makes Microsoft always show its account picker,
+      // so another account can be chosen from the same browser.
+      queryParams: { prompt: 'select_account' },
     },
   })
 
@@ -128,7 +144,18 @@ export async function signInWithMicrosoft() {
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  ;(await cookies()).delete(ACTIVE_COOKIE)
   revalidatePath('/', 'layout')
   // Straight to the landing page's login popup.
   redirect('/?login=1')
+}
+
+// Called by components/IdleLogout.tsx once the page has seen IDLE_MS without
+// activity. Same as logout(), but the login popup says why.
+export async function idleLogout() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  ;(await cookies()).delete(ACTIVE_COOKIE)
+  revalidatePath('/', 'layout')
+  redirect('/login?error=' + encodeURIComponent('You were signed out after 1 hour of inactivity. Please sign in again.'))
 }

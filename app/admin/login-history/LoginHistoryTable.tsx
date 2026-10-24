@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import SearchInput from '@/components/SearchInput'
 import Select from '@/components/Select'
+import Pagination, { usePagination } from '@/components/Pagination'
 
 export interface LoginRow {
   id: string
@@ -39,6 +40,7 @@ export default function LoginHistoryTable({ rows, capped }: { rows: LoginRow[]; 
       (!q || r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)),
     )
   }, [rows, query, role])
+  const { items: pageRows, pagerProps } = usePagination(visible, `${query}|${role}`)
 
   return (
     <div className="space-y-3">
@@ -66,7 +68,7 @@ export default function LoginHistoryTable({ rows, capped }: { rows: LoginRow[]; 
             </tr>
           </thead>
           <tbody className="divide-y ef-border">
-            {visible.map((r) => (
+            {pageRows.map((r) => (
               <tr key={r.id}>
                 <td className="px-4 py-2.5 whitespace-nowrap tabular-nums" style={{ color: 'var(--card-foreground)' }}>{r.when}</td>
                 <td className="px-4 py-2.5">
@@ -83,6 +85,7 @@ export default function LoginHistoryTable({ rows, capped }: { rows: LoginRow[]; 
           </tbody>
         </table>
       </div>
+      <Pagination {...pagerProps} />
     </div>
   )
 }

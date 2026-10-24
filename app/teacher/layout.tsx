@@ -26,6 +26,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   const isAdmin = profile.role === 'admin'
   const nav = [
     ...(isAdmin ? [{ label: 'All Requests', href: '/admin/requests', icon: 'layers' as const }] : []),
+    { label: 'Dashboard', href: '/teacher/dashboard', icon: 'chart' as const },
     { label: 'Pending Queue', href: '/teacher', icon: 'inbox' as const, badge: pending },
     { label: 'Reviewed History', href: '/teacher/history', icon: 'history' as const },
   ]

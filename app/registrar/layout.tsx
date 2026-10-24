@@ -24,6 +24,7 @@ export default async function RegistrarLayout({ children }: { children: React.Re
   const isAdmin = profile.role === 'admin'
   const nav = [
     ...(isAdmin ? [{ label: 'All Requests', href: '/admin/requests', icon: 'layers' as const }] : []),
+    { label: 'Dashboard', href: '/registrar/dashboard', icon: 'chart' as const },
     // The Registrar's only touch of a paid request: after the Program Head
     // accepts, total the student's special-exam subjects and pass the amount to
     // the Cashier. See app/registrar/assessment/page.tsx.

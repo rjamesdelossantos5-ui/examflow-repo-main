@@ -39,6 +39,14 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString()
 }
 
+// "Oct 16, 2026, 2:35 PM" in the school's time zone, so the server and the
+// browser can't disagree about the time shown (same as the admin pages).
+const stampFmt = new Intl.DateTimeFormat('en-PH', {
+  timeZone: 'Asia/Manila',
+  year: 'numeric', month: 'short', day: 'numeric',
+  hour: 'numeric', minute: '2-digit',
+})
+
 export default async function RequestDetailPage({
   params,
   searchParams,
@@ -140,7 +148,11 @@ export default async function RequestDetailPage({
 
   const logs = (req.progress_logs as { id: string; action: string; created_at: string; actor_role: UserRole }[]) ?? []
   // The timeline below leaves out the consent record (kept in the database).
-  const shownLogs = logs.filter((l) => shownInHistory(l.action))
+  // Oldest first. The query doesn't order the embedded log rows, so they come
+  // back in storage order, which put "Verified by Registrar" after the receipt.
+  const shownLogs = logs
+    .filter((l) => shownInHistory(l.action))
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
   // The Program Head's reason, from the log line returnForReverification writes.
   const reverifyReason = reverifyRequested
     ? [...logs]
@@ -184,7 +196,7 @@ export default async function RequestDetailPage({
   }
 
   return (
-    <div className="max-w-2xl space-y-5">
+    <div className="mx-auto max-w-2xl space-y-5">
       {/* Opening the request counts as viewing it: the bell stops flagging it as new. */}
       <MarkViewed ids={[req.id]} />
       <Link href="/student" className="inline-flex items-center gap-1 text-sm ef-muted hover:underline">
@@ -364,7 +376,7 @@ export default async function RequestDetailPage({
               />
               <p className="text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>{log.action}{log.actor_role === 'admin' && ' (by Admin)'}</p>
               <p className="text-xs ef-muted mt-0.5">
-                <span className="capitalize">{log.actor_role.replace(/_/g, ' ')}</span> · {timeAgo(log.created_at)}
+                <span className="capitalize">{log.actor_role.replace(/_/g, ' ')}</span> · {stampFmt.format(new Date(log.created_at))} · {timeAgo(log.created_at)}
               </p>
             </li>
           ))}

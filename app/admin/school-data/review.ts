@@ -89,7 +89,7 @@ export async function compareWithLive(supabase: SupabaseClient, data: SchoolData
   const skippedAdmins: string[] = []
   let unchangedAccounts = 0
 
-  const compare = (person: { email: string; fullName: string; role: string; department: string | null; studentNumber?: string; program?: string; yearLevel?: number; section?: string }) => {
+  const compare = (person: { email: string; fullName: string; role: string; department: string | null }) => {
     inFile.add(person.email)
     const p = byEmail.get(person.email)
     if (!p) { newAccounts.push({ label: person.fullName, detail: `${person.email} · ${ROLE_LABEL[person.role]}` }); return }
@@ -101,20 +101,18 @@ export async function compareWithLive(supabase: SupabaseClient, data: SchoolData
     diff('Role', ROLE_LABEL[p.role] ?? p.role, ROLE_LABEL[person.role])
     diff('Name', p.full_name, person.fullName)
     diff('Department', p.department_id ? deptName.get(p.department_id) : '', person.department ?? '')
-    // The import clears these for staff and sets them for students.
-    diff('Section', p.section, person.section ?? '')
-    diff('Course', p.course, person.program ?? '')
-    diff('Year', p.year_level ?? '', person.yearLevel ?? '')
-    diff('Student no.', p.student_number, person.studentNumber ?? '')
+    // The import clears the student details of anyone it lists as staff.
+    diff('Section', p.section, '')
+    diff('Course', p.course, '')
+    diff('Year', p.year_level ?? '', '')
+    diff('Student no.', p.student_number, '')
     if (changes.length) changedAccounts.push({ label: `${person.fullName} (${person.email})`, detail: changes.join(' · ') })
     else unchangedAccounts++
   }
   for (const s of data.staff) compare({ email: s.email, fullName: s.fullName, role: s.role, department: s.department })
-  for (const s of data.students) {
-    compare({ email: s.email, fullName: s.fullName, role: 'student', department: programDept.get(s.program) ?? null, studentNumber: s.studentNumber, program: s.program, yearLevel: s.yearLevel, section: s.section })
-  }
+  // Students are not in the file, so they are never listed as "not in this file".
   const keptAccounts = ((profiles ?? []) as Existing[])
-    .filter((p) => p.role !== 'admin' && !inFile.has(norm(p.email)))
+    .filter((p) => p.role !== 'admin' && p.role !== 'student' && !inFile.has(norm(p.email)))
     .map((p) => ({ label: p.full_name, detail: `${p.email} · ${ROLE_LABEL[p.role] ?? p.role}` }))
 
   // ── Classes (replaced as a whole list) ──

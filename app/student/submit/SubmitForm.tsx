@@ -1,6 +1,6 @@
 'use client'
 
-import { useErrorToast } from '@/components/Toaster'
+import { useErrorToast, toastError } from '@/components/Toaster'
 import { useCallback, useRef, useState } from 'react'
 import { useEscapeKey } from '@/lib/useEscapeKey'
 import { submitRequest } from './actions'
@@ -201,7 +201,13 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
       setSubjectError('Select at least one subject.')
       return
     }
-    if (form.reportValidity()) setConfirming(true)
+    if (form.reportValidity()) { setConfirming(true); return }
+    // The browser's own bubble sits beside the field and is easy to miss on a
+    // long form (and on phones), so the same message also pops up bottom-right.
+    const bad = form.querySelector<HTMLInputElement>(':invalid')
+    const label = bad?.closest('div')?.querySelector('label')?.textContent?.replace(/\s*\*\s*$/, '').trim()
+    const message = bad?.validationMessage || 'Please complete the highlighted field.'
+    toastError(label && label.length <= 40 ? `${label}: ${message}` : message)
   }
 
   const docLabel = REASONS.find((r) => r.value === reason)?.doc ?? 'Supporting Document'
@@ -213,7 +219,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   return (
     // Phones and tablets keep the narrow form; on a laptop or desktop it grows
     // so the page isn't a thin column beside empty space.
-    <div className="max-w-xl lg:max-w-4xl">
+    <div className="mx-auto max-w-xl lg:max-w-4xl">
       <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--foreground)' }}>Submit New Request</h1>
       <p className="text-sm ef-muted mb-6">Complete the form below to request a special exam.</p>
 

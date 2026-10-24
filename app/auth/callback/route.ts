@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ROLE_HOME } from '@/lib/role-home'
 import { recordLogin } from '@/lib/loginHistory'
+import { asSessionCookie } from '@/lib/sessionCookie'
+import { withoutAccountTag } from '@/lib/initials'
 
 // Student AND teacher accounts both use this domain (@stamaria.sti.edu.ph).
 const ALLOWED_DOMAIN = process.env.SCHOOL_EMAIL_DOMAIN ?? '@stamaria.sti.edu.ph'
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
           pendingCookies = cookiesToSet
           cookiesToSet.forEach(({ name, value, options }) => {
             try {
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, asSessionCookie(value, options))
             } catch {
               // fine to ignore here; the values below on the response are what matter
             }
@@ -56,7 +58,7 @@ export async function GET(request: Request) {
   function respond(location: string) {
     const res = NextResponse.redirect(`${origin}${location}`)
     pendingCookies.forEach(({ name, value, options }) => {
-      res.cookies.set(name, value, options as never)
+      res.cookies.set(name, value, asSessionCookie(value, options) as never)
     })
     return res
   }
@@ -137,15 +139,22 @@ export async function GET(request: Request) {
   // sends — Supabase refreshes user_metadata on every sign-in — but never
   // overwrite a name the person typed themselves. Best effort: a failed update
   // must not block the sign-in.
-  const msName = String(data.user.user_metadata?.full_name ?? '').trim().slice(0, 200)
-  const current = String(profile.full_name ?? '').trim().toLowerCase()
-  const isPlaceholder = current === email || current === email.split('@')[0]
-  if (msName && isPlaceholder && msName.toLowerCase() !== current) {
+  //
+  // School Microsoft accounts are named "Surname, Given (Student)": the bracketed
+  // tag is Microsoft's, not part of the name, so it is dropped from what is saved.
+  // Removing only that tag is safe for a name the person typed, so it is also
+  // removed from an already-saved name (new accounts arrive with it from
+  // handle_new_user, which copies Microsoft's name as is).
+  const msName = withoutAccountTag(String(data.user.user_metadata?.full_name ?? '').trim().slice(0, 200))
+  const stored = String(profile.full_name ?? '').trim()
+  const isPlaceholder = stored.toLowerCase() === email || stored.toLowerCase() === email.split('@')[0]
+  const nextName = isPlaceholder ? msName : withoutAccountTag(stored)
+  if (nextName && nextName !== stored) {
     // Service role: a database guard stops users changing their own full_name.
     // The row is the one just authenticated above.
     const admin = createAdminClient()
     if (admin) {
-      const { error: nameError } = await admin.from('profiles').update({ full_name: msName }).eq('id', data.user.id)
+      const { error: nameError } = await admin.from('profiles').update({ full_name: nextName }).eq('id', data.user.id)
       if (nameError) console.error('[auth/callback] name update failed', nameError)
     }
   }

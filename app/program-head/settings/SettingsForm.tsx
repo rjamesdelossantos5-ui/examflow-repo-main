@@ -21,6 +21,27 @@ function toLocalInput(iso: string | null) {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
+// <input type="time"> wants 'HH:mm' in LOCAL time. Midnight means "no time was
+// set" (every schedule saved before times existed is midnight), so it reads blank.
+function toLocalTime(iso: string | null) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (d.getHours() === 0 && d.getMinutes() === 0) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+// A local date ('yyyy-MM-dd') and an optional time ('HH:mm') as one Date.
+function combine(date: string, time: string) {
+  return new Date(`${date}T${time || '00:00'}:00`)
+}
+// "Oct 23, 2026" or, when a time was set, "Oct 23, 2026, 8:00 AM".
+function fmtWhen(iso: string | null) {
+  if (!iso) return null
+  const d = new Date(iso)
+  const date = fmt(iso)
+  if (d.getHours() === 0 && d.getMinutes() === 0) return date
+  return `${date}, ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+}
 
 // 'Opens 3 Nov 2025 · 7 days', or a plain statement when the term is current
 // but has no window yet. Never build this by concatenating submissionStart
@@ -38,7 +59,7 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
 
   // The special exam in one phrase for the status strip.
   const examSummary = active?.examDay
-    ? `${fmt(active.examDay)}${active.examEndDay ? ` to ${fmt(active.examEndDay)}` : ''}${active.examLocation ? `, ${active.examLocation}` : ''}`
+    ? `${fmtWhen(active.examDay)}${active.examEndDay ? ` to ${fmtWhen(active.examEndDay)}` : ''}${active.examLocation ? `, ${active.examLocation}` : ''}`
     : 'Not scheduled yet'
 
   return (
@@ -88,7 +109,7 @@ export default function SettingsForm({ active, periods }: { active: ExamPeriod |
       )}
 
       {/* The two forms side by side on wide screens; stacked on phones. */}
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
+      <div className="grid lg:grid-cols-2 gap-6 items-stretch">
         <WindowForm active={active} periods={periods} onError={setError} isPending={isPending} startTransition={startTransition} />
         <ScheduleForm active={active} onError={setError} isPending={isPending} startTransition={startTransition} />
       </div>
@@ -158,7 +179,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
   }
 
   return (
-    <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5">
+    <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5 flex flex-col">
       <div>
         <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>Current term &amp; submission window</h3>
         <p className="text-sm ef-muted">Which term the school is processing special exams for, and when students can submit. Leave the date blank to set the term now and add the window later.</p>
@@ -237,7 +258,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
         </div>
       )}
 
-      <button type="submit" disabled={isPending} className="px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+      <button type="submit" disabled={isPending} className="mt-auto px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 self-start" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
         {isPending ? 'Saving…' : effectiveStart ? (alreadySet ? 'Change window' : 'Save & set active') : 'Set as current term'}
       </button>
 
@@ -281,6 +302,8 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
 function ScheduleForm({ active, onError, isPending, startTransition }: FormProps) {
   const [examStart, setExamStart] = useState(toLocalInput(active?.examDay ?? null))
   const [examEnd, setExamEnd] = useState(toLocalInput(active?.examEndDay ?? null))
+  const [startTime, setStartTime] = useState(toLocalTime(active?.examDay ?? null))
+  const [endTime, setEndTime] = useState(toLocalTime(active?.examEndDay ?? null))
   const [location, setLocation] = useState(active?.examLocation ?? '')
   const [bring, setBring] = useState(active?.examBring ?? '')
   const [saved, setSaved] = useState(false)
@@ -297,7 +320,9 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
   function unchanged() {
     return (
       examStart === toLocalInput(active?.examDay ?? null) &&
-      examEnd === toLocalInput(active?.examEndDay ?? null) &&
+      endDate === toLocalInput(active?.examEndDay ?? null) &&
+      startTime === toLocalTime(active?.examDay ?? null) &&
+      endTime === toLocalTime(active?.examEndDay ?? null) &&
       location.trim() === (active?.examLocation ?? '') &&
       bring.trim() === (active?.examBring ?? '')
     )
@@ -307,6 +332,9 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
   // A date in the past means the exam has already happened.
   const todayStr = toLocalInput(new Date().toISOString())
 
+  // A closing time with no last day means the exam ends that same day.
+  const endDate = examEnd || (endTime ? examStart : '')
+
   function submit(e: React.FormEvent) {
     e.preventDefault()
     onError(null); setSaved(false); setInfo(null)
@@ -314,6 +342,8 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
     if (!examStart) { onError('Set the exam date.'); return }
     if (examStart < todayStr) { onError('The exam date can’t be in the past.'); return }
     if (examEnd && examEnd < todayStr) { onError('The last exam day can’t be in the past.'); return }
+    if (startTime && combine(examStart, startTime) < new Date()) { onError('The exam start time can’t be in the past.'); return }
+    if (endDate && combine(endDate, endTime).getTime() < combine(examStart, startTime).getTime()) { onError('The exam must end after it starts.'); return }
     if (alreadySet && unchanged()) { setInfo('You haven’t changed anything, so there’s nothing to save.'); return }
     setConfirmOpen(true) // in-app confirmation instead of a browser popup
   }
@@ -322,8 +352,8 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
     setConfirmOpen(false)
     startTransition(async () => {
       const res = await saveExamSchedule({
-        examStart: new Date(examStart + 'T00:00:00').toISOString(),
-        examEnd: examEnd ? new Date(examEnd + 'T00:00:00').toISOString() : '',
+        examStart: combine(examStart, startTime).toISOString(),
+        examEnd: endDate ? combine(endDate, endTime).toISOString() : '',
         examLocation: location,
         examBring: bring,
       })
@@ -332,8 +362,8 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
     })
   }
 
-  const newStartLabel = examStart ? fmt(new Date(examStart + 'T00:00:00').toISOString()) : '—'
-  const newEndLabel = examEnd ? fmt(new Date(examEnd + 'T00:00:00').toISOString()) : null
+  const newStartLabel = examStart ? fmtWhen(combine(examStart, startTime).toISOString()) : '—'
+  const newEndLabel = endDate ? fmtWhen(combine(endDate, endTime).toISOString()) : null
 
   // Non-blocking sanity check: the exam should fall AFTER submissions close.
   // If it's on or before the window's close day, students can keep filing
@@ -347,7 +377,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
       : null
 
   return (
-    <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5">
+    <form onSubmit={submit} className="ef-card rounded-xl shadow-sm p-6 space-y-5 flex flex-col">
       <div>
         <h3 className="font-bold" style={{ color: 'var(--card-foreground)' }}>Special exam schedule</h3>
         <p className="text-sm ef-muted">The one date the special exam is held for the active term. Runs over 1–2 days.</p>
@@ -358,7 +388,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
       {info && <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 text-sm text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-300">{info}</div>}
       {alreadySet && !saved && (
         <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
-          Current: <strong>{fmt(active!.examDay)}</strong>{active!.examEndDay ? <> → <strong>{fmt(active!.examEndDay)}</strong></> : null}
+          Current: <strong>{fmtWhen(active!.examDay)}</strong>{active!.examEndDay ? <> → <strong>{fmtWhen(active!.examEndDay)}</strong></> : null}
         </div>
       )}
 
@@ -370,6 +400,14 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
         <div>
           <label className={label}>Last day (optional, if multi-day)</label>
           <input type="date" value={examEnd} min={examStart || todayStr} onChange={(e) => setExamEnd(e.target.value)} disabled={!active} className={input} />
+        </div>
+        <div>
+          <label className={label}>Start time (optional)</label>
+          <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} disabled={!active} className={input} />
+        </div>
+        <div>
+          <label className={label}>End time (optional)</label>
+          <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={!active} className={input} />
         </div>
       </div>
 
@@ -388,7 +426,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
         <textarea value={bring} onChange={(e) => setBring(e.target.value)} disabled={!active} rows={3} placeholder="e.g. Valid ID, blue pen, official receipt…" className={`${input} resize-none`} />
       </div>
 
-      <button type="submit" disabled={isPending || !active} className="px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+      <button type="submit" disabled={isPending || !active} className="mt-auto px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 self-start" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
         {isPending ? 'Saving…' : alreadySet ? 'Change schedule' : 'Set schedule'}
       </button>
 
@@ -401,7 +439,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
             </h3>
             <div className="mt-3 space-y-2 text-sm">
               {alreadySet && (
-                <p className="ef-muted">Current: <span style={{ color: 'var(--card-foreground)' }}>{fmt(active!.examDay)}{active!.examEndDay ? ` → ${fmt(active!.examEndDay)}` : ''}</span></p>
+                <p className="ef-muted">Current: <span style={{ color: 'var(--card-foreground)' }}>{fmtWhen(active!.examDay)}{active!.examEndDay ? ` → ${fmtWhen(active!.examEndDay)}` : ''}</span></p>
               )}
               <p className="ef-muted">
                 New: <strong style={{ color: 'var(--card-foreground)' }}>{newStartLabel}{newEndLabel ? ` → ${newEndLabel}` : ''}</strong>
