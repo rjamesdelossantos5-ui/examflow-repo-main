@@ -180,6 +180,28 @@ export async function updateUser(userId: string, formData: FormData) {
   if (error) return { error: friendlyError('updateUser', error, `We couldn't save these changes. ${RETRY_HINT}`) }
   if (!updated?.length) return { error: 'This account no longer exists.' }
 
+  // A teacher's classes, when the Edit form showed the class list (class_ids_sent):
+  // what is ticked becomes theirs, and classes that were theirs but are now
+  // unticked lose their teacher. Only classes that exist are touched. Requests
+  // already sent keep the teacher they went to. The School Data import can set
+  // these again from its Classes sheet.
+  if (role === 'subject_teacher' && formData.get('class_ids_sent') === '1') {
+    const wanted = new Set(formData.getAll('class_ids').map(String).slice(0, 500))
+    const { data: mine, error: readErr } = await supabase.from('class_offerings').select('id').eq('teacher_id', userId)
+    if (readErr) return { error: friendlyError('updateUser.classes.read', readErr, `Saved, but this teacher's classes could not be read. Set them on the Subjects page. ${RETRY_HINT}`) }
+    const had = new Set((mine ?? []).map((c) => c.id as string))
+    const remove = [...had].filter((id) => !wanted.has(id))
+    const add = [...wanted].filter((id) => !had.has(id))
+    if (remove.length) {
+      const { error: e } = await supabase.from('class_offerings').update({ teacher_id: null }).in('id', remove)
+      if (e) return { error: friendlyError('updateUser.classes.remove', e, `Saved, but some classes could not be taken off this teacher. Set them on the Subjects page. ${RETRY_HINT}`) }
+    }
+    if (add.length) {
+      const { error: e } = await supabase.from('class_offerings').update({ teacher_id: userId }).in('id', add)
+      if (e) return { error: friendlyError('updateUser.classes.add', e, `Saved, but some classes could not be given to this teacher. Set them on the Subjects page. ${RETRY_HINT}`) }
+    }
+  }
+
   revalidatePath('/admin/users')
   revalidatePath('/admin/subjects')
   return { error: null }

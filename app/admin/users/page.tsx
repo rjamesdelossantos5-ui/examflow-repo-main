@@ -38,7 +38,7 @@ export default async function UsersPage() {
   const nameById = new Map((users ?? []).map((u) => [u.id as string, u.full_name as string]))
   const classOptions: ClassOption[] = (allClasses ?? []).map((o) => {
     const sub = o.subjects as unknown as { subject_code: string; subject_name: string } | null
-    return { id: o.id as string, section: o.section as string, code: sub?.subject_code ?? '—', name: sub?.subject_name ?? '', teacher: o.teacher_id ? nameById.get(o.teacher_id as string) ?? 'another teacher' : null }
+    return { id: o.id as string, section: o.section as string, code: sub?.subject_code ?? '—', name: sub?.subject_name ?? '', teacher: o.teacher_id ? nameById.get(o.teacher_id as string) ?? 'another teacher' : null, teacherId: (o.teacher_id as string | null) ?? null }
   }).sort((a, b) => a.code.localeCompare(b.code) || a.section.localeCompare(b.section))
   const courseNames = Object.fromEntries((programRows ?? []).filter((p) => p.name).map((p) => [p.program as string, p.name as string]))
   // Accounts whose school email carries the student number: it comes from the

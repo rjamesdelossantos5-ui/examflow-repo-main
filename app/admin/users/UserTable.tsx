@@ -52,6 +52,8 @@ export interface ClassOption {
   name: string
   /** Who teaches it now, or null when nobody does. */
   teacher: string | null
+  /** That teacher's account id, so Edit can tick the classes a person already has. */
+  teacherId?: string | null
 }
 
 /**
@@ -240,6 +242,7 @@ function RoleFields({
   sections,
   courseNames,
   classOptions,
+  initialClassIds,
   initial,
   lockedStudentNumber,
 }: {
@@ -250,8 +253,10 @@ function RoleFields({
   sections: string[]
   /** Program code → full name, e.g. BSIT → Bachelor of Science in IT. */
   courseNames: Record<string, string>
-  /** Classes a new teacher can be given. Only the Create form passes it. */
+  /** Classes a teacher can be given. */
   classOptions?: ClassOption[]
+  /** Edit only: the classes this teacher already has, ticked when the form opens. */
+  initialClassIds?: string[]
   initial?: Profile
   /** Set when the number comes from the person's school email: shown, not editable. */
   lockedStudentNumber?: string
@@ -290,7 +295,9 @@ function RoleFields({
       {role === 'program_head' && (
         <p className="col-span-2 text-xs text-gray-500">They review the requests for subjects in this department.</p>
       )}
-      {role === 'subject_teacher' && classOptions && classOptions.length > 0 && <TeacherClassPicker classes={classOptions} />}
+      {role === 'subject_teacher' && classOptions && classOptions.length > 0 && (
+        <TeacherClassPicker classes={classOptions} initialPicked={initialClassIds} editing={!!initial} />
+      )}
       {role === 'subject_teacher' && !(classOptions && classOptions.length > 0) && (
         <p className="col-span-2 text-xs text-gray-500">
           Their sections and subjects come from the Classes sheet of the School Data file — one row per class with this
@@ -323,8 +330,8 @@ function RoleFields({
  * The picked ids are sent as `class_ids`. Taking a class over replaces its
  * current teacher; requests already sent keep the teacher they were sent to.
  */
-function TeacherClassPicker({ classes }: { classes: ClassOption[] }) {
-  const [picked, setPicked] = useState<Set<string>>(new Set())
+function TeacherClassPicker({ classes, initialPicked = [], editing = false }: { classes: ClassOption[]; initialPicked?: string[]; editing?: boolean }) {
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(initialPicked))
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
   const shown = q ? classes.filter((c) => [c.code, c.name, c.section].some((v) => v.toLowerCase().includes(q))) : classes
@@ -338,7 +345,7 @@ function TeacherClassPicker({ classes }: { classes: ClassOption[] }) {
 
   return (
     <div className="col-span-2">
-      <label className={labelClass}>Classes they teach (optional) — {picked.size} selected</label>
+      <label className={labelClass}>Classes they teach{editing ? '' : ' (optional)'} — {picked.size} selected</label>
       {/* Enter in the search box must not submit the whole form. */}
       <input
         type="search"
@@ -354,14 +361,21 @@ function TeacherClassPicker({ classes }: { classes: ClassOption[] }) {
             <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} className="mt-1" />
             <span className="min-w-0">
               <span className="font-mono text-xs">{c.code}</span> {c.name} · {c.section}
-              <span className="block text-xs text-gray-500">{c.teacher ? `Now taught by ${c.teacher} — picking it takes it over` : 'No teacher yet'}</span>
+              <span className="block text-xs text-gray-500">{initialPicked.includes(c.id) ? 'They teach this class now' : c.teacher ? `Now taught by ${c.teacher} — picking it takes it over` : 'No teacher yet'}</span>
             </span>
           </label>
         ))}
         {shown.length === 0 && <p className="px-3 py-4 text-center text-xs text-gray-500">No class matches your search.</p>}
       </div>
       {[...picked].map((id) => <input key={id} type="hidden" name="class_ids" value={id} />)}
-      <p className="mt-1 text-xs text-gray-500">Requests already sent keep their current teacher. Classes can also be changed later on the Subjects page.</p>
+      {/* Tells Edit's save that this list was on screen, so an empty list means
+          "no classes" and not "the list was never shown". */}
+      {editing && <input type="hidden" name="class_ids_sent" value="1" />}
+      <p className="mt-1 text-xs text-gray-500">
+        {editing
+          ? 'Untick a class to take it off this teacher; tick one to give it to them. Requests already sent keep their current teacher. For many people at once, use the Classes sheet of the School Data file.'
+          : 'Requests already sent keep their current teacher. Classes can also be changed later on the Subjects page.'}
+      </p>
     </div>
   )
 }
@@ -689,7 +703,7 @@ export default function UserTable({
                 <label className={labelClass}>Full Name *</label>
                 <input name="full_name" required defaultValue={toEdit.full_name} className={inputClass} />
               </div>
-              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} initial={toEdit} lockedStudentNumber={lockedStudentNumbers[toEdit.id]} />
+              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} classOptions={classOptions} initialClassIds={classOptions.filter((c) => c.teacherId === toEdit.id).map((c) => c.id)} initial={toEdit} lockedStudentNumber={lockedStudentNumbers[toEdit.id]} />
               {toEdit.role === 'subject_teacher' && editRole !== 'subject_teacher' && editTeaches > 0 && (
                 <p className="col-span-2 rounded-md px-3 py-2 text-xs bg-amber-50 border border-amber-200 text-amber-800">
                   They teach {editTeaches} class{editTeaches === 1 ? '' : 'es'}. Those stay assigned to them — and new requests
