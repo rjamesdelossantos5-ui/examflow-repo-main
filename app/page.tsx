@@ -304,7 +304,7 @@ export default function LandingPage() {
       </section>
 
       {/* ───────── Footer ───────── */}
-      <footer style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}` }}>
+      <footer className="sticky bottom-0 z-40" style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}` }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-center`}>
           <span className="font-black text-lg leading-none" style={{ fontStretch: '115%' }}>
             EXAM<span style={{ color: GOLD }}>FLOW</span>
