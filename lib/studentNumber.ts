@@ -1,5 +1,5 @@
 // A student's number is the school prefix plus the digits already in their
-// school email: bejo.344860@stamaria.sti.edu.ph → 02000344860 (prefix given by
+// school email: juan.123456@stamaria.sti.edu.ph → 02000123456 (prefix given by
 // the project team, 2026-09-28). Used only to pre-fill forms — the student can
 // still correct it, and nothing is saved until they submit or press Save.
 export const STUDENT_NUMBER_PREFIX = '02000'

@@ -15,8 +15,8 @@ const ALLOWED_DOMAIN = process.env.SCHOOL_EMAIL_DOMAIN ?? '@stamaria.sti.edu.ph'
 const PROGRAM_HEAD_DOMAIN = process.env.FACULTY_EMAIL_DOMAIN ?? '@stamaria.sti.edu'
 
 // Inside ALLOWED_DOMAIN, the part before the @ tells student and teacher apart:
-//   student -> has a number   (casano.340503@stamaria.sti.edu.ph)
-//   teacher -> has no number  (jho.malaca@stamaria.sti.edu.ph)
+//   student -> has a number   (juan.123456@stamaria.sti.edu.ph)
+//   teacher -> has no number  (maria.santos@stamaria.sti.edu.ph)
 function looksLikeStudentEmail(email: string) {
   const localPart = email.split('@')[0] ?? ''
   return /\d/.test(localPart)
