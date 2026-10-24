@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import { createClient } from '@/lib/supabase/client'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon } from '@/components/Icon'
@@ -40,6 +41,7 @@ interface StudentRow {
   submitted_at: string
   student_name: string
   student_number: string | null
+  contact_number: string | null
   course: string | null
   year_level: number | null
   section: string | null
@@ -47,6 +49,75 @@ interface StudentRow {
   subject_name: string
   teacher_name: string | null
   department_name: string | null
+}
+
+const REASON_LABEL: Record<string, string> = { medical: 'Medical', bereavement: 'Bereavement', other: 'Other' }
+
+// "Oct 24, 2026, 4:14 PM" in the school's time zone.
+const stampFmt = new Intl.DateTimeFormat('en-PH', {
+  timeZone: 'Asia/Manila',
+  year: 'numeric', month: 'short', day: 'numeric',
+  hour: 'numeric', minute: '2-digit',
+})
+
+// The request in a pop-up: who, what, when, and where it stands.
+function RequestInfoModal({ r, onClose }: { r: StudentRow; onClose: () => void }) {
+  useEscapeKey(onClose)
+  const waived = r.exam_type !== 'paid'
+  const reason = waived
+    ? [REASON_LABEL[r.excused_reason ?? ''] ?? null, r.other_reason].filter(Boolean).join(': ') || null
+    : null
+  const fields: [string, string][] = [
+    ['Student', r.student_name || '—'],
+    ['Student no.', r.student_number ?? '—'],
+    ['Contact no.', r.contact_number ?? '—'],
+    ['Course', r.course ?? '—'],
+    ['Year', r.year_level ? ordinalYear(r.year_level) : '—'],
+    ['Section', r.section ?? '—'],
+    ['Subject', `${r.subject_code ? `${r.subject_code} — ` : ''}${r.subject_name}`],
+    ['Teacher', r.teacher_name ?? 'Not assigned'],
+    ['Department', r.department_name ?? '—'],
+    ['Exam type', waived ? (reason ? `Waived — ${reason}` : 'Waived') : 'Paid (Unexcused)'],
+    ['Submitted', stampFmt.format(new Date(r.submitted_at))],
+    ...(r.final_schedule ? [['Scheduled for', stampFmt.format(new Date(r.final_schedule))] as [string, string]] : []),
+  ]
+  return (
+    <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="request-info-title"
+        className="ef-dialog ef-card rounded-2xl shadow-xl max-w-lg md:max-w-3xl w-full p-6 md:p-8 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 id="request-info-title" className="font-bold text-lg md:text-2xl" style={{ color: 'var(--card-foreground)' }}>Request details</h3>
+            <p className="text-sm md:text-base ef-muted">{r.subject_name}</p>
+          </div>
+          <StatusBadge status={r.status} />
+        </div>
+        <dl className="mt-4 md:mt-6 grid grid-cols-2 md:grid-cols-3 gap-x-4 md:gap-x-8 gap-y-3 md:gap-y-5 text-sm md:text-base">
+          {fields.map(([label, value]) => (
+            <div key={label} className={label === 'Subject' || label === 'Exam type' ? 'col-span-2 md:col-span-3' : ''}>
+              <dt className="text-xs md:text-sm ef-muted">{label}</dt>
+              <dd className="font-medium break-words" style={{ color: 'var(--card-foreground)' }}>{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-lg font-semibold text-sm"
+            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function StudentsList({ initial, exportHeader }: { initial: StudentRow[]; exportHeader: ExportHeader }) {
@@ -65,8 +136,15 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
     })
   }
 
+  // Find by student name or number, subject (code or name) or section.
+  const [info, setInfo] = useState<StudentRow | null>(null)
+  const closeInfo = useCallback(() => setInfo(null), [])
   const q = query.trim().toLowerCase()
-  const visible = q ? rows.filter((r) => r.student_name.toLowerCase().includes(q)) : rows
+  const visible = q
+    ? rows.filter((r) =>
+        [r.student_name, r.student_number, r.subject_code, r.subject_name, r.section].some((v) => (v ?? '').toLowerCase().includes(q)),
+      )
+    : rows
   const groups = groupByStudent(visible)
 
   function handleDelete(id: string) {
@@ -144,7 +222,8 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search student name…"
+              placeholder="Search name, subject or section…"
+              aria-label="Search accepted students"
               className="w-full rounded-lg px-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
               style={{ color: 'var(--card-foreground)' }}
             />
@@ -191,10 +270,16 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
                   <div className="border-t ef-border divide-y">
                     {g.forms.map((r) => (
                       <div key={r.id} className="flex items-center gap-3 px-4 py-2.5 pl-16">
-                        <div className="min-w-0 flex-1">
+                        {/* Opens the request's details. Delete stays its own button. */}
+                        <button
+                          type="button"
+                          onClick={() => setInfo(r)}
+                          className="min-w-0 flex-1 text-left rounded-md hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors -my-1 py-1 px-1 -mx-1"
+                          title="View request details"
+                        >
                           <p className="text-sm font-medium truncate" style={{ color: 'var(--card-foreground)' }}>{r.subject_name}</p>
                           <p className="text-xs ef-muted truncate">{r.subject_code}{r.teacher_name ? ` · ${r.teacher_name}` : ''}</p>
-                        </div>
+                        </button>
                         <span className="text-2xs capitalize ef-muted shrink-0">{r.exam_type === 'paid' ? 'Paid' : 'Waived'}</span>
                         <StatusBadge status={r.status} />
                         <button
@@ -213,6 +298,8 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
           })}
         </div>
       )}
+
+      {info && <RequestInfoModal r={info} onClose={closeInfo} />}
     </div>
   )
 }
@@ -248,9 +335,10 @@ async function fetchRows(supabase: ReturnType<typeof createClient>): Promise<Stu
       section: string | null
     } | null
     const routedTeacher = r.routed_teacher as unknown as { full_name: string } | null
-    const s = r as { snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null; snap_year_level?: number | null; snap_section?: string | null }
+    const s = r as { snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null; snap_year_level?: number | null; snap_section?: string | null; snap_contact_number?: string | null }
     return {
       id: r.id,
+      contact_number: s.snap_contact_number ?? null,
       status: r.status as RequestStatus,
       exam_type: r.exam_type,
       excused_reason: (r.excused_reason as string | null) ?? null,

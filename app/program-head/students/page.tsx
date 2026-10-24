@@ -64,9 +64,10 @@ export default async function StudentsPage() {
       section: string | null
     } | null
     const routedTeacher = r.routed_teacher as unknown as { full_name: string } | null
-    const s = r as { snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null; snap_year_level?: number | null; snap_section?: string | null }
+    const s = r as { snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null; snap_year_level?: number | null; snap_section?: string | null; snap_contact_number?: string | null }
     return {
       id: r.id,
+      contact_number: s.snap_contact_number ?? null,
       status: r.status as RequestStatus,
       exam_type: r.exam_type,
       excused_reason: (r.excused_reason as string | null) ?? null,
