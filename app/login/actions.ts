@@ -24,6 +24,14 @@ async function siteOrigin(): Promise<string> {
   return `${proto}://${host}`
 }
 
+const RATE_LIMITED = 'Too many login attempts. Please wait a few minutes, then try again.'
+
+// Supabase answers 429 / over_request_rate_limit when sign-ins come too fast;
+// that is not a wrong password and must not be reported as one.
+function isRateLimited(error: { status?: number; code?: string } | null): boolean {
+  return error?.status === 429 || error?.code === 'over_request_rate_limit'
+}
+
 export async function login(formData: FormData) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return redirect('/login?error=Server+is+not+configured.+Supabase+environment+variables+are+missing.')
@@ -40,6 +48,7 @@ export async function login(formData: FormData) {
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
+  if (isRateLimited(error)) return redirect('/login?error=' + encodeURIComponent(RATE_LIMITED))
   if (error || !data.user) {
     return redirect('/login?error=Invalid+email+or+password')
   }
@@ -78,6 +87,7 @@ export async function signIn(formData: FormData): Promise<{ error: string } | vo
   if (!email || !password) return { error: 'Please fill in all fields.' }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (isRateLimited(error)) return { error: RATE_LIMITED }
   if (error || !data.user) return { error: 'Invalid email or password.' }
 
   const { data: profile } = await supabase
