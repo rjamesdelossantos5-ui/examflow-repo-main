@@ -675,16 +675,16 @@ export default function UserTable({
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-user-title"
-            className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-[578px] p-8 max-h-[90vh] overflow-y-auto"
+            className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-[578px] md:max-w-3xl p-8 md:p-10 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="edit-user-title" className="text-lg font-bold" style={{ color: 'var(--sti-navy)' }}>Edit User</h3>
-            <p className="text-xs text-gray-500 mt-1 mb-4 break-all">
+            <h3 id="edit-user-title" className="text-lg md:text-2xl font-bold" style={{ color: 'var(--sti-navy)' }}>Edit User</h3>
+            <p className="text-xs md:text-sm text-gray-500 mt-1 mb-4 md:mb-6 break-all">
               {toEdit.email} — the email is their login, so it can&apos;t be changed here.
             </p>
             {/* key: a fresh form per person, so one person's values never
                 linger in another's. */}
-            <form key={toEdit.id} onSubmit={handleEdit} className="grid grid-cols-2 gap-3">
+            <form key={toEdit.id} onSubmit={handleEdit} className="grid grid-cols-2 gap-3 md:gap-5 md:text-base">
               <div className="col-span-2">
                 <label className={labelClass}>Full Name *</label>
                 <input name="full_name" required defaultValue={toEdit.full_name} className={inputClass} />
@@ -696,17 +696,17 @@ export default function UserTable({
                   for them still go to this person — until you pick another teacher on the Subjects page.
                 </p>
               )}
-              <p className="col-span-2 text-xs text-gray-500">
+              <p className="col-span-2 text-xs md:text-sm text-gray-500">
                 If this person is in the School Data file, the next import sets these details from the file again.
               </p>
               {editError && (
                 <p className="col-span-2 rounded-md px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700">{editError}</p>
               )}
-              <div className="col-span-2 flex justify-end gap-2 mt-2">
+              <div className="col-span-2 flex justify-end gap-2 md:gap-3 mt-2 md:mt-4">
                 <button type="button" onClick={closeEdit} disabled={isPending}
-                  className="px-4 py-2 text-sm rounded border disabled:opacity-50">Cancel</button>
+                  className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded border disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={isPending}
-                  className="px-4 py-2 text-sm rounded font-semibold disabled:opacity-50"
+                  className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded font-semibold disabled:opacity-50"
                   style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
                   {isPending ? 'Saving…' : 'Save changes'}
                 </button>
