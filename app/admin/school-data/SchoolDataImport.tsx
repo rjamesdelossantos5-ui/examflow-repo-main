@@ -12,7 +12,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024
 const card = 'ef-card rounded-xl shadow-sm p-5 sm:p-6 space-y-4'
 
 interface Props {
-  current: { departments: number; programs: number; staff: number; students: number; classes: number; subjects: number }
+  current: { departments: number; programs: number; staff: number; classes: number; subjects: number }
   /** The migration file still to run, or null when the database is ready. */
   migrationMissing: string | null
   /** The file waiting for review, compared with the live data. */
@@ -22,9 +22,9 @@ interface Props {
 interface Result { created: number; updated: number; classes: number; subjects: number; withoutTeacher: number; failures: { email: string; reason: string }[] }
 
 /**
- * One workbook, one import: departments, programs, staff and student accounts,
- * subjects and classes. Students then sign in to find their section and
- * subjects already set; nothing else is configured in the app.
+ * One workbook, one import: departments, programs, staff accounts, subjects
+ * and classes. Students are not in the file — their accounts are created when
+ * they first sign in with Microsoft.
  *
  * Two steps: the checked file is uploaded for review (nothing changes yet),
  * the page shows what it would change, and Accept applies it — or Cancel
@@ -100,10 +100,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
     setRunError(null)
     setResult(null)
     startTransition(async () => {
-      const people: PersonInput[] = [
-        ...file.staff.map((s) => ({ fullName: s.fullName, email: s.email, role: s.role, department: s.department })),
-        ...file.students.map((s) => ({ fullName: s.fullName, email: s.email, role: 'student' as const, studentNumber: s.studentNumber, program: s.program, yearLevel: s.yearLevel, section: s.section })),
-      ]
+      const people: PersonInput[] = file.staff.map((s) => ({ fullName: s.fullName, email: s.email, role: s.role, department: s.department }))
 
       setProgress({ step: 'Departments and programs', done: 0, total: 1 })
       const structure = await importStructure({ departments: file.departments, programs: file.programs })
@@ -137,7 +134,6 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
     ['Departments', current.departments, 'building'],
     ['Programs', current.programs, 'layers'],
     ['Staff', current.staff, 'users'],
-    ['Students', current.students, 'cap'],
     ['Subjects', current.subjects, 'book'],
     ['Classes', current.classes, 'list'],
   ] as const
@@ -149,7 +145,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
       <div className="max-w-3xl">
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>School Data</h2>
         <p className="text-sm ef-muted mt-1">
-          Upload one Excel file with the school&apos;s departments, programs, staff, students and classes.
+          Upload one Excel file with the school&apos;s departments, programs, staff and classes.
         </p>
       </div>
 
@@ -166,7 +162,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
           <div>
             <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Upload the school data file</h3>
             <p className="text-sm ef-muted mt-1">
-              Five sheets: <code>Departments</code>, <code>Programs</code>, <code>Staff</code>, <code>Students</code>,{' '}
+              Four sheets: <code>Departments</code>, <code>Programs</code>, <code>Staff</code>,{' '}
               <code>Classes</code>. Every sheet is checked against the others, then you review what would change before
               anything is saved.
             </p>
@@ -223,7 +219,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
           <h3 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>{fileName}</h3>
           <p className="text-sm" style={{ color: 'var(--card-foreground)' }}>
             {data.departments.length} departments · {data.programs.length} programs · {data.staff.length} staff ·{' '}
-            {data.students.length} students · {Object.keys(data.subjectNames).length} subjects · {data.classes.length} classes
+            {Object.keys(data.subjectNames).length} subjects · {data.classes.length} classes
           </p>
           <IssueList title="must be fixed in the file" issues={data.errors} tone="var(--status-danger)" open />
           <IssueList title="worth checking" issues={data.warnings} tone="var(--status-warning)" />
@@ -305,8 +301,7 @@ function ReviewPanel({ review, busy, onAccept, onCancel }: { review: ImportRevie
       <div>
         <h3 id="review-title" className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Review before importing</h3>
         <p className="text-xs ef-muted mt-0.5">
-          {review.fileName} · uploaded {review.uploadedAt} · {d.staff.length} staff, {d.students.length} students,{' '}
-          {d.classes.length} classes
+          {review.fileName} · uploaded {review.uploadedAt} · {d.staff.length} staff, {d.classes.length} classes
         </p>
         <p className="text-sm mt-2" style={{ color: 'var(--card-foreground)' }}>
           <strong>Nothing has changed yet.</strong> Accept applies this file; Cancel throws it away.

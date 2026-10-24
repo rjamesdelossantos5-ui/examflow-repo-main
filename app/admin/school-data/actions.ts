@@ -97,17 +97,13 @@ export async function importStructure(input: { departments: string[]; programs: 
   return { error: null }
 }
 
-// ── 2. People (staff and students) ──────────────────────────────────────────
+// ── 2. People (staff) ───────────────────────────────────────────────────────
 
 export interface PersonInput {
   fullName: string
   email: string
-  role: StaffRole | 'student'
+  role: StaffRole
   department?: string | null
-  studentNumber?: string
-  program?: string
-  yearLevel?: number
-  section?: string
 }
 
 /**
@@ -126,12 +122,8 @@ export async function importPeopleChunk(people: PersonInput[]) {
   if (!admin) return { error: SERVICE_KEY_MISSING, created: 0, updated: 0, failures: [] }
   if ((people ?? []).length > PEOPLE_CHUNK_SIZE) return { error: 'Chunk too large', created: 0, updated: 0, failures: [] }
 
-  const [{ data: depts }, { data: programs }] = await Promise.all([
-    supabase.from('departments').select('id, name'),
-    supabase.from('program_departments').select('program, department_id'),
-  ])
+  const { data: depts } = await supabase.from('departments').select('id, name')
   const deptId = new Map((depts ?? []).map((d) => [String(d.name).toLowerCase(), d.id as string]))
-  const programDept = new Map((programs ?? []).map((p) => [String(p.program), p.department_id as string]))
 
   let created = 0
   let updated = 0
@@ -139,17 +131,16 @@ export async function importPeopleChunk(people: PersonInput[]) {
 
   for (const p of people) {
     const email = clip(p.email, 254).toLowerCase()
-    const isStudent = p.role === 'student'
     const details = {
       // Without the "(Student)" tag the school's file / Microsoft adds to names.
       full_name: clip(withoutAccountTag(p.fullName), 200),
       email,
       role: p.role,
-      department_id: isStudent ? programDept.get(clip(p.program, 20).toUpperCase()) ?? null : p.department ? deptId.get(clip(p.department, 120).toLowerCase()) ?? null : null,
-      student_number: isStudent ? clip(p.studentNumber, 40) || null : null,
-      course: isStudent ? clip(p.program, 20).toUpperCase() || null : null,
-      year_level: isStudent && Number.isInteger(p.yearLevel) ? p.yearLevel! : null,
-      section: isStudent ? clip(p.section, 60).toUpperCase() || null : null,
+      department_id: p.department ? deptId.get(clip(p.department, 120).toLowerCase()) ?? null : null,
+      student_number: null,
+      course: null,
+      year_level: null,
+      section: null,
       is_active: true,
     }
 
