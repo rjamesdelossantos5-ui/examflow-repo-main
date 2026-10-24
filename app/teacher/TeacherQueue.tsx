@@ -1,11 +1,13 @@
 'use client'
 
 import { useErrorToast, toastSuccess, withSuccessToast } from '@/components/Toaster'
-import { useState, useEffect, useRef, useTransition } from 'react'
+import { useState, useEffect, useCallback, useTransition } from 'react'
 import { useSearchParams } from 'next/navigation'
 import RequestReviewPanel from '@/components/RequestReviewPanel'
 import MarkViewed from '@/components/MarkViewed'
-import { Icon } from '@/components/Icon'
+import StatusBadge from '@/components/StatusBadge'
+import Pagination, { usePagination } from '@/components/Pagination'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import { approveRequest, approveAll } from './actions'
 import type { RequestStatus } from '@/lib/supabase/types'
 
@@ -24,31 +26,11 @@ interface RequestRow {
   logs: { id: string; action: string; created_at: string; actor_role: string }[]
 }
 
-interface Group {
-  key: string
-  name: string
-  forms: RequestRow[]
-}
-
-// One student = one card, no matter how many subjects they filed for. The
-// teacher reviews per-student (all that student's forms open together in the
-// detail pane) instead of hunting the same name across the list.
-function groupByStudent(rows: RequestRow[]): Group[] {
-  const map = new Map<string, Group>()
-  for (const r of rows) {
-    const key = r.student.full_name
-    const g = map.get(key)
-    if (g) g.forms.push(r)
-    else map.set(key, { key, name: r.student.full_name, forms: [r] })
-  }
-  return [...map.values()]
-}
-
 /**
- * Teacher's pending queue: master list of students on the left, the selected
- * student's forms (approve panels) on the right. Approving removes the form
- * from the list immediately (optimistic) — the server round trip happens in
- * the background via the actions in ./actions.
+ * Teacher's pending queue: one row per request (student, section, subject, type,
+ * stage, date). Info opens that request in a pop-up with the review panel and its
+ * Approve button. Approving removes the row immediately (optimistic) — the server
+ * round trip happens in the background via the actions in ./actions.
  *
  * The teacher can only approve. There is no reject here: only the Program Head
  * can reject, and only the Program Head sees the parent-list check.
@@ -60,39 +42,37 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
   const [items, setItems] = useState(requests)
   useEffect(() => setItems(requests), [requests])
 
-  const groups = groupByStudent(items)
-  const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  const active = groups.find((g) => g.key === selectedKey) ?? null
-  const detailRef = useRef<HTMLDivElement>(null)
+  // The request open in the pop-up (null = closed). Kept as an id so the pop-up
+  // follows the list: it closes by itself when that request is approved.
+  const [openId, setOpenId] = useState<string | null>(null)
+  const open = items.find((r) => r.id === openId) ?? null
+  const close = useCallback(() => setOpenId(null), [])
+  useEscapeKey(close, !!open)
 
   const [error, setError] = useState<string | null>(null)
   useErrorToast(error)
   const [isPending, startTransition] = useTransition()
 
-  // ?req=<id> (from a notification-bell link) opens straight to that
-  // student's forms instead of landing on an unselected queue.
+  // ?req=<id> (from a notification-bell link) opens straight to that request.
   useEffect(() => {
     if (!reqParam) return
-    const form = requests.find((r) => r.id === reqParam)
-    if (form) setSelectedKey(form.student.full_name)
+    if (requests.some((r) => r.id === reqParam)) setOpenId(reqParam)
   }, [reqParam, requests])
 
-  // On phones the detail pane renders BELOW the list, so scroll it into view
-  // when a student is picked (on desktop it's already visible side-by-side).
-  useEffect(() => {
-    if (selectedKey && typeof window !== 'undefined' && window.innerWidth < 768) {
-      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [selectedKey])
+  const pager = usePagination(items, 'all')
 
   function dropForm(id: string) {
     setItems((prev) => prev.filter((r) => r.id !== id))
+    setOpenId(null)
   }
 
-  // "Approve all N forms" — one click approves every still-pending form of
-  // the selected student (single DB update via approveAll).
-  function approveGroup(g: Group) {
-    const ids = g.forms.filter((f) => f.status === 'submitted').map((f) => f.id)
+  // The same student's other pending forms, so all of them can be approved in one go.
+  const siblings = open
+    ? items.filter((r) => r.status === 'submitted' && r.student.full_name === open.student.full_name)
+    : []
+
+  function approveStudent() {
+    const ids = siblings.map((f) => f.id)
     if (!ids.length) return
     setError(null)
     startTransition(async () => {
@@ -100,108 +80,127 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
       if (res.error) setError(res.error)
       else {
         setItems((prev) => prev.filter((r) => !ids.includes(r.id)))
+        setOpenId(null)
         toastSuccess(ids.length === 1 ? 'Request approved' : `${ids.length} requests approved`)
       }
     })
   }
 
   return (
-    <div>
-      {/* Opening a student shows all their forms, so all count as viewed. */}
-      <MarkViewed ids={active?.forms.map((f) => f.id) ?? []} />
-      <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
+    <div className="space-y-5">
+      {/* Opening a request counts as viewing it: the bell stops flagging it as new. */}
+      <MarkViewed ids={open ? [open.id] : []} />
+      <div>
+        <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
+        <p className="text-sm ef-muted">Click Info on a request to read it and approve it.</p>
+      </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
           {error} <button className="underline ml-1" onClick={() => setError(null)}>Dismiss</button>
         </div>
       )}
 
-      {groups.length === 0 && (
-        <div className="ef-card rounded-xl shadow-sm px-4 py-10 text-center ef-muted">No pending requests.</div>
-      )}
-
-      {/* A narrow list and a wide review: each list entry is only a name and
-          subject codes, so it never needed half the screen. */}
-      <div className="grid md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[340px_minmax(0,1fr)] gap-5 items-start">
-        {/* Student list: one panel, one row per student */}
-        <div className={`ef-card rounded-xl shadow-sm overflow-hidden divide-y ef-border ${groups.length === 0 ? 'hidden' : ''}`}>
-          {groups.map((g) => {
-            const pending = g.forms.filter((f) => f.status === 'submitted').length
-            const anyResub = g.forms.some((f) => f.resubmitted)
-            const selected = selectedKey === g.key
-            return (
-              <button
-                key={g.key}
-                onClick={() => setSelectedKey(g.key === selectedKey ? null : g.key)}
-                aria-current={selected ? 'true' : undefined}
-                className="w-full text-left px-4 py-3.5 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
-                style={selected ? { background: 'color-mix(in srgb, var(--sti-gold) 14%, transparent)' } : undefined}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold truncate flex items-center gap-2" style={{ color: 'var(--card-foreground)' }}>
-                      {g.name}
-                      {anyResub && <span className="px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
-                    </p>
-                    <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_name).join(', ')}</p>
-                  </div>
-                  <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
-                    {pending} form{pending === 1 ? '' : 's'}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
+      <div className="ef-card rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto [scrollbar-width:thin]">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b ef-border text-left text-xs font-semibold ef-muted uppercase tracking-wide">
+                <th className="px-4 py-3">Student</th>
+                <th className="px-4 py-3">Section</th>
+                <th className="px-4 py-3">Subject</th>
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Stage</th>
+                <th className="px-4 py-3">Submitted</th>
+                <th className="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {pager.items.map((r) => (
+                <tr key={r.id} className="hover:bg-black/5 dark:hover:bg-white/5">
+                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</td>
+                  <td className="px-4 py-3 ef-muted whitespace-nowrap">{r.student.section ?? '—'}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--card-foreground)' }}>{r.subject.subject_name}</td>
+                  <td className="px-4 py-3 ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Waived'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <StatusBadge status={r.status} />
+                    {r.resubmitted && <span className="ml-1.5 px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
+                  </td>
+                  <td className="px-4 py-3 ef-muted whitespace-nowrap">{new Date(r.submitted_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(r.id)}
+                      className="inline-block text-xs px-3 py-1.5 rounded-lg font-semibold"
+                      style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                    >
+                      Info
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {items.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-10 text-center ef-muted">No pending requests.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
-
-        {/* Detail */}
-        {groups.length > 0 && (
-          <div className="md:sticky md:top-20" ref={detailRef}>
-            {active ? (
-              <div className="space-y-3">
-                {active.forms.filter((f) => f.status === 'submitted').length > 1 && (
-                  <button
-                    onClick={() => approveGroup(active)}
-                    disabled={isPending}
-                    className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
-                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-                  >
-                    {isPending ? 'Approving…' : `Approve all ${active.forms.filter((f) => f.status === 'submitted').length} forms`}
-                  </button>
-                )}
-                {active.forms.map((f) => (
-                  <div key={f.id} className="ef-card rounded-xl shadow-sm p-5 sm:p-6">
-                    <RequestReviewPanel
-                      requestId={f.id}
-                      studentName={f.student.full_name}
-                      teacherName={f.teacherName}
-                      studentInfo={f.student}
-                      subjectName={f.subject.subject_name}
-                      subjectCode={f.subject.subject_code}
-                      examType={f.exam_type}
-                      excusedReason={f.excused_reason}
-                      otherReason={f.other_reason}
-                      status={f.status}
-                      media={f.media}
-                      logs={f.logs}
-                      onVerify={withSuccessToast(approveRequest, 'Request approved')}
-                      onDone={() => dropForm(f.id)}
-                      verifyLabel="Approve & Forward to Program Head"
-                      showDocuments={false}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="hidden md:flex flex-col items-center justify-center rounded-xl border-2 border-dashed ef-border px-6 py-20 text-center ef-muted">
-                <Icon name="file" className="w-8 h-8 mb-2 opacity-60" />
-                <p className="text-sm">Select a student to review their forms.</p>
-              </div>
-            )}
-          </div>
-        )}
       </div>
+      <Pagination {...pager.pagerProps} />
+
+      {/* The request's details and its Approve button, in a pop-up. */}
+      {open && (
+        <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={close}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Request from ${open.student.full_name}`}
+            className="ef-dialog ef-card rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5 sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <RequestReviewPanel
+              key={open.id}
+              requestId={open.id}
+              studentName={open.student.full_name}
+              teacherName={open.teacherName}
+              studentInfo={open.student}
+              subjectName={open.subject.subject_name}
+              subjectCode={open.subject.subject_code}
+              examType={open.exam_type}
+              excusedReason={open.excused_reason}
+              otherReason={open.other_reason}
+              status={open.status}
+              media={open.media}
+              logs={open.logs}
+              onVerify={withSuccessToast(approveRequest, 'Request approved')}
+              onDone={() => dropForm(open.id)}
+              verifyLabel="Approve & Forward to Program Head"
+              showDocuments={false}
+            />
+            {siblings.length > 1 && (
+              <button
+                type="button"
+                onClick={approveStudent}
+                disabled={isPending}
+                className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm border ef-border disabled:opacity-50"
+                style={{ color: 'var(--card-foreground)' }}
+              >
+                {isPending ? 'Approving…' : `Approve all ${siblings.length} of this student's forms`}
+              </button>
+            )}
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={close}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                style={{ color: 'var(--card-foreground)' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
