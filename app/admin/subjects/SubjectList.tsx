@@ -30,6 +30,10 @@ const NO_DEPT = '__none__'
 
 const fieldClass = 'w-full rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]'
 const fieldStyle = { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }
+// The teacher dropdown looks exactly like the dropdowns on the student's submit
+// form (the same size, border, gold focus ring and pointer).
+const teacherSelectClass =
+  'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent cursor-pointer'
 
 /**
  * The subjects from the School Data import. Clicking one shows its sections and
@@ -236,7 +240,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
                               onChange={(v) => setPicked((p) => ({ ...p, [c.id]: v }))}
                               options={teacherOptions}
                               placeholder="— No teacher —"
-                              className="w-full rounded-lg px-3 py-1.5 md:py-2.5 text-sm md:text-base border ef-border"
+                              className={teacherSelectClass}
                               style={fieldStyle}
                             />
                           ) : c.teacherId ? (
