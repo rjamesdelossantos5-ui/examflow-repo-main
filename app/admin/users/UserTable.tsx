@@ -675,7 +675,7 @@ export default function UserTable({
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-user-title"
-            className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
+            className="ef-dialog bg-white rounded-2xl shadow-xl w-full max-w-[578px] p-8 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="edit-user-title" className="text-lg font-bold" style={{ color: 'var(--sti-navy)' }}>Edit User</h3>
