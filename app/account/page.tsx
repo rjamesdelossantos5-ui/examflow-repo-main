@@ -81,7 +81,8 @@ export default async function AccountPage() {
     <div>
       <Link
         href={ROLE_HOME[role] ?? '/'}
-        className="inline-flex items-center gap-1 text-sm ef-muted hover:underline mb-3"
+        className="ef-press inline-flex items-center gap-1 text-sm font-semibold px-3.5 py-2 rounded-lg mb-3"
+        style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
       >
         ← Back to dashboard
       </Link>
