@@ -50,7 +50,7 @@ export default function LandingPage() {
   // Inline colours (not bg-white / border / text-gray-* classes) so the app's
   // dark-mode overrides never touch this public page; it always renders light.
   return (
-    <div className={`${archivo.variable} ef-landing`} style={{ background: '#FFFFFF', color: NAVY, fontFamily: 'var(--font-archivo), Arial, sans-serif' }}>
+    <div className={`${archivo.variable} ef-landing min-h-screen flex flex-col`} style={{ background: '#FFFFFF', color: NAVY, fontFamily: 'var(--font-archivo), Arial, sans-serif' }}>
       {/* ───────── Nav: the dashboards' navy bar ───────── */}
       <header className="sticky top-0 z-50" style={{ background: NAVY, color: '#FFFFFF' }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-between gap-4`}>
@@ -110,9 +110,15 @@ export default function LandingPage() {
           </div>
           <ul style={{ borderTop: `2px solid ${NAVY}` }}>
             {PREPARE.map((p) => (
-              <li key={p.title} className="flex gap-4 py-5" style={{ borderBottom: `1px solid ${RULE}` }}>
-                {/* An empty form checkbox: drawn, not a glyph */}
-                <span aria-hidden className="mt-1 w-5 h-5 shrink-0 rounded-[2px]" style={{ border: `2px solid ${NAVY}` }} />
+              <li key={p.title} className="ef-prep ef-in flex gap-4 py-5" style={{ borderBottom: `1px solid ${RULE}` }}>
+                {/* An empty form checkbox: drawn, not a glyph. Ticks gold on hover. */}
+                <span aria-hidden className="relative mt-1 w-5 h-5 shrink-0 rounded-[2px]" style={{ border: `2px solid ${NAVY}` }}>
+                  <span className="ef-prep-tick absolute -inset-[2px] grid place-items-center rounded-[2px]" style={{ background: GOLD }}>
+                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                      <path d="M2.5 7.5l3 3 6-7" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </span>
                 <div>
                   <p className="font-bold text-lg leading-snug">{p.title}</p>
                   <p className="mt-1 text-base leading-relaxed max-w-[60ch]" style={{ color: INK_SOFT }}>{p.note}</p>
@@ -132,7 +138,8 @@ export default function LandingPage() {
           {/* A real sequence, so the numbers carry information */}
           <ol className="mt-12 grid gap-x-10 lg:grid-cols-5" style={{ borderTop: `2px solid ${NAVY}` }}>
             {STEPS.map((s, i) => (
-              <li key={s.title} className="py-6 lg:pr-2" style={{ borderBottom: `1px solid ${RULE}` }}>
+              <li key={s.title} className="ef-step ef-in relative py-6 lg:pr-2" style={{ borderBottom: `1px solid ${RULE}` }}>
+                <span aria-hidden className="ef-step-bar absolute left-0 -top-[2px] h-[2px] w-full" style={{ background: GOLD }} />
                 <span className="font-extrabold text-3xl tabular-nums" style={{ fontStretch: '125%', color: NAVY }}>{i + 1}</span>
                 <p className="mt-3 font-bold text-lg leading-snug">{s.title}</p>
                 <p className="mt-2 text-base leading-relaxed" style={{ color: INK_SOFT }}>{s.body}</p>
@@ -142,8 +149,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── Footer: the wordmark, centred, in navy ink on white; stays pinned at the bottom while scrolling ───────── */}
-      <footer className="sticky bottom-0 z-40" style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}` }}>
+      {/* ───────── Footer: the wordmark, centred, in navy ink on white; sits at the bottom of a short page ───────── */}
+      <footer className="mt-auto" style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}` }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-center`}>
           <span className="font-black text-lg leading-none" style={{ fontStretch: '115%' }}>
             EXAM<span style={{ color: GOLD }}>FLOW</span>

@@ -55,9 +55,12 @@ export default function HeroDrawing() {
       <style>{`
         .efh-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: efh-draw 2.4s linear .4s both; }
         .efh-fade { animation: efh-fade .4s ease-out both; }
+        /* After the route arrives, each gold stop gives a slow, quiet pulse */
+        .efh-ring { transform-box: fill-box; transform-origin: center; opacity: 0; animation: efh-ring 4.5s ease-out infinite; }
+        @keyframes efh-ring { 0% { transform: scale(1); opacity: .45; } 70%, 100% { transform: scale(1.7); opacity: 0; } }
         @keyframes efh-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
         @keyframes efh-fade { from { opacity: 0; } to { opacity: 1; } }
-        @media (prefers-reduced-motion: reduce) { .efh-draw, .efh-fade { animation: none; } }
+        @media (prefers-reduced-motion: reduce) { .efh-draw, .efh-fade, .efh-ring { animation: none; } }
       `}</style>
 
       <svg
@@ -77,6 +80,10 @@ export default function HeroDrawing() {
           <path d="M54 370h26" stroke={NAVY} strokeWidth="2" strokeLinecap="round" opacity="0.3" />
         </g>
 
+        <text x="60" y="406" textAnchor="middle" fill={NAVY} className="efh-fade" style={{ fontSize: 13, fontWeight: 600, animationDelay: '.2s' }}>
+          Submitted
+        </text>
+
         {/* The route: dotted ahead of the pen, solid once travelled */}
         <path d={ROUTE} stroke={NAVY} strokeWidth="2" strokeLinecap="round" strokeDasharray="1 7" opacity="0.35" />
         <path d={ROUTE} pathLength={1} className="efh-draw" stroke={NAVY} strokeWidth="2" strokeLinecap="round" />
@@ -86,6 +93,7 @@ export default function HeroDrawing() {
           <g key={s.label} transform={`translate(${s.x} ${s.y})`}>
             <circle r="21" fill="#fff" />
             <circle r="21" fill={GOLD} className="efh-fade" style={{ animationDelay: s.delay }} />
+            <circle r="21" stroke={GOLD} strokeWidth="2" className="efh-ring" style={{ animationDelay: `calc(${s.delay} + 1s)` }} />
             <circle r="21" stroke={NAVY} strokeWidth="2" />
             <Glyph kind={s.glyph} />
             <text

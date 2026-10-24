@@ -376,3 +376,20 @@ button:focus-visible,
   50%      { transform: translateY(5px); }
 }
 .ef-drift { animation: ef-drift 2.4s var(--ease-in-out) infinite; }
+
+/* ---- Landing page: quiet interaction (hover only on devices that hover; no JS) ---- */
+.ef-prep-tick { opacity: 0; transform: scale(0.85); transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.ef-step-bar { transform: scaleX(0); transform-origin: left; transition: transform 260ms var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .ef-prep > div { transition: transform 200ms var(--ease-out); }
+  .ef-prep:hover > div { transform: translateX(4px); }
+  .ef-prep:hover .ef-prep-tick { opacity: 1; transform: scale(1); }
+  .ef-step:hover .ef-step-bar { transform: scaleX(1); }
+}
+/* Sections ease in as they scroll into view, where the browser supports it; elsewhere they simply show */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .ef-in { animation: ef-in linear both; animation-timeline: view(); animation-range: entry 0% entry 45%; }
+    @keyframes ef-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  }
+}
