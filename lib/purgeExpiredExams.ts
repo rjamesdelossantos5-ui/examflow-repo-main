@@ -35,8 +35,9 @@ interface PurgeCandidate {
  *
  * Deletion is RLS-guarded to `accepted`/`scheduled` and to Program Head / admin
  * callers by the same `requests_ph_admin_delete` policy that powers the manual
- * delete button, and it cascades the request's media rows + progress logs.
- * Storage files aren't part of that cascade, so we remove them first.
+ * delete button (migration_delete.sql), and it cascades the request's media rows
+ * + progress logs. Storage files aren't part of that cascade, so their paths are
+ * read before the delete and the files removed after it.
  *
  * This is a page-load cleanup: it runs before the Overview / Accepted Students
  * queries so the freshly-loaded list already excludes the purged rows. It must
@@ -89,10 +90,41 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
     if (!candidates.size) return
     const idList = [...candidates.keys()]
 
-    // Anonymized history for the ones that actually reached 'scheduled' (i.e.
-    // took the exam) — written BEFORE delete, since this is the last moment the
-    // category facts (subject → department, exam type, term) are available.
-    const scheduled = [...candidates.values()].filter((r) => r.status === 'scheduled')
+    // Storage paths are read now, while the media rows still exist (the delete
+    // below cascades them away); the files themselves are removed only for the
+    // requests that really were deleted.
+    const { data: media } = await supabase
+      .from('application_media')
+      .select('request_id, storage_path')
+      .in('request_id', idList)
+
+    // Delete FIRST, and get back only the rows actually deleted. Everything
+    // after this works from that list, so a request is logged to history at most
+    // once: if the delete is refused (e.g. the requests_ph_admin_delete policy is
+    // missing, which RLS reports as zero rows, not an error) nothing is logged,
+    // and when two page loads race, only the one whose delete removed the row
+    // logs it. Logging before deleting used to re-insert the same requests into
+    // exam_history on every page load whenever the delete failed.
+    // The .in(status) guard is defence-in-depth over RLS: never delete a row that
+    // slipped back into an active stage between the select above and now.
+    const { data: deletedRows, error: deleteErr } = await supabase
+      .from('special_exam_requests')
+      .delete()
+      .in('id', idList)
+      .in('status', ['accepted', 'scheduled'])
+      .select('id')
+    if (deleteErr) console.error('purgeExpiredExams: delete failed', deleteErr.message)
+    const deletedIds = new Set((deletedRows ?? []).map((r) => r.id as string))
+    if (deletedIds.size < idList.length) {
+      console.error(`purgeExpiredExams: ${idList.length - deletedIds.size} of ${idList.length} finished requests were not deleted (check the requests_ph_admin_delete policy)`)
+    }
+    if (!deletedIds.size) return
+    const deleted = [...candidates.values()].filter((r) => deletedIds.has(r.id))
+
+    // Anonymized history for the deleted ones that reached 'scheduled' (i.e.
+    // took the exam). The category facts (subject → department, exam type,
+    // term) were captured in `candidates` before the delete.
+    const scheduled = deleted.filter((r) => r.status === 'scheduled')
     if (scheduled.length) {
       const subjectIds = [...new Set(scheduled.map((r) => r.subject_id).filter((x): x is string => !!x))]
       const { data: subjects } = subjectIds.length
@@ -115,31 +147,22 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
           school_year: period?.school_year ?? null,
         }
       })
-      // Best-effort: if exam_history isn't migrated yet, skip logging rather
-      // than block the purge (deletion still must proceed either way).
-      await supabase.from('exam_history').insert(historyRows)
+      // Best-effort: if exam_history isn't migrated yet, the count is lost but
+      // the purge itself has already happened.
+      const { error: historyErr } = await supabase.from('exam_history').insert(historyRows)
+      if (historyErr) console.error('purgeExpiredExams: history insert failed', historyErr.message)
     }
 
-    // Clear their uploaded files from storage before the DB cascade removes the
-    // media rows (otherwise the files would be orphaned in the bucket).
-    const { data: media } = await supabase
-      .from('application_media')
-      .select('storage_path')
-      .in('request_id', idList)
-    const paths = (media ?? []).map((m) => m.storage_path as string).filter(Boolean)
+    // Uploaded files aren't part of the database cascade; remove them now.
+    const paths = (media ?? [])
+      .filter((m) => deletedIds.has(m.request_id as string))
+      .map((m) => m.storage_path as string)
+      .filter(Boolean)
     if (paths.length) await supabase.storage.from('exam-documents').remove(paths)
-
-    // The .in(status) guard is defence-in-depth over RLS: never delete a row that
-    // slipped back into an active stage between the select above and now.
-    await supabase
-      .from('special_exam_requests')
-      .delete()
-      .in('id', idList)
-      .in('status', ['accepted', 'scheduled'])
 
     // The parent's ID and selfie photos are kept at Didit for the whole term
     // (one check can cover several requests) and go with the term's requests.
-    await deleteOrphanedSessions(supabase, [...candidates.values()].map((r) => r.didit_session_id))
+    await deleteOrphanedSessions(supabase, deleted.map((r) => r.didit_session_id))
   } catch {
     // Best-effort cleanup — swallow everything so the page still renders.
   }
