@@ -393,3 +393,33 @@ button:focus-visible,
     @keyframes ef-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
   }
 }
+
+/* Landing: a dotted divider drawn like the hero route (2px navy dots, 8px apart, 35%) */
+.ef-route-rule {
+  height: 2px;
+  background-image: radial-gradient(circle at 1px 1px, rgba(0, 47, 108, 0.35) 1px, transparent 1.25px);
+  background-size: 8px 2px;
+  background-repeat: repeat-x;
+}
+/* Landing: Paid / Waived route switch. The chosen one gets a gold underline, like a stop turning gold */
+.ef-route-tab {
+  position: relative;
+  border-radius: 4px;
+  transition: background-color 150ms ease, transform 160ms var(--ease-out);
+}
+.ef-route-tab::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--sti-gold);
+  transform: scaleX(0);
+  transition: transform 220ms var(--ease-out);
+}
+.ef-route-tab[data-on]::after { transform: scaleX(1); }
+@media (hover: hover) and (pointer: fine) {
+  .ef-route-tab:not([data-on]):hover { background: rgba(0, 47, 108, 0.06); }
+}

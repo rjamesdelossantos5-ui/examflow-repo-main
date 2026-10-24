@@ -97,8 +97,11 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Section dividers are the drawing's dotted route, not plain rules */}
+      <div aria-hidden className="ef-route-rule" />
+
       {/* ───────── Before you start ───────── */}
-      <section id="prepare" className="scroll-mt-16" style={{ borderTop: `1px solid ${RULE}` }}>
+      <section id="prepare" className="scroll-mt-16">
         <div className={`${CONTAINER} py-20 lg:py-28 grid lg:grid-cols-[1fr_1.4fr] gap-10 lg:gap-16`}>
           <div>
             <h2 className="font-extrabold leading-tight text-balance" style={H2_STYLE}>
@@ -130,7 +133,8 @@ export default function LandingPage() {
       </section>
 
       {/* ───────── How it works ───────── */}
-      <section id="steps" className="scroll-mt-16" style={{ background: PAPER_COOL, borderTop: `1px solid ${RULE}` }}>
+      <div aria-hidden className="ef-route-rule" />
+      <section id="steps" className="scroll-mt-16" style={{ background: PAPER_COOL }}>
         <div className={`${CONTAINER} py-20 lg:py-28`}>
           <h2 className="font-extrabold leading-tight text-balance max-w-[18ch]" style={H2_STYLE}>
             How your request moves
