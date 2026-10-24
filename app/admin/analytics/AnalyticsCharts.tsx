@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -48,6 +48,22 @@ function useReducedMotion() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
   return reduced
+}
+
+// True on a desktop-width window (Tailwind's lg, 1024px). Read through
+// useSyncExternalStore so it is right on first paint and follows a resize.
+// Bar thickness and label sizes are numbers handed to Recharts, which CSS
+// classes can't reach, so the charts need to know which size to draw.
+function useIsDesktop() {
+  return useSyncExternalStore(
+    (notify) => {
+      const mq = window.matchMedia('(min-width: 1024px)')
+      mq.addEventListener('change', notify)
+      return () => mq.removeEventListener('change', notify)
+    },
+    () => window.matchMedia('(min-width: 1024px)').matches,
+    () => false,
+  )
 }
 
 function StatTile({ label, value, icon, accent }: { label: string; value: number; icon: IconName; accent: string }) {
@@ -106,7 +122,14 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
   }, [rows, dimension, chartData])
 
   // Both charts share one height so they line up; it grows with the bar count.
-  const chartHeight = Math.max(260, chartData.length * 44)
+  // Tall enough that each bar keeps a readable thickness however many categories
+  // there are; the pie sits in the same height. Larger again on a desktop window.
+  const desktop = useIsDesktop()
+  const chartHeight = desktop ? Math.max(560, chartData.length * 76) : Math.max(380, chartData.length * 56)
+  const tickSize = desktop ? 16 : 14
+  const labelWidth = desktop ? 250 : 190
+  const labelChars = desktop ? 34 : 26
+  const barMax = desktop ? 56 : 36
 
   const tooltipStyle = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--card-foreground)', fontSize: 13 }
 
@@ -147,7 +170,7 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
           <p className="text-sm ef-muted mt-1">Once students are scheduled for a special exam, their numbers will appear here.</p>
         </div>
       ) : (
-        <div className="ef-card rounded-xl shadow-sm p-4 sm:p-6">
+        <div className="ef-card rounded-xl shadow-sm p-4 sm:p-8">
           {/* Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div className="flex flex-wrap gap-1.5">
@@ -185,7 +208,7 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
                     dataKey="value"
                     nameKey="name"
                     innerRadius="45%"
-                    outerRadius="80%"
+                    outerRadius="88%"
                     paddingAngle={2}
                     isAnimationActive={!reducedMotion}
                   >
@@ -200,17 +223,20 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
             <div style={{ width: '100%', height: chartHeight }}>
               <ResponsiveContainer>
                 <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
-                  <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--muted)', fontSize: 12 }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--muted)', fontSize: tickSize }} axisLine={{ stroke: 'var(--border)' }} tickLine={false} />
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={140}
-                    tick={{ fill: 'var(--card-foreground)', fontSize: 12 }}
+                    width={labelWidth}
+                    tick={{ fill: 'var(--card-foreground)', fontSize: tickSize }}
+                    // Long subject names are shortened here; the tooltip and the list
+                    // below the charts keep the full name.
+                    tickFormatter={(v: string) => (v.length > labelChars ? `${v.slice(0, labelChars - 1)}…` : v)}
                     axisLine={{ stroke: 'var(--border)' }}
                     tickLine={false}
                   />
                   <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'color-mix(in srgb, var(--sti-gold) 8%, transparent)' }} formatter={(value) => [`${value} student${value === 1 ? '' : 's'}`, 'Students']} />
-                  <Bar dataKey="value" radius={[0, 6, 6, 0]} isAnimationActive={!reducedMotion} maxBarSize={28}>
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} isAnimationActive={!reducedMotion} maxBarSize={barMax}>
                     {chartData.map((entry, i) => (
                       <Cell key={entry.name} fill={PALETTE[i % PALETTE.length]} />
                     ))}
@@ -228,8 +254,8 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
               {chartData.map((d, i) => {
                 const pct = totals.total ? Math.round((d.value / totals.total) * 100) : 0
                 return (
-                  <li key={d.name} className="flex items-center gap-2 text-sm min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PALETTE[i % PALETTE.length] }} />
+                  <li key={d.name} className="flex items-center gap-2 text-sm lg:text-base min-w-0">
+                    <span className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full shrink-0" style={{ background: PALETTE[i % PALETTE.length] }} />
                     <span className="truncate flex-1" style={{ color: 'var(--card-foreground)' }}>{d.name}</span>
                     <span className="ef-muted shrink-0">{d.value} · {pct}%</span>
                   </li>
