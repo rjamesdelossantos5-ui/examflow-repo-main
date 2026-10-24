@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { Icon, type IconName } from '@/components/Icon'
 import type { ExamStatRow } from '@/lib/examAnalytics'
+import { TERMS, TERM_LABEL, type Term } from '@/lib/examSettings'
 
 type Dimension = 'department' | 'subject' | 'examType'
 
@@ -63,9 +64,21 @@ function StatTile({ label, value, icon, accent }: { label: string; value: number
   )
 }
 
-export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
+export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStatRow[] }) {
   const [dimension, setDimension] = useState<Dimension>('department')
+  // 'all' = Overall (every term of the semester shown); otherwise one term.
+  const [termFilter, setTermFilter] = useState<'all' | Term>('all')
   const reducedMotion = useReducedMotion()
+
+  const rows = useMemo(
+    () => (termFilter === 'all' ? semesterRows : semesterRows.filter((r) => r.term === termFilter)),
+    [semesterRows, termFilter],
+  )
+  const termCounts = useMemo(() => {
+    const c: Record<string, number> = {}
+    for (const r of semesterRows) if (r.term) c[r.term] = (c[r.term] ?? 0) + 1
+    return c
+  }, [semesterRows])
 
   const totals = useMemo(() => ({
     total: rows.length,
@@ -99,6 +112,24 @@ export default function AnalyticsCharts({ rows }: { rows: ExamStatRow[] }) {
 
   return (
     <div className="space-y-5">
+      {/* Term choices: Overall for the whole semester, or one term. */}
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Term">
+        {([['all', 'Overall', semesterRows.length], ...TERMS.map((t) => [t, TERM_LABEL[t], termCounts[t] ?? 0] as const)] as const).map(([value, label, count]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setTermFilter(value as 'all' | Term)}
+            aria-pressed={termFilter === value}
+            className={`ef-press px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              termFilter === value ? '' : 'border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
+            }`}
+            style={termFilter === value ? { background: 'var(--sti-gold)', color: 'var(--sti-navy)' } : { color: 'var(--card-foreground)' }}
+          >
+            {label} <span className="tabular-nums opacity-70">({count})</span>
+          </button>
+        ))}
+      </div>
+
       {/* Stat tiles */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatTile label="Total Exams Taken" value={totals.total} icon="layers" accent="var(--status-neutral)" />
