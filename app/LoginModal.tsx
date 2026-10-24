@@ -23,6 +23,9 @@ export default function LoginModal() {
   const [view, setView] = useState<View>('choose')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  // Seconds left before another login attempt is allowed. Set after a failed
+  // attempt so rapid repeat submits don't re-trigger Supabase's auth rate limit.
+  const [cooldown, setCooldown] = useState(0)
 
   useEffect(() => {
     // /login redirects here with ?login=1 (and ?error=… when something went
@@ -42,6 +45,12 @@ export default function LoginModal() {
     window.addEventListener('hashchange', sync)
     return () => window.removeEventListener('hashchange', sync)
   }, [])
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const id = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(id)
+  }, [cooldown])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -65,11 +74,15 @@ export default function LoginModal() {
 
   function handleLoginSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (cooldown > 0) return
     const fd = new FormData(e.currentTarget)
     setError(null)
     startTransition(async () => {
       const res = await signIn(fd)
-      if (res?.error) setError(res.error)
+      if (res?.error) {
+        setError(res.error)
+        setCooldown(5)
+      }
     })
   }
 
@@ -163,8 +176,8 @@ export default function LoginModal() {
               </div>
 
               <div className="pt-2 space-y-3">
-                <button type="submit" disabled={isPending} className={primaryClass} style={{ background: NAVY, color: '#FFFFFF' }}>
-                  {isPending ? 'Logging in…' : 'Log in'}
+                <button type="submit" disabled={isPending || cooldown > 0} className={primaryClass} style={{ background: NAVY, color: '#FFFFFF' }}>
+                  {isPending ? 'Logging in…' : cooldown > 0 ? `Try again in ${cooldown}s` : 'Log in'}
                 </button>
                 <button
                   type="button"
