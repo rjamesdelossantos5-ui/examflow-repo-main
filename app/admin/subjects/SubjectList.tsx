@@ -186,19 +186,19 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
             role="dialog"
             aria-modal="true"
             aria-labelledby="subject-title"
-            className="ef-dialog ef-card rounded-2xl shadow-2xl w-full max-w-xl p-6 max-h-[90vh] flex flex-col"
+            className="ef-dialog ef-card rounded-2xl shadow-2xl w-full max-w-xl md:max-w-3xl p-6 md:p-8 max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {editing ? (
               <>
-                <h3 id="subject-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>Edit subject</h3>
-                <p className="text-xs ef-muted">{open.department ?? 'No department'}</p>
-                <div className="grid grid-cols-3 gap-3 mt-4">
-                  <label className="text-xs ef-muted space-y-1">
+                <h3 id="subject-title" className="font-bold text-lg md:text-2xl" style={{ color: 'var(--card-foreground)' }}>Edit subject</h3>
+                <p className="text-xs md:text-sm ef-muted">{open.department ?? 'No department'}</p>
+                <div className="grid grid-cols-3 gap-3 md:gap-5 mt-4 md:mt-6">
+                  <label className="text-xs md:text-sm ef-muted space-y-1">
                     <span>Code</span>
                     <input value={code} onChange={(e) => setCode(e.target.value)} className={`${fieldClass} font-mono`} style={fieldStyle} />
                   </label>
-                  <label className="col-span-2 text-xs ef-muted space-y-1">
+                  <label className="col-span-2 text-xs md:text-sm ef-muted space-y-1">
                     <span>Subject name</span>
                     <input value={name} onChange={(e) => setName(e.target.value)} className={fieldClass} style={fieldStyle} />
                   </label>
@@ -206,37 +206,37 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
               </>
             ) : (
               <>
-                <h3 id="subject-title" className="font-bold text-lg" style={{ color: 'var(--card-foreground)' }}>
-                  <span className="font-mono text-base">{open.code}</span> {open.name}
+                <h3 id="subject-title" className="font-bold text-lg md:text-2xl" style={{ color: 'var(--card-foreground)' }}>
+                  <span className="font-mono text-base md:text-xl">{open.code}</span> {open.name}
                 </h3>
-                <p className="text-xs ef-muted">{open.department ?? 'No department'}</p>
+                <p className="text-xs md:text-sm ef-muted">{open.department ?? 'No department'}</p>
               </>
             )}
 
-            <p className="text-sm mt-4 mb-2" style={{ color: 'var(--card-foreground)' }}>
+            <p className="text-sm md:text-base mt-4 md:mt-6 mb-2" style={{ color: 'var(--card-foreground)' }}>
               Taught in <strong>{open.classes.length}</strong> section{open.classes.length === 1 ? '' : 's'}
             </p>
             <div className="overflow-y-auto rounded-lg border ef-border min-h-0">
               {open.classes.length ? (
-                <table className="min-w-full text-sm">
+                <table className="min-w-full text-sm md:text-base">
                   <thead>
-                    <tr className="border-b ef-border text-left text-xs font-semibold uppercase tracking-wide ef-muted">
-                      <th className="px-3 py-2">Section</th>
-                      <th className="px-3 py-2">Teacher</th>
+                    <tr className="border-b ef-border text-left text-xs md:text-sm font-semibold uppercase tracking-wide ef-muted">
+                      <th className="px-3 py-2 md:px-5 md:py-3">Section</th>
+                      <th className="px-3 py-2 md:px-5 md:py-3">Teacher</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y ef-border">
                     {open.classes.map((c) => (
                       <tr key={c.id}>
-                        <td className="px-3 py-2 whitespace-nowrap align-middle" style={{ color: 'var(--card-foreground)' }}>{c.section}</td>
-                        <td className="px-3 py-2" style={{ color: 'var(--card-foreground)' }}>
+                        <td className="px-3 py-2 md:px-5 md:py-3.5 whitespace-nowrap align-middle" style={{ color: 'var(--card-foreground)' }}>{c.section}</td>
+                        <td className="px-3 py-2 md:px-5 md:py-3.5" style={{ color: 'var(--card-foreground)' }}>
                           {editing ? (
                             <Select
                               value={picked[c.id] ?? ''}
                               onChange={(v) => setPicked((p) => ({ ...p, [c.id]: v }))}
                               options={teacherOptions}
                               placeholder="— No teacher —"
-                              className="w-full rounded-lg px-3 py-1.5 text-sm border ef-border"
+                              className="w-full rounded-lg px-3 py-1.5 md:py-2.5 text-sm md:text-base border ef-border"
                               style={fieldStyle}
                             />
                           ) : c.teacherId ? (
@@ -255,7 +255,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
             </div>
 
             {editing && (
-              <p className="text-xs ef-muted mt-3">
+              <p className="text-xs md:text-sm ef-muted mt-3">
                 Requests already sent keep their teacher. The next School Data import sets this subject and its sections from the file again.
               </p>
             )}
@@ -263,15 +263,15 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
               <p role="alert" className="mt-3 rounded-md px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">{error}</p>
             )}
 
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex justify-end gap-2 md:gap-3 mt-4 md:mt-6">
               {editing ? (
                 <>
                   <button type="button" onClick={() => show(open, false)} disabled={isPending}
-                    className="px-4 py-2 text-sm rounded-lg font-semibold border ef-border disabled:opacity-50" style={{ color: 'var(--card-foreground)' }}>
+                    className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded-lg font-semibold border ef-border disabled:opacity-50" style={{ color: 'var(--card-foreground)' }}>
                     Cancel
                   </button>
                   <button type="button" onClick={save} disabled={isPending}
-                    className="px-4 py-2 text-sm rounded-lg font-semibold disabled:opacity-50"
+                    className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded-lg font-semibold disabled:opacity-50"
                     style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
                     {isPending ? 'Saving…' : 'Save changes'}
                   </button>
