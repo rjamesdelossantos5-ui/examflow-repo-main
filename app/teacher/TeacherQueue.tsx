@@ -28,8 +28,8 @@ interface RequestRow {
 
 /**
  * Teacher's pending queue: one row per request (student, section, subject, type,
- * stage, date). Info opens that request in a pop-up with the review panel and its
- * Approve button. Approving removes the row immediately (optimistic) — the server
+ * stage, date). Clicking a row opens that request in a pop-up with the review
+ * panel and its Approve button. Approving removes the row immediately (optimistic) — the server
  * round trip happens in the background via the actions in ./actions.
  *
  * The teacher can only approve. There is no reject here: only the Program Head
@@ -92,7 +92,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
       <MarkViewed ids={open ? [open.id] : []} />
       <div>
         <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Requests Awaiting Your Approval</h2>
-        <p className="text-sm ef-muted">Click Info on a request to read it and approve it.</p>
+        <p className="text-sm ef-muted">Click a request to read it and approve it.</p>
       </div>
 
       {error && (
@@ -112,13 +112,23 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Stage</th>
                 <th className="px-4 py-3">Submitted</th>
-                <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {pager.items.map((r) => (
-                <tr key={r.id} className="hover:bg-black/5 dark:hover:bg-white/5">
-                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.student.full_name}</td>
+                // The whole row opens the request. The name is also a real button,
+                // so the keyboard and screen readers can open it too.
+                <tr key={r.id} onClick={() => setOpenId(r.id)} className="cursor-pointer hover:bg-black/5 dark:hover:bg-white/5">
+                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setOpenId(r.id) }}
+                      className="text-left hover:underline underline-offset-2"
+                      title="Open this request"
+                    >
+                      {r.student.full_name}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 ef-muted whitespace-nowrap">{r.student.section ?? '—'}</td>
                   <td className="px-4 py-3" style={{ color: 'var(--card-foreground)' }}>{r.subject.subject_name}</td>
                   <td className="px-4 py-3 ef-muted">{r.exam_type === 'paid' ? 'Paid' : 'Waived'}</td>
@@ -127,20 +137,10 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                     {r.resubmitted && <span className="ml-1.5 px-1.5 py-0.5 rounded text-3xs font-semibold bg-blue-100 text-blue-700">Resubmitted</span>}
                   </td>
                   <td className="px-4 py-3 ef-muted whitespace-nowrap">{new Date(r.submitted_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={() => setOpenId(r.id)}
-                      className="inline-block text-xs px-3 py-1.5 rounded-lg font-semibold"
-                      style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
-                    >
-                      Info
-                    </button>
-                  </td>
                 </tr>
               ))}
               {items.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center ef-muted">No pending requests.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-10 text-center ef-muted">No pending requests.</td></tr>
               )}
             </tbody>
           </table>
@@ -155,7 +155,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
             role="dialog"
             aria-modal="true"
             aria-label={`Request from ${open.student.full_name}`}
-            className="ef-dialog ef-card rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5 sm:p-8"
+            className="ef-dialog ef-card rounded-2xl shadow-xl w-full max-w-3xl lg:max-w-5xl max-h-[92vh] overflow-y-auto p-5 sm:p-8 lg:p-12"
             onClick={(e) => e.stopPropagation()}
           >
             <RequestReviewPanel
