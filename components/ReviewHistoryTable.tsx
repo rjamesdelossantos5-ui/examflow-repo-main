@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import StatusBadge from '@/components/StatusBadge'
 import { Icon } from '@/components/Icon'
+import { useEscapeKey } from '@/lib/useEscapeKey'
 import type { RequestStatus } from '@/lib/supabase/types'
 
 /** What a row shows when opened: the submitted details and when the teacher approved it. */
@@ -38,13 +39,16 @@ const stampFmt = new Intl.DateTimeFormat('en-PH', {
 })
 
 /**
- * Reviewed-history table (Teacher, Registrar). A row with `detail` opens to show
- * the form's details and its activity timeline; a rejected row also shows the
+ * Reviewed-history table (Teacher). Clicking a row opens a pop-up with the form's
+ * details and when the teacher approved it; a rejected request also shows its
  * rejection reason.
  */
 export default function ReviewHistoryTable({ title, rows }: { title: string; rows: HistoryRow[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const open = rows.find((r) => r.id === openId) ?? null
+  const close = useCallback(() => setOpenId(null), [])
+  useEscapeKey(close, !!open)
 
   const q = query.trim().toLowerCase()
   const filtered = q ? rows.filter((r) => r.student.toLowerCase().includes(q)) : rows
@@ -78,16 +82,32 @@ export default function ReviewHistoryTable({ title, rows }: { title: string; row
           </thead>
           <tbody className="divide-y">
             {filtered.map((r) => {
-              const rejected = r.status === 'rejected'
-              const expanded = openId === r.id
+              // Rows with something to show open a pop-up; the rest stay plain.
+              const openable = r.status === 'rejected' || !!r.detail
               return (
-                <FragmentRow
+                <tr
                   key={r.id}
-                  r={r}
-                  rejected={rejected}
-                  expanded={expanded}
-                  onToggle={() => setOpenId(expanded ? null : r.id)}
-                />
+                  onClick={openable ? () => setOpenId(r.id) : undefined}
+                  className={openable ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : ''}
+                >
+                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>
+                    {openable ? (
+                      // A real button too, so the keyboard and screen readers can open it.
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setOpenId(r.id) }}
+                        className="text-left hover:underline underline-offset-2"
+                        title="Open this request"
+                      >
+                        {r.student}
+                      </button>
+                    ) : r.student}
+                  </td>
+                  <td className="px-4 py-3 ef-muted">{r.subject}</td>
+                  <td className="px-4 py-3 capitalize ef-muted">{r.exam_type}</td>
+                  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                  <td className="px-4 py-3 ef-muted">{new Date(r.date).toLocaleDateString()}</td>
+                </tr>
               )
             })}
             {filtered.length === 0 && (
@@ -96,47 +116,46 @@ export default function ReviewHistoryTable({ title, rows }: { title: string; row
           </tbody>
         </table>
       </div>
+
+      {open && (
+        <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={close}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="history-request-title"
+            className="ef-dialog ef-card rounded-2xl shadow-xl w-full max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto p-6 md:p-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 id="history-request-title" className="font-bold text-lg md:text-2xl" style={{ color: 'var(--card-foreground)' }}>Request details</h3>
+                <p className="text-sm md:text-base ef-muted">{open.subject}</p>
+              </div>
+              <StatusBadge status={open.status} />
+            </div>
+            <div className="mt-5 md:mt-7 space-y-4">
+              {open.status === 'rejected' && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm md:text-base text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
+                  {open.rejection_reason || 'No reason recorded.'}
+                </div>
+              )}
+              {open.detail && <Detail d={open.detail} />}
+            </div>
+            <div className="mt-6 md:mt-8 flex justify-end">
+              <button
+                type="button"
+                onClick={close}
+                className="px-5 py-2.5 md:px-7 md:py-3 rounded-lg text-sm md:text-base font-semibold"
+                style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
-
-  function FragmentRow({ r, rejected, expanded, onToggle }: { r: HistoryRow; rejected: boolean; expanded: boolean; onToggle: () => void }) {
-    const expandable = rejected || !!r.detail
-    return (
-      <>
-        <tr
-          className={expandable ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : ''}
-          onClick={expandable ? onToggle : undefined}
-        >
-          <td className="px-4 py-3 font-medium" style={{ color: 'var(--card-foreground)' }}>{r.student}</td>
-          <td className="px-4 py-3 ef-muted">{r.subject}</td>
-          <td className="px-4 py-3 capitalize ef-muted">{r.exam_type}</td>
-          <td className="px-4 py-3">
-            <span className="inline-flex items-center gap-1.5">
-              <StatusBadge status={r.status} />
-              {expandable && (
-                <Icon name="chevron-right" className={`w-4 h-4 ef-muted transition-transform ${expanded ? 'rotate-90' : ''}`} />
-              )}
-            </span>
-          </td>
-          <td className="px-4 py-3 ef-muted">{new Date(r.date).toLocaleDateString()}</td>
-        </tr>
-        {expandable && expanded && (
-          <tr>
-            <td colSpan={5} className="px-4 pb-4 pt-0">
-              <div className="space-y-4">
-                {rejected && (
-                  <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-500/10 dark:border-red-500/30 dark:text-red-300">
-                    {r.rejection_reason || 'No reason recorded.'}
-                  </div>
-                )}
-                {r.detail && <Detail d={r.detail} />}
-              </div>
-            </td>
-          </tr>
-        )}
-      </>
-    )
-  }
 }
 
 // Laid out like the student's own request page: Submitted Details, plus one line
@@ -156,10 +175,10 @@ function Detail({ d }: { d: HistoryDetail }) {
     <div className="space-y-4">
       <div>
         <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--card-foreground)' }}>Submitted Details</h3>
-        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 md:gap-x-8 gap-y-3 md:gap-y-5 text-sm md:text-base">
           {fields.map(([label, value]) => (
             <div key={label}>
-              <dt className="text-xs ef-muted">{label}</dt>
+              <dt className="text-xs md:text-sm ef-muted">{label}</dt>
               <dd className="font-medium" style={{ color: 'var(--card-foreground)' }}>{value}</dd>
             </div>
           ))}
@@ -167,7 +186,7 @@ function Detail({ d }: { d: HistoryDetail }) {
       </div>
 
       {d.approvedAt && (
-        <p className="text-sm ef-muted">
+        <p className="text-sm md:text-base ef-muted">
           Approved by Subject Teacher: <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{stampFmt.format(new Date(d.approvedAt))}</span>
         </p>
       )}
