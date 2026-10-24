@@ -241,6 +241,7 @@ function RoleFields({
   courseNames,
   classOptions,
   initial,
+  lockedStudentNumber,
 }: {
   role: string
   onRoleChange: (role: string) => void
@@ -252,6 +253,8 @@ function RoleFields({
   /** Classes a new teacher can be given. Only the Create form passes it. */
   classOptions?: ClassOption[]
   initial?: Profile
+  /** Set when the number comes from the person's school email: shown, not editable. */
+  lockedStudentNumber?: string
 }) {
   const usesDepartment = role === 'subject_teacher' || role === 'program_head'
   return (
@@ -298,7 +301,14 @@ function RoleFields({
         <>
           <div>
             <label className={labelClass}>Student Number *</label>
-            <input name="student_number" required defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
+            {lockedStudentNumber ? (
+              <>
+                <input name="student_number" value={lockedStudentNumber} readOnly className={`${inputClass} opacity-60 cursor-not-allowed`} />
+                <p className="text-xs text-gray-500 mt-1">From their school email.</p>
+              </>
+            ) : (
+              <input name="student_number" required defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
+            )}
           </div>
           <StudentClassFields sections={sections} courseNames={courseNames} initial={initial} />
         </>
@@ -463,8 +473,11 @@ export default function UserTable({
   sections,
   courseNames,
   classOptions,
+  lockedStudentNumbers,
 }: {
   users: Profile[]
+  /** User id → student number taken from their school email; not editable. */
+  lockedStudentNumbers: Record<string, string>
   departments: Department[]
   /** Every section that has classes — the choices for a student's section. */
   sections: string[]
@@ -664,7 +677,7 @@ export default function UserTable({
                 <label className={labelClass}>Full Name *</label>
                 <input name="full_name" required defaultValue={toEdit.full_name} className={inputClass} />
               </div>
-              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} initial={toEdit} />
+              <RoleFields role={editRole} onRoleChange={setEditRole} departments={departments} sections={sections} courseNames={courseNames} initial={toEdit} lockedStudentNumber={lockedStudentNumbers[toEdit.id]} />
               {toEdit.role === 'subject_teacher' && editRole !== 'subject_teacher' && editTeaches > 0 && (
                 <p className="col-span-2 rounded-md px-3 py-2 text-xs bg-amber-50 border border-amber-200 text-amber-800">
                   They teach {editTeaches} class{editTeaches === 1 ? '' : 'es'}. Those stay assigned to them — and new requests

@@ -7,6 +7,7 @@ import { isValidEmail, isValidName, isValidStudentNumber, isValidCode } from '@/
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 import type { UserRole } from '@/lib/supabase/types'
 import { isSettingOn, TOGGLE_SETTINGS } from '@/lib/settings'
+import { studentNumberFromEmail } from '@/lib/studentNumber'
 
 const ALLOWED_ROLES: UserRole[] = ['admin', 'registrar', 'subject_teacher', 'program_head', 'student']
 
@@ -152,7 +153,13 @@ export async function updateUser(userId: string, formData: FormData) {
 
   const fields = readProfileFields(formData)
   if (fields.error !== null) return { error: fields.error }
-  const { fullName, role, departmentId, studentNumber, course, yearLevel, section } = fields
+  const { fullName, role, departmentId, course, yearLevel, section } = fields
+  let studentNumber = fields.studentNumber
+  // A school-email student's number comes from the email, not from this form.
+  if (role === 'student') {
+    const { data: target } = await supabase.from('profiles').select('email').eq('id', userId).maybeSingle()
+    studentNumber = studentNumberFromEmail(target?.email as string | undefined) ?? studentNumber
+  }
   // Changing your own role would lock you out of this page.
   if (userId === me.id && role !== 'admin') return { error: "You can't remove your own admin role." }
   // Taking the admin role away from someone else removes an admin, so it needs
