@@ -50,7 +50,7 @@ export default function LandingPage() {
   // Inline colours (not bg-white / border / text-gray-* classes) so the app's
   // dark-mode overrides never touch this public page; it always renders light.
   return (
-    <div className={`${archivo.variable} ef-landing min-h-screen flex flex-col`} style={{ background: '#FFFFFF', color: NAVY, fontFamily: 'var(--font-archivo), Arial, sans-serif' }}>
+    <div className={`${archivo.variable} ef-landing min-h-screen flex flex-col pb-12`} style={{ background: '#FFFFFF', color: NAVY, fontFamily: 'var(--font-archivo), Arial, sans-serif' }}>
       {/* ───────── Nav: the dashboards' navy bar ───────── */}
       <header className="sticky top-0 z-50" style={{ background: NAVY, color: '#FFFFFF' }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-between gap-4`}>
@@ -149,12 +149,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── Footer: the wordmark, centred, in navy ink on white; sits at the bottom of a short page ───────── */}
-      <footer className="mt-auto" style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}` }}>
-        <div className={`${CONTAINER} h-16 flex items-center justify-center`}>
-          <span className="font-black text-lg leading-none" style={{ fontStretch: '115%' }}>
+      {/* ───────── Footer: pinned to the bottom of the window, always in view.
+          The page has bottom padding (see the wrapper) so the last section is
+          never hidden behind it. Below the login pop-up's layer (z-[100]). ───────── */}
+      <footer
+        className="fixed bottom-0 inset-x-0 z-40"
+        style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}`, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className={`${CONTAINER} h-12 flex items-center justify-center gap-3 text-xs sm:text-sm`}>
+          <span className="font-black leading-none" style={{ fontStretch: '115%' }}>
             EXAM<span style={{ color: GOLD }}>FLOW</span>
           </span>
+          <span aria-hidden style={{ color: RULE }}>|</span>
+          <span style={{ color: INK_SOFT }}>© {new Date().getFullYear()} STI College Sta. Maria</span>
         </div>
       </footer>
 
