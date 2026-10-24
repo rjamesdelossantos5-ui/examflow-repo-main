@@ -4,7 +4,7 @@
  * app/student/submit/actions.ts as the record that consent was given; it stays
  * in progress_logs, it just isn't shown.
  */
-const HIDDEN_PREFIXES = ['Data privacy consent given']
+export const HIDDEN_PREFIXES = ['Data privacy consent given']
 
 export function shownInHistory(action: string): boolean {
   return !HIDDEN_PREFIXES.some((p) => action.startsWith(p))
