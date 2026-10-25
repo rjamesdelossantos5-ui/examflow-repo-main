@@ -120,23 +120,24 @@ export default function UserMenu({
         </div>
       )}
 
-      {/* Logout confirmation */}
+      {/* Logout confirmation: a plain confirm box, same size on every screen */}
       {confirmLogout && (
         <div className="ef-overlay fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmLogout(false)}>
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="sign-out-title"
-            className="ef-dialog ef-card rounded-lg md:rounded-2xl shadow-xl max-w-sm md:max-w-lg w-full p-6 md:p-10"
+            className="ef-dialog ef-card rounded-lg border ef-border max-w-sm w-full p-5"
+            style={{ boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="sign-out-title" className="font-bold text-lg md:text-3xl" style={{ color: 'var(--card-foreground)' }}>Sign out?</h3>
-            <p className="text-sm md:text-lg ef-muted mt-1 md:mt-3">You can sign back in anytime and pick up where you left off.</p>
-            <div className="mt-6 md:mt-10 flex justify-end gap-2 md:gap-3">
+            <h3 id="sign-out-title" className="font-semibold text-base" style={{ color: 'var(--card-foreground)' }}>Sign out?</h3>
+            <p className="text-sm ef-muted mt-2">You can sign back in anytime and pick up where you left off.</p>
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmLogout(false)}
-                className="px-4 py-2.5 md:px-7 md:py-3.5 rounded-lg text-sm md:text-lg font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                className="px-3.5 py-2 rounded-md text-sm font-medium border ef-border transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                 style={{ color: 'var(--card-foreground)' }}
               >
                 Cancel
@@ -144,7 +145,7 @@ export default function UserMenu({
               <form action={logout}>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 md:px-9 md:py-3.5 rounded-lg text-sm md:text-lg font-semibold transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90"
+                  className="px-3.5 py-2 rounded-md text-sm font-medium transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90"
                   style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
                 >
                   Sign out
