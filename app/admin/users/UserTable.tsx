@@ -796,7 +796,7 @@ export default function UserTable({
         </div>
       )}
 
-      {/* Archive confirmation */}
+      {/* Archive confirmation: a plain confirm box, same size on every screen */}
       {toArchive && (
         <div className="ef-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50" onClick={isPending ? undefined : closeArchive}>
           <div
@@ -804,37 +804,30 @@ export default function UserTable({
             aria-modal="true"
             aria-labelledby="archive-user-title"
             aria-describedby="archive-user-desc"
-            className="ef-dialog ef-card rounded-lg md:rounded-2xl shadow-xl max-w-md md:max-w-xl w-full p-6 md:p-8"
+            className="ef-dialog ef-card rounded-lg border ef-border max-w-md w-full p-5"
+            style={{ boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="archive-user-title" className="font-bold text-lg md:text-2xl" style={{ color: 'var(--card-foreground)' }}>Archive this account?</h3>
+            <h3 id="archive-user-title" className="font-semibold text-base" style={{ color: 'var(--card-foreground)' }}>Archive this account?</h3>
 
-            {/* Who it is: name and email, the role as a small tag. No box. */}
-            <div className="mt-4 md:mt-6 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm md:text-lg font-semibold break-words" style={{ color: 'var(--card-foreground)' }}>{toArchive.full_name}</p>
-                {toArchive.email !== toArchive.full_name && <p className="text-xs md:text-sm ef-muted break-all mt-0.5">{toArchive.email}</p>}
-              </div>
-              <span className="shrink-0 px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-semibold" style={{ background: 'color-mix(in srgb, var(--muted) 16%, transparent)', color: 'var(--card-foreground)' }}>
-                {ROLE_LABELS[toArchive.role] ?? toArchive.role}
-              </span>
-            </div>
-
-            <p id="archive-user-desc" className="mt-4 md:mt-6 text-sm md:text-base ef-muted">
-              They can no longer log in and leave this list. Their data is kept, and you can restore the account from the Archived view.
+            <p id="archive-user-desc" className="mt-2 text-sm ef-muted">
+              <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>{toArchive.full_name}</span>
+              {' '}({ROLE_LABELS[toArchive.role] ?? toArchive.role}
+              {toArchive.email !== toArchive.full_name ? <>, <span className="break-all">{toArchive.email}</span></> : null})
+              {' '}will no longer be able to log in and will leave this list. Their data is kept, and you can restore the account from the Archived view.
             </p>
 
             {archiveError && (
-              <p role="alert" className="mt-4 text-sm md:text-base" style={{ color: 'var(--status-danger)' }}>{archiveError}</p>
+              <p role="alert" className="mt-3 text-sm" style={{ color: 'var(--status-danger)' }}>{archiveError}</p>
             )}
 
-            <div className="mt-6 md:mt-8 flex justify-end gap-2 md:gap-3">
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={closeArchive}
                 disabled={isPending}
                 autoFocus
-                className="px-4 py-2.5 md:px-6 md:py-3 rounded-lg text-sm md:text-base font-semibold transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-50"
+                className="px-3.5 py-2 rounded-md text-sm font-medium border ef-border transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] disabled:opacity-50"
                 style={{ color: 'var(--card-foreground)' }}
               >
                 Cancel
@@ -843,10 +836,10 @@ export default function UserTable({
                 type="button"
                 onClick={confirmArchive}
                 disabled={isPending}
-                className="px-5 py-2.5 md:px-7 md:py-3 rounded-lg text-sm md:text-base font-semibold text-white transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90 disabled:opacity-60"
+                className="px-3.5 py-2 rounded-md text-sm font-medium text-white transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90 disabled:opacity-60"
                 style={{ backgroundColor: 'var(--status-danger)' }}
               >
-                {isPending ? 'Archiving…' : 'Archive account'}
+                {isPending ? 'Archiving…' : 'Archive'}
               </button>
             </div>
           </div>

@@ -97,7 +97,9 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
     startTransition(async () => {
       const res = await updateSubject({ subjectId, code, name, teachers: picked })
       if (res.error) setError(res.error)
-      else { setEditing(false); setError(null); toastSuccess('Subject updated') }
+      // Saving ends the task: close the window instead of falling back to the
+      // subject's details, which looked like a second edit step.
+      else { close(); toastSuccess('Subject updated') }
     })
   }
 
