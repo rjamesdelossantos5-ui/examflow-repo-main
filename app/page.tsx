@@ -73,7 +73,7 @@ export default function LandingPage() {
           stacking context), clipped to the section. */}
       <section className="relative isolate overflow-hidden" style={{ background: PAPER_COOL }}>
         <HeroDrawing />
-        <div className={`${CONTAINER} pt-20 pb-24 lg:pt-32 lg:pb-36`}>
+        <div className={`${CONTAINER} pt-12 pb-14 sm:pt-20 sm:pb-24 lg:pt-32 lg:pb-36`}>
           <h1
             className="ef-reveal font-extrabold leading-[0.98] text-balance"
             // marginLeft: optical alignment. At this size the M's built-in side
@@ -82,11 +82,11 @@ export default function LandingPage() {
           >
             Missed an exam?
           </h1>
-          <p className="ef-reveal mt-6 text-lg sm:text-xl leading-relaxed max-w-[44ch]" style={{ color: INK_SOFT, animationDelay: '90ms' }}>
+          <p className="ef-reveal mt-5 sm:mt-6 text-base sm:text-xl leading-relaxed max-w-[44ch]" style={{ color: INK_SOFT, animationDelay: '90ms' }}>
             Request your special exam here. It goes to your teacher and your Program Head in order,
             and you can follow every step from your phone.
           </p>
-          <div className="ef-reveal mt-10 flex flex-wrap items-center gap-x-6 gap-y-4" style={{ animationDelay: '180ms' }}>
+          <div className="ef-reveal mt-8 sm:mt-10 flex flex-wrap items-center gap-x-6 gap-y-4" style={{ animationDelay: '180ms' }}>
             <a href="#login" className="ef-press px-6 py-3.5 rounded-[4px] text-base font-bold" style={{ background: NAVY, color: '#FFFFFF' }}>
               Log in to start a request
             </a>

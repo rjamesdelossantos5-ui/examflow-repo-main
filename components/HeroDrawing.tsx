@@ -107,10 +107,11 @@ export default function HeroDrawing() {
     <>
       <div
         aria-hidden="true"
-        // Phones: the whole hero, behind the text, faded so the text stays easy to
-        // read (the text fills the width there). From md up: the right 56%, full
-        // height, full strength.
-        className="pointer-events-none absolute -z-10 inset-0 w-full opacity-50 md:inset-x-auto md:inset-y-0 md:right-0 md:w-[56%] md:opacity-100"
+        // Not shown on phones: there the text fills the width, so the drawing
+        // could only sit behind it, and seven labels are too small to read. The
+        // "How your request moves" section covers the steps there. From md up:
+        // the right 56%, full height.
+        className="pointer-events-none absolute -z-10 hidden md:block inset-y-0 right-0 w-[56%]"
       >
         <style>{`
           .efh-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: efh-draw 3s linear .4s both; }
