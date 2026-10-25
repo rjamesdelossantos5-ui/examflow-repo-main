@@ -3,8 +3,8 @@
 import { useEffect, useSyncExternalStore } from 'react'
 
 /**
- * Pop-ups, gone after a few seconds (top-left and larger on desktop, bottom-right on smaller screens): red for errors, green for
- * successes.
+ * Pop-ups, gone after a few seconds (bottom centre on desktop, bottom right on smaller screens): a red icon for errors, a
+ * green tick for successes.
  *
  * Most screens already show an error as a banner at the top of the page, which a
  * user scrolled down a long form (or looking at a modal) never sees. This shows
@@ -128,49 +128,59 @@ export default function Toaster() {
   const items = useSyncExternalStore(subscribe, () => toasts, () => EMPTY)
   if (items.length === 0) return null
 
+  // Plain and small: the app's card surface, a hairline border, one small
+  // coloured icon for the kind, the message, and a close button. Bottom right on
+  // phones, bottom centre on desktop; each toast is only as wide as its text.
   return (
     <div
-      className="fixed z-[200] right-4 bottom-4 lg:right-auto lg:bottom-8 lg:left-1/2 lg:-translate-x-1/2 flex flex-col gap-3 lg:gap-3 w-[calc(100vw-2rem)] max-w-sm lg:w-[min(44rem,calc(100vw-4rem))] lg:max-w-none pointer-events-none"
+      className="fixed z-[200] right-4 bottom-4 left-4 lg:left-1/2 lg:right-auto lg:bottom-8 lg:-translate-x-1/2 flex flex-col items-end lg:items-center gap-2 pointer-events-none"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       {items.map((t) => {
         const success = t.kind === 'success'
+        const tone = success ? 'var(--status-success, #16a34a)' : 'var(--status-danger)'
         return (
           <div
             key={t.id}
             role={success ? 'status' : 'alert'}
             aria-live={success ? 'polite' : 'assertive'}
-            className="ef-toast pointer-events-auto flex items-start gap-3 rounded-lg px-4 py-3 text-sm lg:gap-4 lg:rounded-xl lg:px-7 lg:py-5 lg:text-lg shadow-lg border"
+            className="ef-toast pointer-events-auto flex items-start gap-2.5 w-fit max-w-[min(24rem,calc(100vw-2rem))] rounded-lg border pl-3 pr-1.5 py-2 text-sm"
             style={{
               background: 'var(--card)',
               color: 'var(--card-foreground)',
               borderColor: 'var(--border)',
-              borderLeft: `4px solid ${success ? 'var(--status-success, #16a34a)' : 'var(--status-danger)'}`,
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.08)',
             }}
           >
-            {success && (
-              <svg
-                viewBox="0 0 24 24"
-                className="w-5 h-5 lg:w-7 lg:h-7 shrink-0 mt-px"
-                fill="none"
-                stroke="var(--status-success, #16a34a)"
-                strokeWidth={2.25}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path d="M8 12.5l2.7 2.7L16 9.8" />
-              </svg>
-            )}
-            <span className="flex-1 min-w-0 break-words">{t.message}</span>
+            <svg
+              viewBox="0 0 16 16"
+              className="w-4 h-4 shrink-0 mt-0.5"
+              fill="none"
+              stroke={tone}
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              {success ? (
+                <path d="M3.5 8.5l3 3 6-7" />
+              ) : (
+                <>
+                  <circle cx="8" cy="8" r="6.25" />
+                  <path d="M8 4.75v3.75M8 11.1v.15" />
+                </>
+              )}
+            </svg>
+            <span className="flex-1 min-w-0 break-words leading-snug">{t.message}</span>
             <button
               type="button"
               onClick={() => dismiss(t.id)}
               aria-label="Dismiss"
-              className="shrink-0 leading-none text-lg lg:text-2xl ef-muted hover:opacity-70"
+              className="shrink-0 grid place-items-center w-5 h-5 rounded ef-muted hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
             >
-              ×
+              <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden>
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
             </button>
           </div>
         )
