@@ -71,7 +71,12 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const courses = Array.from(new Set(offerings.map((o) => coursePrefix(o.section)).filter(Boolean))).sort()
   // The student's section from the School Data import: course, year and
   // section are filled in and only that section's classes are offered.
-  const enrolled = enrolledSection && offerings.some((o) => o.section === enrolledSection) ? enrolledSection : null
+  // Compared without case or spaces, so "BSIT 2-201" still matches a section the
+  // account has as "bsit2-201"; the offering's own spelling is the one used.
+  const sectionKey = (s: string) => s.toUpperCase().replace(/\s+/g, '')
+  const enrolled = enrolledSection
+    ? offerings.find((o) => sectionKey(o.section) === sectionKey(enrolledSection))?.section ?? null
+    : null
   const enrolledYear = enrolled?.match(/^[A-Za-z]+\s+(\d)-/)?.[1] ?? null
   // Effective values: the student's account wins, then a resubmit's saved snapshot.
   const eff = {
@@ -121,6 +126,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // a resubmit edits one request, so it keeps the single subject picker.
   const [picked, setPicked] = useState<string[]>([])
   const [pickedSection, setPickedSection] = useState<Record<string, string>>({})
+  // A student whose account has no section picks their own here, and the subject
+  // list then shows only that section's subjects. (Not used when the account's
+  // section is known, in irregular-student mode, or when resubmitting.)
+  const [ownSection, setOwnSection] = useState('')
   const [subjectError, setSubjectError] = useState<string | null>(null)
   useErrorToast(subjectError)
   function togglePicked(id: string) {
@@ -129,6 +138,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   }
 
   function toggleOverride() {
+    // Subjects picked under one mode may not exist under the other.
+    setPicked([])
+    setPickedSection({})
+    setOwnSection('')
     if (override) {
       // Back to the account's own course / year / section.
       setOverride(false)
@@ -150,8 +163,14 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // Only offerings whose section matches the chosen course (and, with a mock
   // enrollment, only the student's own section). Nothing shows until a course
   // is picked, so a subject never leaks in from another program.
+  const pickOwnSection = !prefill && !enrolled && !override
   const courseOfferings = course
-    ? offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course) && (!enrolled || override || o.section === enrolled))
+    ? offerings.filter((o) =>
+        coursePrefix(o.section) === normalizeCourse(course) &&
+        (!enrolled || override || o.section === enrolled) &&
+        // No section on the account: nothing is offered until the student picks theirs.
+        (!pickOwnSection || (ownSection !== '' && o.section === ownSection)),
+      )
     : []
 
   // The year level decides what is offered: only subjects (and their sections)
@@ -160,6 +179,10 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   const yearNum = yearLevel ? Number(yearLevel) : null
   const matchesYear = (o: Offering) => override || yearNum == null || o.yearLevel == null || o.yearLevel === yearNum
   const yearOfferings = courseOfferings.filter(matchesYear)
+  // The sections a student with no saved section can choose from: this course and year.
+  const ownSectionOptions = course
+    ? [...new Set(offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course) && matchesYear(o)).map((o) => o.section))].sort()
+    : []
 
   const subjectOptions = Array.from(
     new Map(yearOfferings.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
@@ -377,7 +400,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                   name="course"
                   required
                   value={course}
-                  onChange={(v) => { setCourse(v); setSubjectId(''); setSection(''); setPicked([]); setPickedSection({}) }}
+                  onChange={(v) => { setCourse(v); setSubjectId(''); setSection(''); setPicked([]); setPickedSection({}); setOwnSection('') }}
                   placeholder="— Select course —"
                   options={courses.map((c) => ({ value: c, label: courseNames[c] ? `${c} — ${courseNames[c]}` : c }))}
                   className={selectClass}
@@ -401,7 +424,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                   name="year_level"
                   required
                   value={yearLevel}
-                  onChange={(v) => { setYearLevel(v); setSubjectId(''); setSection(''); setPicked([]); setPickedSection({}) }}
+                  onChange={(v) => { setYearLevel(v); setSubjectId(''); setSection(''); setPicked([]); setPickedSection({}); setOwnSection('') }}
                   placeholder="— Select year —"
                   options={YEARS.map((y) => ({ value: String(y), label: `Year ${y}` }))}
                   className={selectClass}
@@ -444,12 +467,29 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Exam Details</h2>
           {!prefill ? (
             <div className="space-y-4">
+              {/* The account has no section, so the student says which one is theirs;
+                  the subjects below are then only that section's. */}
+              {pickOwnSection && course && (
+                <div>
+                  <label className="block text-sm font-medium ef-muted mb-1">Your section *</label>
+                  <Select
+                    value={ownSection}
+                    onChange={(v) => { setOwnSection(v); setPicked([]); setPickedSection({}) }}
+                    placeholder={ownSectionOptions.length ? '— Select your section —' : 'No sections for that course and year'}
+                    options={ownSectionOptions.map((s) => ({ value: s, label: s }))}
+                    className={selectClass}
+                    style={selectStyle}
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium ef-muted mb-1">
                   Subjects * <span className="font-normal">(up to {MAX_SUBJECTS})</span>
                 </label>
                 {!course ? (
                   <p className="text-sm ef-muted">Select a course first.</p>
+                ) : pickOwnSection && !ownSection ? (
+                  <p className="text-sm ef-muted">Select your section first.</p>
                 ) : subjectOptions.length === 0 ? (
                   <p className="text-sm ef-muted">{yearNum ? `No subjects for Year ${yearNum} yet.` : 'No subjects for that course yet.'}</p>
                 ) : (
