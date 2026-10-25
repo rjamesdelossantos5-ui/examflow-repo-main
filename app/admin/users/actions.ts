@@ -19,7 +19,7 @@ function sanitize(v: unknown): string {
  * are kept (the form shows just those): a department for teachers and Program
  * Heads, student details for students, nothing extra for registrars and admins.
  */
-function readProfileFields(formData: FormData) {
+function readProfileFields(formData: FormData, requireClass = true) {
   const fullName = sanitize(formData.get('full_name'))
   const role = sanitize(formData.get('role')) as UserRole
   const isStudent = role === 'student'
@@ -36,7 +36,10 @@ function readProfileFields(formData: FormData) {
   // A student's course, year and section fill in the submit form and decide
   // which classes they see, and the student number is how the Registrar's parent
   // list is matched to them, so a student account can't be saved without them.
-  if (isStudent && (!studentNumber || !course || yearLevel === null || !section)) return fail('A student needs a student number, course, year level and section.')
+  // Edit leaves a student's course, year and section alone (requireClass = false),
+  // so only the student number is needed there.
+  if (isStudent && !studentNumber) return fail('A student needs a student number.')
+  if (isStudent && requireClass && (!course || yearLevel === null || !section)) return fail('A student needs a student number, course, year level and section.')
   if (studentNumber && !isValidStudentNumber(studentNumber)) return fail('Enter a valid student number (digits only, e.g. 2024-00001).')
   if (course && !isValidCode(course)) return fail('Enter a valid course (letters and numbers only).')
   if (section && !isValidCode(section)) return fail('Enter a valid section (letters and numbers only).')
@@ -156,7 +159,7 @@ export async function updateUser(userId: string, formData: FormData) {
   const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', me.id).single()
   if (myProfile?.role !== 'admin') return { error: 'Unauthorized' }
 
-  const fields = readProfileFields(formData)
+  const fields = readProfileFields(formData, false)
   if (fields.error !== null) return { error: fields.error }
   const { fullName, role, departmentId, course, yearLevel, section } = fields
   let studentNumber = fields.studentNumber
@@ -172,9 +175,13 @@ export async function updateUser(userId: string, formData: FormData) {
     if (blocked) return { error: blocked }
   }
 
+  // A student's course, year and section are not on the Edit form, so they are
+  // left exactly as saved. Anyone who is not a student has none of the three.
+  const classFields = role === 'student' ? {} : { course, year_level: yearLevel, section }
+
   const { data: updated, error } = await supabase
     .from('profiles')
-    .update({ full_name: fullName, role, department_id: departmentId, student_number: studentNumber, course, year_level: yearLevel, section })
+    .update({ full_name: fullName, role, department_id: departmentId, student_number: studentNumber, ...classFields })
     .eq('id', userId)
     .select('id')
 

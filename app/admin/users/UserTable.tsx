@@ -317,7 +317,9 @@ function RoleFields({
       )}
       {role === 'student' && (
         <>
-          <div>
+          {/* Edit shows only the student number: course, year and section are not
+              edited here, and are kept as saved (see updateUser). */}
+          <div className={initial ? 'col-span-2' : ''}>
             <label className={labelClass}>Student Number *</label>
             {lockedStudentNumber ? (
               <>
@@ -328,7 +330,7 @@ function RoleFields({
               <input name="student_number" required defaultValue={initial?.student_number ?? ''} placeholder="02000123456" className={inputClass} />
             )}
           </div>
-          <StudentClassFields sections={sections} courseNames={courseNames} initial={initial} />
+          {!initial && <StudentClassFields sections={sections} courseNames={courseNames} initial={initial} />}
         </>
       )}
     </>
@@ -727,9 +729,11 @@ export default function UserTable({
                   for them still go to this person — until you pick another teacher on the Subjects page.
                 </p>
               )}
-              <p className="col-span-2 text-xs md:text-sm text-gray-500">
-                If this person is in the School Data file, the next import sets these details from the file again.
-              </p>
+              {editRole !== 'student' && (
+                <p className="col-span-2 text-xs md:text-sm text-gray-500">
+                  If this person is in the School Data file, the next import sets these details from the file again.
+                </p>
+              )}
               {editError && (
                 <p className="col-span-2 rounded-md px-3 py-2 text-sm bg-red-50 border border-red-200 text-red-700">{editError}</p>
               )}
