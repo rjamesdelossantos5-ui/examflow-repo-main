@@ -125,11 +125,12 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
   // Tall enough that each bar keeps a readable thickness however many categories
   // there are; the pie sits in the same height. Larger again on a desktop window.
   const desktop = useIsDesktop()
-  const chartHeight = desktop ? Math.max(560, chartData.length * 76) : Math.max(380, chartData.length * 56)
-  const tickSize = desktop ? 16 : 14
-  const labelWidth = desktop ? 250 : 190
-  const labelChars = desktop ? 34 : 26
-  const barMax = desktop ? 56 : 36
+  // About 80% of the earlier sizes, which read as too large on a laptop screen.
+  const chartHeight = desktop ? Math.max(448, chartData.length * 61) : Math.max(304, chartData.length * 45)
+  const tickSize = desktop ? 13 : 12
+  const labelWidth = desktop ? 200 : 152
+  const labelChars = desktop ? 30 : 22
+  const barMax = desktop ? 45 : 29
 
   const tooltipStyle = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--card-foreground)', fontSize: 13 }
 
@@ -170,7 +171,7 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
           <p className="text-sm ef-muted mt-1">Once students are scheduled for a special exam, their numbers will appear here.</p>
         </div>
       ) : (
-        <div className="ef-card rounded-xl shadow-sm p-4 sm:p-8">
+        <div className="ef-card rounded-xl shadow-sm p-4 sm:p-6">
           {/* Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div className="flex flex-wrap gap-1.5">

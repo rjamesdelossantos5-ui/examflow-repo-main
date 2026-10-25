@@ -54,6 +54,8 @@ export interface ClassOption {
   teacher: string | null
   /** That teacher's account id, so Edit can tick the classes a person already has. */
   teacherId?: string | null
+  /** The subject's department, so the list can follow the Department picked above it. */
+  departmentId?: string | null
 }
 
 /**
@@ -262,6 +264,14 @@ function RoleFields({
   lockedStudentNumber?: string
 }) {
   const usesDepartment = role === 'subject_teacher' || role === 'program_head'
+  // The department picked in the form, so a teacher's class list shows only that
+  // department's subjects. Back to the saved one when the role changes, matching
+  // the Select below, which remounts on a role change.
+  const [department, setDepartment] = useState(initial?.department_id ?? '')
+  const changeRole = (r: string) => {
+    setDepartment(initial?.department_id ?? '')
+    onRoleChange(r)
+  }
   return (
     <>
       <div className={usesDepartment ? '' : 'col-span-2'}>
@@ -270,7 +280,7 @@ function RoleFields({
           name="role"
           required
           value={role}
-          onChange={onRoleChange}
+          onChange={changeRole}
           placeholder="— Select role —"
           options={Object.entries(ROLE_LABELS).map(([v, l]) => ({ value: v, label: l }))}
           className={inputClass}
@@ -286,6 +296,7 @@ function RoleFields({
             name="department_id"
             required={role === 'program_head'}
             defaultValue={initial?.department_id ?? ''}
+            onChange={setDepartment}
             placeholder={role === 'program_head' ? '— Select department —' : '— none —'}
             options={departments.map((d) => ({ value: d.id, label: d.name }))}
             className={inputClass}
@@ -296,7 +307,7 @@ function RoleFields({
         <p className="col-span-2 text-xs text-gray-500">They review the requests for subjects in this department.</p>
       )}
       {role === 'subject_teacher' && classOptions && classOptions.length > 0 && (
-        <TeacherClassPicker classes={classOptions} initialPicked={initialClassIds} editing={!!initial} />
+        <TeacherClassPicker classes={classOptions} department={department} initialPicked={initialClassIds} editing={!!initial} />
       )}
       {role === 'subject_teacher' && !(classOptions && classOptions.length > 0) && (
         <p className="col-span-2 text-xs text-gray-500">
@@ -330,11 +341,15 @@ function RoleFields({
  * The picked ids are sent as `class_ids`. Taking a class over replaces its
  * current teacher; requests already sent keep the teacher they were sent to.
  */
-function TeacherClassPicker({ classes, initialPicked = [], editing = false }: { classes: ClassOption[]; initialPicked?: string[]; editing?: boolean }) {
+function TeacherClassPicker({ classes, department = '', initialPicked = [], editing = false }: { classes: ClassOption[]; department?: string; initialPicked?: string[]; editing?: boolean }) {
   const [picked, setPicked] = useState<Set<string>>(() => new Set(initialPicked))
   const [query, setQuery] = useState('')
   const q = query.trim().toLowerCase()
-  const shown = q ? classes.filter((c) => [c.code, c.name, c.section].some((v) => v.toLowerCase().includes(q))) : classes
+  // With a department picked: that department's classes, plus any class already
+  // ticked (so a ticked class from another department never disappears while
+  // still selected). With no department: every class.
+  const inDepartment = department ? classes.filter((c) => c.departmentId === department || picked.has(c.id)) : classes
+  const shown = q ? inDepartment.filter((c) => [c.code, c.name, c.section].some((v) => v.toLowerCase().includes(q))) : inDepartment
   const toggle = (id: string) =>
     setPicked((prev) => {
       const next = new Set(prev)
@@ -365,7 +380,11 @@ function TeacherClassPicker({ classes, initialPicked = [], editing = false }: { 
             </span>
           </label>
         ))}
-        {shown.length === 0 && <p className="px-3 py-4 text-center text-xs text-gray-500">No class matches your search.</p>}
+        {shown.length === 0 && (
+          <p className="px-3 py-4 text-center text-xs text-gray-500">
+            {q ? 'No class matches your search.' : 'This department has no classes yet.'}
+          </p>
+        )}
       </div>
       {[...picked].map((id) => <input key={id} type="hidden" name="class_ids" value={id} />)}
       {/* Tells Edit's save that this list was on screen, so an empty list means
