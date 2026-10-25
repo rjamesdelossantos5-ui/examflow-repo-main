@@ -152,7 +152,10 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-[22rem] max-w-[calc(100vw-1.5rem)] rounded-2xl shadow-2xl overflow-hidden z-50 ef-card"
+          // Phones: pinned under the header with 12px side margins, so it can never
+          // run off the screen (the bell sits mid-header there, not at the edge).
+          // sm and up: the dropdown hangs from the bell as before.
+          className="fixed left-3 right-3 top-[4.25rem] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[22rem] max-w-none sm:max-w-[calc(100vw-1.5rem)] rounded-2xl shadow-2xl overflow-hidden z-50 ef-card"
           style={{ border: '1px solid var(--border)' }}
         >
           {/* Header with gold accent bar */}
@@ -180,7 +183,7 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
               <p className="text-xs ef-muted mt-0.5">New activity will show up here.</p>
             </div>
           ) : (
-            <ul className="max-h-[22rem] overflow-y-auto divide-y ef-border">
+            <ul className="max-h-[min(22rem,calc(100vh-10rem))] overflow-y-auto divide-y ef-border">
               {items.map((n) => {
                 const color = TONE[n.tone ?? 'info']
                 const isNew = n.read !== undefined ? !n.read : n.unread === true
