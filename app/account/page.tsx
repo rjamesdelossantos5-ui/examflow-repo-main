@@ -29,9 +29,16 @@ export default async function AccountPage() {
 
   // Programs from the School Data import, for the student's course dropdown.
   let courses: { code: string; name: string | null }[] = []
+  // Every section that has classes ("BSIT 2-201"), for the student's section
+  // dropdown. The form narrows it to the chosen course and year.
+  let sections: string[] = []
   if (role === 'student') {
-    const { data: programRows } = await supabase.from('program_departments').select('program, name').order('program')
+    const [{ data: programRows }, { data: classRows }] = await Promise.all([
+      supabase.from('program_departments').select('program, name').order('program'),
+      supabase.from('class_offerings').select('section'),
+    ])
     courses = (programRows ?? []).map((p) => ({ code: p.program as string, name: (p.name as string | null) ?? null }))
+    sections = [...new Set((classRows ?? []).map((c) => String(c.section)))].sort((a, b) => a.localeCompare(b))
   }
   const deptName = (profile.departments as unknown as { name: string } | null)?.name ?? null
 
@@ -99,6 +106,7 @@ export default async function AccountPage() {
         }}
         studentNumberLocked={role === 'student' && studentNumberFromEmail(profile.email) !== null}
         courses={courses}
+        sections={sections}
       />
     </div>
   )

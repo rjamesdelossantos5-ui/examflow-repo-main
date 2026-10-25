@@ -164,6 +164,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // enrollment, only the student's own section). Nothing shows until a course
   // is picked, so a subject never leaks in from another program.
   const pickOwnSection = !prefill && !enrolled && !override
+  const sectionLocked = !prefill && !!enrolled && !override
   const courseOfferings = course
     ? offerings.filter((o) =>
         coursePrefix(o.section) === normalizeCourse(course) &&
@@ -184,8 +185,14 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
     ? [...new Set(offerings.filter((o) => coursePrefix(o.section) === normalizeCourse(course) && matchesYear(o)).map((o) => o.section))].sort()
     : []
 
+  // Irregular mode: a chosen section narrows the subject list to that section's
+  // subjects. Subjects already ticked stay in the list, so changing the section to
+  // add one from another section never loses the ones picked before.
+  const optionSource = override && ownSection
+    ? yearOfferings.filter((o) => o.section === ownSection || picked.includes(o.subjectId))
+    : yearOfferings
   const subjectOptions = Array.from(
-    new Map(yearOfferings.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
+    new Map(optionSource.map((o) => [o.subjectId, { id: o.subjectId, code: o.subjectCode, name: o.subjectName }])).values(),
   )
   // Sections available for the chosen subject.
   const sectionOptions = yearOfferings.filter((o) => o.subjectId === subjectId)
@@ -432,6 +439,14 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 />
               )}
             </div>
+            {/* The section saved on the account (My Account), locked like course and
+                year. The subjects below are only this section's. */}
+            {sectionLocked && (
+              <div>
+                <label className="block text-sm font-medium ef-muted mb-1">Section</label>
+                <input readOnly value={enrolled ?? ''} className={`${inputClass} cursor-not-allowed opacity-70`} />
+              </div>
+            )}
           </div>
           {(baseCourseLocked || baseYearLocked) && (
             <div className="rounded-lg border ef-border px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
@@ -453,7 +468,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               </button>
             </div>
           )}
-          {(numberLocked || courseLocked || yearLocked) && (
+          {(numberLocked || courseLocked || yearLocked || sectionLocked) && (
             <p className="text-xs ef-muted">
               Locked fields come from your account. To change them, open My Account from the menu at the top right.
             </p>
@@ -469,14 +484,22 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             <div className="space-y-4">
               {/* The account has no section, so the student says which one is theirs;
                   the subjects below are then only that section's. */}
-              {pickOwnSection && course && (
+              {(pickOwnSection || override) && course && (
                 <div>
-                  <label className="block text-sm font-medium ef-muted mb-1">Your section *</label>
+                  <label className="block text-sm font-medium ef-muted mb-1">
+                    {override ? 'Section' : 'Your section *'}
+                    {override && <span className="font-normal"> (optional — pick one to see only its subjects)</span>}
+                  </label>
                   <Select
                     value={ownSection}
-                    onChange={(v) => { setOwnSection(v); setPicked([]); setPickedSection({}) }}
-                    placeholder={ownSectionOptions.length ? '— Select your section —' : 'No sections for that course and year'}
-                    options={ownSectionOptions.map((s) => ({ value: s, label: s }))}
+                    // Normal mode: a new section means a new subject list, so picks are cleared.
+                    // Irregular mode keeps them: one request can mix subjects from several sections.
+                    onChange={(v) => { setOwnSection(v); if (!override) { setPicked([]); setPickedSection({}) } }}
+                    placeholder={override ? 'All sections' : ownSectionOptions.length ? '— Select your section —' : 'No sections for that course and year'}
+                    options={[
+                      ...(override ? [{ value: '', label: 'All sections' }] : []),
+                      ...ownSectionOptions.map((s) => ({ value: s, label: s })),
+                    ]}
                     className={selectClass}
                     style={selectStyle}
                   />
@@ -509,7 +532,8 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               {picked.map((id) => {
                 const subj = subjectOptions.find((o) => o.id === id)
                 const opts = yearOfferings.filter((o) => o.subjectId === id)
-                const chosen = pickedSection[id] ?? (opts.length === 1 ? opts[0].section : '')
+                // The section picked above is chosen for the subject when it is offered there.
+                const chosen = pickedSection[id] ?? (override && ownSection && opts.some((o) => o.section === ownSection) ? ownSection : opts.length === 1 ? opts[0].section : '')
                 const teacher = opts.find((o) => o.section === chosen)?.teacherName ?? null
                 return (
                   <div key={id} className="rounded-lg border ef-border p-3 space-y-2">

@@ -5,6 +5,7 @@ import { updateProfile } from './actions'
 import { initials } from '@/lib/initials'
 import Select from '@/components/Select'
 import { toastSuccess } from '@/components/Toaster'
+import { programOf, yearOf } from '@/lib/schoolData'
 import type { Profile } from '@/lib/supabase/types'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -40,9 +41,18 @@ function Banner({ kind, text }: { kind: 'ok' | 'err'; text: string }) {
  * account), email and role are read-only here. Note: edits
  * do NOT rewrite past requests — those keep the snapshot taken at submit time.
  */
-export default function ProfileForm({ profile, assignment, studentNumberLocked = false, courses = [] }: { profile: Profile; assignment?: React.ReactNode; studentNumberLocked?: boolean; courses?: { code: string; name: string | null }[] }) {
+export default function ProfileForm({ profile, assignment, studentNumberLocked = false, courses = [], sections = [] }: { profile: Profile; assignment?: React.ReactNode; studentNumberLocked?: boolean; courses?: { code: string; name: string | null }[]; sections?: string[] }) {
   const isStudent = profile.role === 'student'
   const [isPending, startTransition] = useTransition()
+  // Course, year and section depend on each other: the section list shows only
+  // the chosen course and year, and a section that no longer fits is cleared.
+  const [course, setCourse] = useState(profile.course ?? '')
+  const [year, setYear] = useState(profile.year_level ? String(profile.year_level) : '')
+  const [section, setSection] = useState(profile.section ?? '')
+  const courseKey = (c: string) => c.toUpperCase().replace(/[^A-Z]/g, '')
+  const fits = (s: string, c: string, y: string) =>
+    (!c || programOf(s) === courseKey(c)) && (!y || yearOf(s) === null || yearOf(s) === Number(y))
+  const sectionOptions = sections.filter((s) => fits(s, course, year))
   const [profileMsg, setProfileMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
 
   function onProfileSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -97,7 +107,7 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
         </div>
 
         {isStudent && (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium ef-muted mb-1">
                 Student number {!studentNumberLocked && <span className="font-normal text-2xs">(optional)</span>}
@@ -116,7 +126,8 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
               {courses.length ? (
                 <Select
                   name="course"
-                  defaultValue={profile.course ?? ''}
+                  value={course}
+                  onChange={(v) => { setCourse(v); if (section && !fits(section, v, year)) setSection('') }}
                   placeholder="— Select course —"
                   // A course already saved stays selectable even if it is not on the list.
                   options={[
@@ -134,7 +145,8 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
               <label className="block text-sm font-medium ef-muted mb-1">Year level</label>
               <Select
                 name="year_level"
-                defaultValue={profile.year_level ? String(profile.year_level) : ''}
+                value={year}
+                onChange={(v) => { setYear(v); if (section && !fits(section, course, v)) setSection('') }}
                 placeholder="— Select year —"
                 options={[
                   ...YEARS.map((y) => ({ value: String(y), label: `Year ${y}` })),
@@ -144,6 +156,21 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
                 className={inputClass}
               />
             </div>
+            {/* Not shown until classes exist: with nothing to pick from, the field is
+                left out of the form, so saving never blanks a section an admin set. */}
+            {sections.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium ef-muted mb-1">Section</label>
+                <Select
+                  name="section"
+                  value={section}
+                  onChange={setSection}
+                  placeholder={sectionOptions.length ? '— Select section —' : 'No sections for that course and year'}
+                  options={sectionOptions.map((s) => ({ value: s, label: s }))}
+                  className={inputClass}
+                />
+              </div>
+            )}
           </div>
         )}
 

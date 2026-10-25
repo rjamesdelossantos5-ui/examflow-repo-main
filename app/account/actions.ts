@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { isValidStudentNumber, isValidCode } from '@/lib/validation'
 import { studentNumberFromEmail } from '@/lib/studentNumber'
+import { programOf, yearOf } from '@/lib/schoolData'
 import { friendlyError, RETRY_HINT } from '@/lib/actionError'
 
 function clean(v: FormDataEntryValue | null, max = 120) {
@@ -36,8 +37,27 @@ export async function updateProfile(formData: FormData) {
   }
   const course = clean(formData.get('course'), 60)
   if (course && !isValidCode(course)) return { error: 'Enter a valid course (letters and numbers only).' }
-  // Section is not edited here. It comes from the School Data import and is left
-  // untouched, so saving this page never blanks it.
+  // A student's section. It pre-fills the submit form and decides which subjects
+  // it offers. Only a student has one, and only when the form sent the field (it
+  // is left out when no classes exist yet), so saving never blanks a section an
+  // admin set. It has to be a real section, and agree with the course and year.
+  let sectionUpdate: { section: string | null } | Record<string, never> = {}
+  if (me?.role === 'student' && formData.has('section')) {
+    const section = clean(formData.get('section'), 60).toUpperCase()
+    if (section) {
+      if (!isValidCode(section)) return { error: 'Pick a valid section.' }
+      if (course && programOf(section) !== course.toUpperCase().replace(/[^A-Z]/g, '')) {
+        return { error: 'That section does not belong to the course you picked.' }
+      }
+      const sectionYear = yearOf(section)
+      if (yearLevel !== null && sectionYear !== null && sectionYear !== yearLevel) {
+        return { error: 'That section is not in the year level you picked.' }
+      }
+      const { data: found } = await supabase.from('class_offerings').select('id').eq('section', section).limit(1)
+      if (!found?.length) return { error: 'Pick a section from the list.' }
+    }
+    sectionUpdate = { section: section || null }
+  }
 
   const { error } = await supabase
     .from('profiles')
@@ -45,6 +65,7 @@ export async function updateProfile(formData: FormData) {
       ...(numberAlreadySaved ? {} : { student_number: studentNumber || null }),
       course: course || null,
       year_level: yearLevel,
+      ...sectionUpdate,
     })
     .eq('id', user.id)
 
