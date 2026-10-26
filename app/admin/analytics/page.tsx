@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
-import { getExamStatRows } from '@/lib/examAnalytics'
-import { getActivePeriod, SEMESTER_LABEL } from '@/lib/examSettings'
-import AnalyticsCharts from './AnalyticsCharts'
+import { getSemesterStatRows } from '@/lib/examAnalytics'
+import { SEMESTER_LABEL } from '@/lib/examSettings'
+import AnalyticsCharts from '@/components/AnalyticsCharts'
 import { displayName, surname } from '@/lib/initials'
 
 export const metadata = { title: 'EXAMFLOW — Analytics' }
@@ -17,11 +17,7 @@ export default async function AdminAnalyticsPage() {
   if (!profile || profile.role !== 'admin') redirect('/login')
 
   const supabase = await createClient()
-  const [allRows, active] = await Promise.all([getExamStatRows(supabase), getActivePeriod(supabase)])
-  // The counts restart when the active semester changes (1st → 2nd): only the
-  // active period's semester is counted. With no active period there is nothing
-  // to scope to, so every row is shown.
-  const rows = active ? allRows.filter((r) => r.semester === active.semester) : allRows
+  const { rows, active } = await getSemesterStatRows(supabase)
 
   return (
     <div className="space-y-5">

@@ -16,6 +16,7 @@ import { syncDiditResult } from '@/lib/diditSync'
 import { getSpecialExamFee } from '@/lib/fees'
 import type { RequestStatus, UserRole } from '@/lib/supabase/types'
 import { shownInHistory } from '@/lib/historyFilter'
+import { runAutoDecisions, isAutoDeclined } from '@/lib/autoDecide'
 
 export const metadata = { title: 'EXAMFLOW — Request Detail' }
 
@@ -61,6 +62,7 @@ export default async function RequestDetailPage({
   // Cached — reuses the layout's auth lookup instead of a second round-trip.
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   const { data: req } = await supabase
     .from('special_exam_requests')
@@ -390,8 +392,10 @@ export default async function RequestDetailPage({
         </div>
       )}
 
-      {/* Rejected — edit & resubmit (details pre-filled) or delete */}
-      {req.status === 'rejected' && (
+      {/* Rejected — edit & resubmit (details pre-filled) or delete. Not for a
+          form declined at a deadline: the window is closed, so a resubmit
+          would only be refused. */}
+      {req.status === 'rejected' && !isAutoDeclined(req.rejection_reason as string | null) && (
         <div className="ef-card rounded-xl shadow-sm p-6 space-y-4">
           <div>
             <h2 className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Want to try again?</h2>
@@ -400,7 +404,7 @@ export default async function RequestDetailPage({
           <Link
             href={`/student/submit?from=${req.id}`}
             className="block w-full text-center py-2.5 rounded-lg font-semibold text-sm"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+            style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
           >
             Edit &amp; Resubmit
           </Link>

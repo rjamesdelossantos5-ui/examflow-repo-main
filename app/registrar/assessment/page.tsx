@@ -5,6 +5,7 @@ import { getActivePeriodCached } from '@/lib/activePeriod'
 import { getCurrentUser } from '@/lib/currentUser'
 import AssessmentList, { type StudentAssessment } from './AssessmentList'
 import { getSpecialExamFee } from '@/lib/fees'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export const metadata = { title: 'EXAMFLOW — Payment Assessment' }
 
@@ -23,6 +24,7 @@ export default async function PaymentAssessmentPage() {
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   const SELECT = `
     id, student_id, status, exam_type, submitted_at, period_id,

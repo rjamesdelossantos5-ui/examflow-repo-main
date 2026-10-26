@@ -60,7 +60,9 @@ const REQUEST_SELECT =
 export async function emailRequestEvent(
   event: RequestEmailEvent,
   requestIds: string[],
-  opts: { reason?: string } = {},
+  /** base: the site address, for a caller that can't read the request headers
+   *  inside after() — a page, as opposed to a Server Action (lib/autoDecide.ts). */
+  opts: { reason?: string; base?: string } = {},
 ): Promise<void> {
   try {
     const ids = [...new Set(requestIds)].filter(Boolean)
@@ -70,7 +72,7 @@ export async function emailRequestEvent(
       console.warn('[requestEmails] SUPABASE_SERVICE_ROLE_KEY not set — skipped', event)
       return
     }
-    const base = await siteUrl()
+    const base = opts.base ?? await siteUrl()
 
     const { data, error } = await admin.from('special_exam_requests').select(REQUEST_SELECT).in('id', ids)
     if (error || !data) {
@@ -153,6 +155,7 @@ async function send(admin: Admin, event: RequestEmailEvent, r: RequestRow, base:
       await toStudent()
       return toStaff(programHeadEmails(admin, r.departmentId), 'program_head')
     case 'rejected':
+    case 'auto_declined':
     case 'returned':
     case 'scheduled':
     case 'receipt_rejected':
@@ -188,8 +191,9 @@ async function teacherEmails(admin: Admin, teacherId: string | null): Promise<st
 
 /** The site the action was performed on, so a local test links to localhost, a
  *  Vercel preview to that preview, and the live site to itself. Allowed inside
- *  after() when called from a Server Action (Next's after() docs). */
-async function siteUrl(): Promise<string> {
+ *  after() when called from a Server Action (Next's after() docs); a page must
+ *  call it during render and pass the result as `base`. */
+export async function siteUrl(): Promise<string> {
   const h = await headers()
   const host = h.get('host') ?? ''
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')

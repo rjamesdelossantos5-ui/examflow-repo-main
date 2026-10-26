@@ -4,9 +4,18 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Brand */
-  --sti-gold: #FDB913;
-  --sti-navy: #002F6C;
+  /* Brand — STI College's own colors. STI publishes no public brand guide, so
+     these are read from what STI itself uses: the yellow and blue are sampled
+     from the pixels of the STI logo, the navy from sti.edu's pages. The same
+     values live in lib/brand.ts for code that can't read CSS (emails, the
+     error page). Contrast ratios are WCAG, against white.
+
+     Yellow is 1.17:1 on white: unreadable as text and invisible as a thin line.
+     It is a FILL only — buttons, the active tab, tints — always with navy text
+     on it (16:1). Lines, icons and focus rings use blue instead. */
+  --sti-yellow: #FFF200;   /* logo yellow */
+  --sti-blue: #0072BC;     /* logo blue · 5.1:1 — header, accents, focus rings */
+  --sti-navy: #050D36;     /* sti.edu navy · 18.8:1 — ink, text on yellow */
 
   /* Semantic surface tokens (light) */
   --background: #f3f4f6;   /* app canvas */
@@ -18,7 +27,7 @@
      7.3:1 on cards, so muted copy stays readable on a phone outdoors. */
   --muted: #4b5563;
   --border: #e5e7eb;       /* hairlines */
-  --header: #002F6C;       /* top nav */
+  --header: var(--sti-blue); /* top nav — white text on it is 5.1:1 */
 
   /* Status colors used as TEXT (pills, banners, headlines). The raw palette
      hues (#3b82f6 / #16a34a / #f59e0b) only reach 2.1–3.7:1 on a light
@@ -49,7 +58,10 @@
   --card-foreground: #e5e7eb;
   --muted: #94a3b8;        /* 6.8:1 on the dark card — already compliant */
   --border: #1f2b45;
-  --header: #0a1830;
+  --header: var(--sti-navy);
+  /* The logo blue is 3.4:1 on the dark card — too dim for a focus ring or an
+     icon there — so dark mode lifts it to a lighter tint of the same hue. */
+  --sti-blue: #4FA8E0;     /* 6.6:1 on the dark card */
 
   /* Light tints of the status colors: on a dark surface the contrast need
      inverts, so these go brighter rather than darker. */
@@ -67,10 +79,10 @@
   --color-card-foreground: var(--card-foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
-  --color-sti-gold: var(--sti-gold);
+  --color-sti-yellow: var(--sti-yellow);
+  --color-sti-blue: var(--sti-blue);
   --color-sti-navy: var(--sti-navy);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-poppins);
 }
 
 /* Bump the whole Tailwind type scale by ~1px for readability. Only font sizes
@@ -106,7 +118,7 @@ html.dark {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
   /* Long unbroken strings (student/contact numbers, emails, URLs) wrap instead
      of overflowing their container on small screens — a site-wide safety net. */
@@ -160,9 +172,15 @@ button:disabled,
 a:focus-visible,
 button:focus-visible,
 [role='button']:focus-visible {
-  outline: 2px solid var(--sti-gold);
+  outline: 2px solid var(--sti-blue);
   outline-offset: 2px;
   border-radius: 6px;
+}
+/* On the blue header and sidebar a blue ring would vanish; yellow there. */
+.ef-on-brand a:focus-visible,
+.ef-on-brand button:focus-visible,
+.ef-on-brand [role='button']:focus-visible {
+  outline-color: var(--sti-yellow);
 }
 
 /* Reusable surface helpers so role pages get dark mode for free */
@@ -332,7 +350,7 @@ button:focus-visible,
 
 /* ── Landing page (app/page.tsx, app/RoutingSlip.tsx) ─────────
    Scoped to .ef-landing so nothing here reaches the dashboards. */
-.ef-landing ::selection { background: var(--sti-gold); color: var(--sti-navy); }
+.ef-landing ::selection { background: var(--sti-yellow); color: var(--sti-navy); }
 
 /* Links underline like ink on a form; offset keeps descenders clear. */
 .ef-landing-link {
@@ -343,7 +361,7 @@ button:focus-visible,
 }
 .ef-landing-link:hover { text-decoration-thickness: 2px; }
 
-/* The global gold focus ring is invisible on white paper; navy there. */
+/* On the landing paper the ring is navy, the page's ink colour. */
 .ef-landing section a:focus-visible,
 .ef-landing footer a:focus-visible,
 .ef-landing [role='dialog'] button:focus-visible {
@@ -397,11 +415,11 @@ button:focus-visible,
 /* Landing: a dotted divider drawn like the hero route (2px navy dots, 8px apart, 35%) */
 .ef-route-rule {
   height: 2px;
-  background-image: radial-gradient(circle at 1px 1px, rgba(0, 47, 108, 0.35) 1px, transparent 1.25px);
+  background-image: radial-gradient(circle at 1px 1px, rgba(5, 13, 54, 0.35) 1px, transparent 1.25px);
   background-size: 8px 2px;
   background-repeat: repeat-x;
 }
-/* Landing: Paid / Waived route switch. The chosen one gets a gold underline, like a stop turning gold */
+/* Landing: Paid / Waived route switch. The chosen one gets a blue underline (yellow would vanish on white paper) */
 .ef-route-tab {
   position: relative;
   border-radius: 4px;
@@ -415,11 +433,11 @@ button:focus-visible,
   bottom: 2px;
   height: 3px;
   border-radius: 2px;
-  background: var(--sti-gold);
+  background: var(--sti-blue);
   transform: scaleX(0);
   transition: transform 220ms var(--ease-out);
 }
 .ef-route-tab[data-on]::after { transform: scaleX(1); }
 @media (hover: hover) and (pointer: fine) {
-  .ef-route-tab:not([data-on]):hover { background: rgba(0, 47, 108, 0.06); }
+  .ef-route-tab:not([data-on]):hover { background: rgba(5, 13, 54, 0.06); }
 }

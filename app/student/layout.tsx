@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import { getNotifications } from '@/lib/notifications'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 const NAV = [
   { label: 'My Requests', href: '/student', icon: 'inbox' as const },
@@ -14,6 +15,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   // One parallel wave — nothing below depends on the profile row, so it must
   // not wait behind it (the header can't paint until this layout resolves).

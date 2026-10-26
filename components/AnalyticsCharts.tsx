@@ -21,8 +21,8 @@ const DIMENSIONS: { value: Dimension; label: string }[] = [
 // decorative marks, not text, so they don't need to individually pass the AA
 // text-contrast bar the way the --status-* variables do).
 const PALETTE = [
-  'var(--sti-gold)', 'var(--sti-navy)', 'var(--status-info)', 'var(--status-success)',
-  'var(--status-warning)', 'var(--status-danger)', '#8b5cf6', '#14b8a6',
+  'var(--sti-blue)', 'var(--sti-navy)', 'var(--status-success)', 'var(--status-warning)',
+  'var(--status-danger)', '#8b5cf6', '#14b8a6', 'var(--status-info)',
 ]
 
 // Cap the number of slices/bars shown — a pie (or bar) chart with 30 subject
@@ -80,8 +80,14 @@ function StatTile({ label, value, icon, accent }: { label: string; value: number
   )
 }
 
-export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStatRow[] }) {
-  const [dimension, setDimension] = useState<Dimension>('department')
+/**
+ * singleDepartment: the rows are one department's (a Program Head's or a
+ * Teacher's), so a Department breakdown would be one slice. It is left out,
+ * the chart opens on Subject, and the fourth tile counts subjects instead.
+ */
+export default function AnalyticsCharts({ rows: semesterRows, singleDepartment = false }: { rows: ExamStatRow[]; singleDepartment?: boolean }) {
+  const dimensions = singleDepartment ? DIMENSIONS.filter((d) => d.value !== 'department') : DIMENSIONS
+  const [dimension, setDimension] = useState<Dimension>(dimensions[0].value)
   // 'all' = Overall (every term of the semester shown); otherwise one term.
   const [termFilter, setTermFilter] = useState<'all' | Term>('all')
   const reducedMotion = useReducedMotion()
@@ -101,6 +107,7 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
     paid: rows.filter((r) => r.examType === 'paid').length,
     excused: rows.filter((r) => r.examType === 'excused').length,
     departments: new Set(rows.map((r) => r.departmentName)).size,
+    subjects: new Set(rows.map((r) => r.subjectCode)).size,
   }), [rows])
 
   const chartData = useMemo(() => {
@@ -147,7 +154,7 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
             className={`ef-press px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
               termFilter === value ? '' : 'border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
             }`}
-            style={termFilter === value ? { background: 'var(--sti-gold)', color: 'var(--sti-navy)' } : { color: 'var(--card-foreground)' }}
+            style={termFilter === value ? { background: 'var(--sti-yellow)', color: 'var(--sti-navy)' } : { color: 'var(--card-foreground)' }}
           >
             {label} <span className="tabular-nums opacity-70">({count})</span>
           </button>
@@ -159,13 +166,15 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
         <StatTile label="Total Exams Taken" value={totals.total} icon="layers" accent="var(--status-neutral)" />
         <StatTile label="Paid" value={totals.paid} icon="receipt" accent="var(--status-warning)" />
         <StatTile label="Waived" value={totals.excused} icon="file" accent="var(--status-info)" />
-        <StatTile label="Departments" value={totals.departments} icon="building" accent="var(--status-success)" />
+        {singleDepartment
+          ? <StatTile label="Subjects" value={totals.subjects} icon="book" accent="var(--status-success)" />
+          : <StatTile label="Departments" value={totals.departments} icon="building" accent="var(--status-success)" />}
       </div>
 
       {rows.length === 0 ? (
         <div className="ef-card rounded-xl shadow-sm px-4 py-14 text-center">
-          <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)' }}>
-            <Icon name="chart" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
+          <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)' }}>
+            <Icon name="chart" className="w-6 h-6" style={{ color: 'var(--sti-blue)' }} />
           </div>
           <p className="font-medium" style={{ color: 'var(--card-foreground)' }}>No completed exams yet</p>
           <p className="text-sm ef-muted mt-1">Once students are scheduled for a special exam, their numbers will appear here.</p>
@@ -175,7 +184,7 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
           {/* Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div className="flex flex-wrap gap-1.5">
-              {DIMENSIONS.map((d) => (
+              {dimensions.map((d) => (
                 <button
                   key={d.value}
                   type="button"
@@ -183,7 +192,7 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
                   className={`ef-press px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                     dimension === d.value ? '' : 'border ef-border hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
                   }`}
-                  style={dimension === d.value ? { background: 'var(--sti-gold)', color: 'var(--sti-navy)' } : { color: 'var(--card-foreground)' }}
+                  style={dimension === d.value ? { background: 'var(--sti-yellow)', color: 'var(--sti-navy)' } : { color: 'var(--card-foreground)' }}
                 >
                   {d.label}
                 </button>
@@ -236,7 +245,7 @@ export default function AnalyticsCharts({ rows: semesterRows }: { rows: ExamStat
                     axisLine={{ stroke: 'var(--border)' }}
                     tickLine={false}
                   />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'color-mix(in srgb, var(--sti-gold) 8%, transparent)' }} formatter={(value) => [`${value} student${value === 1 ? '' : 's'}`, 'Students']} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'color-mix(in srgb, var(--sti-yellow) 8%, transparent)' }} formatter={(value) => [`${value} student${value === 1 ? '' : 's'}`, 'Students']} />
                   <Bar dataKey="value" radius={[0, 6, 6, 0]} isAnimationActive={!reducedMotion} maxBarSize={barMax}>
                     {chartData.map((entry, i) => (
                       <Cell key={entry.name} fill={PALETTE[i % PALETTE.length]} />

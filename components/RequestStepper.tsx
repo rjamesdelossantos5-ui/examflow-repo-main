@@ -1,7 +1,7 @@
 import type { RequestStatus } from '@/lib/supabase/types'
 
 // Inline progress rail on each student request card. `current` = the stage the
-// request is WAITING on (rendered navy); every earlier stage is done (gold
+// request is WAITING on (rendered navy); every earlier stage is done (blue
 // check); later stages are gray. The final node is only ever "done", never
 // current. 'rejected' never renders this — the card shows a resubmit strip.
 //
@@ -62,7 +62,7 @@ export default function RequestStepper({
   // Still waiting on step one: being submitted at all.
   if (pending) current = 0
   const last = STEP_LABELS.length - 1
-  // Gold line reaches up to whichever node is current (or the end when done).
+  // Blue line reaches up to whichever node is current (or the end when done).
   const fillTo = Math.min(current, last)
   const fillPct = (fillTo / last) * 100
   const done = current > last
@@ -71,7 +71,7 @@ export default function RequestStepper({
     // --node is the circle's width. The track and the fill are inset by half of
     // it at each end so they run centre-to-centre, and it shrinks on phones.
     <div className="relative [--node:1.5rem] sm:[--node:2rem]">
-      {/* base track + gold fill, centred on the nodes */}
+      {/* base track + blue fill, centred on the nodes */}
       <div
         className="absolute h-0.5 -translate-y-1/2"
         style={{ left: 'calc(var(--node) / 2)', right: 'calc(var(--node) / 2)', top: 'calc(var(--node) / 2)', background: 'var(--border)' }}
@@ -82,7 +82,7 @@ export default function RequestStepper({
           left: 'calc(var(--node) / 2)',
           top: 'calc(var(--node) / 2)',
           width: `calc((100% - var(--node)) * ${fillPct / 100})`,
-          background: 'linear-gradient(90deg, #e0a200, var(--sti-gold))',
+          background: 'var(--sti-blue)',
         }}
       />
 
@@ -101,7 +101,7 @@ export default function RequestStepper({
                   width: 'var(--node)',
                   height: 'var(--node)',
                   ...(isDone
-                    ? { background: 'var(--sti-gold)', color: '#fff' }
+                    ? { background: 'var(--sti-blue)', color: '#fff' }
                     : active
                       ? { background: 'var(--sti-navy)', color: '#fff' }
                       : { background: 'var(--card)', border: '2px solid var(--border)', color: 'var(--muted)' }),

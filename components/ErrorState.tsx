@@ -10,7 +10,7 @@ import { Icon } from '@/components/Icon'
  * contained: the surrounding layout (top nav, role tabs) still renders, and the
  * user gets a plain-language explanation plus a way out — "Try again" re-runs
  * the failed render, which is usually all a transient Supabase/network blip
- * needs. Uses the theme tokens (ef-card / --sti-gold) so it looks right in both
+ * needs. Uses the theme tokens (ef-card / --sti-yellow) so it looks right in both
  * light and dark mode.
  */
 export default function ErrorState({
@@ -47,7 +47,7 @@ export default function ErrorState({
           type="button"
           onClick={onRetry}
           className="px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 active:scale-[0.98] transition-[opacity,scale] duration-160 ease-[var(--ease-out)]"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           Try again
         </button>

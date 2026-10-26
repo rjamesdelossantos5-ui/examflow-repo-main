@@ -64,7 +64,7 @@ export default function PrivacyNoticeSheet({ onClose, onAgree }: { onClose: () =
               type="button"
               onClick={onAgree}
               className="ef-press w-full sm:w-auto px-6 py-3 sm:py-2.5 rounded-lg font-semibold text-sm"
-              style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+              style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
             >
               I agree
             </button>

@@ -1,6 +1,6 @@
 /*
- * Privacy Notice — same world as the landing page (app/page.tsx): navy bar,
- * cool off-white then white paper, navy ink, hairline rules, Archivo. No card:
+ * Privacy Notice — same world as the landing page (app/page.tsx): STI blue bar,
+ * cool off-white then white paper, navy ink, hairline rules, Poppins. No card:
  * the notice is a document, so it reads like one. Each section is a row with
  * its heading on the left and the text on the right (stacked on phones). The
  * text itself lives in components/PrivacyNoticeContent.tsx.
@@ -16,13 +16,12 @@
  * they hand anything over.
  */
 import Link from 'next/link'
-import { archivo } from '../fonts'
+import { STI } from '@/lib/brand'
 import PrivacyNoticeContent from '@/components/PrivacyNoticeContent'
 
 export const metadata = { title: 'EXAMFLOW — Privacy Notice' }
 
-const NAVY = '#002F6C'
-const GOLD = '#FDB913'
+const NAVY = STI.navy
 const INK_SOFT = '#3D4F6E'
 const RULE = '#D5DCE6'
 const PAPER_COOL = '#F5F7FA'
@@ -32,11 +31,11 @@ export default function PrivacyPage() {
   // Inline colours, like the landing page, so the app's dark-mode overrides
   // never touch this public page.
   return (
-    <div className={`${archivo.variable} ef-landing min-h-screen`} style={{ background: '#FFFFFF', color: NAVY, fontFamily: 'var(--font-archivo), Arial, sans-serif', '--pn-ink': NAVY, '--pn-soft': INK_SOFT, '--pn-rule': RULE } as React.CSSProperties}>
-      <header style={{ background: NAVY, color: '#FFFFFF' }}>
+    <div className="ef-landing min-h-screen" style={{ background: '#FFFFFF', color: NAVY, '--pn-ink': NAVY, '--pn-soft': INK_SOFT, '--pn-rule': RULE } as React.CSSProperties}>
+      <header className="ef-on-brand" style={{ background: STI.blue, color: '#FFFFFF' }}>
         <div className={`${CONTAINER} h-16 flex items-center`}>
-          <Link href="/" className="font-black text-lg leading-none" style={{ fontStretch: '115%' }} aria-label="EXAMFLOW home">
-            EXAM<span style={{ color: GOLD }}>FLOW</span>
+          <Link href="/" className="font-black text-lg leading-none" aria-label="EXAMFLOW home">
+            EXAM<span style={{ color: STI.yellow }}>FLOW</span>
           </Link>
         </div>
       </header>
@@ -45,7 +44,7 @@ export default function PrivacyPage() {
         <div className={`${CONTAINER} pt-16 pb-14 lg:pt-24 lg:pb-20`}>
           <h1
             className="ef-reveal font-extrabold leading-[0.98] text-balance"
-            style={{ fontStretch: '125%', fontSize: 'clamp(2.2rem, 4.4vw, 3.5rem)', letterSpacing: '-0.03em', marginLeft: '-0.03em' }}
+            style={{ fontSize: 'clamp(2.2rem, 4.4vw, 3.5rem)', letterSpacing: '-0.03em', marginLeft: '-0.03em' }}
           >
             Privacy Notice
           </h1>
@@ -62,8 +61,9 @@ export default function PrivacyPage() {
 
       <footer style={{ borderTop: `1px solid ${RULE}` }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-center`}>
-          <Link href="/" className="font-black text-lg leading-none" style={{ fontStretch: '115%' }}>
-            EXAM<span style={{ color: GOLD }}>FLOW</span>
+          {/* On white the yellow would vanish, so FLOW is blue here. */}
+          <Link href="/" className="font-black text-lg leading-none">
+            EXAM<span style={{ color: STI.blue }}>FLOW</span>
           </Link>
         </div>
       </footer>

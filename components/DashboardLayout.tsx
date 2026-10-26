@@ -85,7 +85,7 @@ export default function DashboardLayout({
     <Link
       href={ROLE_HOME[role] ?? '/'}
       className="font-black text-xl tracking-tight hover:opacity-90 transition-opacity"
-      style={{ color: 'var(--sti-gold)' }}
+      style={{ color: 'var(--sti-yellow)' }}
     >
       EXAM<span className="text-white">FLOW</span>
     </Link>
@@ -95,7 +95,7 @@ export default function DashboardLayout({
     <Link
       href={backHref}
       className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap shadow-sm transition-opacity hover:opacity-90"
-      style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+      style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
     >
       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M19 12H5M11 6l-6 6 6 6" />
@@ -131,7 +131,7 @@ export default function DashboardLayout({
         <IdleLogout />
 
         {/* Brand bar — sticky so the sidebar (top-16) always sits right under it */}
-        <header className="sticky top-0 z-50" style={{ backgroundColor: 'var(--header)' }}>
+        <header className="ef-on-brand sticky top-0 z-50" style={{ backgroundColor: 'var(--header)' }}>
           <div className="px-4 sm:px-6 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
@@ -169,7 +169,7 @@ export default function DashboardLayout({
           )}
 
           <aside
-            className={`fixed lg:sticky top-16 left-0 z-40 lg:z-30 w-64 shrink-0 h-[calc(100vh-4rem)] overflow-y-auto transition-transform duration-200 lg:translate-x-0 ${
+            className={`ef-on-brand fixed lg:sticky top-16 left-0 z-40 lg:z-30 w-64 shrink-0 h-[calc(100vh-4rem)] overflow-y-auto transition-transform duration-200 lg:translate-x-0 ${
               drawerOpen ? 'translate-x-0' : '-translate-x-full'
             } ${collapsed ? 'lg:hidden' : ''}`}
             style={{ backgroundColor: 'var(--header)', borderRight: '1px solid rgba(255,255,255,0.08)' }}
@@ -186,8 +186,8 @@ export default function DashboardLayout({
                     }`}
                     style={
                       active
-                        ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }
-                        : { color: 'rgba(255,255,255,0.75)' }
+                        ? { backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }
+                        : { color: 'rgba(255,255,255,0.92)' } // 4.6:1 on the blue
                     }
                   >
                     {item.icon && <Icon name={item.icon} className="w-4 h-4 shrink-0" />}
@@ -219,7 +219,7 @@ export default function DashboardLayout({
       <Toaster />
       <IdleLogout />
       {/* Brand bar */}
-      <header className="relative z-50" style={{ backgroundColor: 'var(--header)' }}>
+      <header className="ef-on-brand relative z-50" style={{ backgroundColor: 'var(--header)' }}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {brandArea}
           {headerRight}
@@ -247,7 +247,7 @@ export default function DashboardLayout({
                   }`}
                   style={
                     active
-                      ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }
+                      ? { backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }
                       : { color: 'var(--muted)' }
                   }
                 >

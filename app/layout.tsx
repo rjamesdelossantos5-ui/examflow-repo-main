@@ -1,8 +1,6 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { poppins } from './fonts'
 import './globals.css'
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' })
 
 export const metadata: Metadata = {
   title: 'EXAMFLOW',
@@ -15,7 +13,7 @@ const themeScript = `(function(){try{if(localStorage.getItem('theme')==='dark')d
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geist.variable} h-full`} suppressHydrationWarning>
+    <html lang="en" className={`${poppins.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full" suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}

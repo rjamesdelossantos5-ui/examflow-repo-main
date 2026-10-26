@@ -136,7 +136,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                 onClick={() => setSelectedKey(g.key === selectedKey ? null : g.key)}
                 aria-current={selected ? 'true' : undefined}
                 className="w-full text-left px-4 py-3.5 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
-                style={selected ? { background: 'color-mix(in srgb, var(--sti-gold) 14%, transparent)' } : undefined}
+                style={selected ? { background: 'color-mix(in srgb, var(--sti-yellow) 14%, transparent)' } : undefined}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -146,7 +146,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                     </p>
                     <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_name).join(', ')}</p>
                   </div>
-                  <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
+                  <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 20%, transparent)', color: 'var(--card-foreground)' }}>
                     {pending} form{pending === 1 ? '' : 's'}
                   </span>
                 </div>
@@ -165,7 +165,7 @@ export default function TeacherQueue({ requests }: { requests: RequestRow[] }) {
                     onClick={() => approveGroup(active)}
                     disabled={isPending}
                     className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
-                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                    style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                   >
                     {isPending ? 'Approving…' : `Approve all ${active.forms.filter((f) => f.status === 'submitted').length} forms`}
                   </button>

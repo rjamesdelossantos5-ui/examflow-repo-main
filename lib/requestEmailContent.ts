@@ -1,21 +1,23 @@
 /**
  * What each EXAMFLOW notification email says and how it looks. Pure — no
- * database, no sending, no imports — so it can be rendered on its own for a
- * preview. lib/requestEmails.ts looks up the request and the recipients, then
- * sends what this builds.
+ * database, no sending, nothing imported but the brand colors — so it can be
+ * rendered on its own for a preview. lib/requestEmails.ts looks up the request
+ * and the recipients, then sends what this builds.
  *
  * Email HTML is not web HTML. Outlook for Windows lays mail out with Word's
  * engine and many mail apps drop <style> blocks, so the layout is tables with
  * inline styles only. The logo is drawn in HTML rather than an image: Outlook
  * blocks remote images until the reader allows them, and a text logo shows at
- * once. Colours are the app's own (--sti-navy, --sti-gold in app/globals.css).
+ * once. Colours are STI's own (lib/brand.ts): mail apps ignore CSS variables.
  */
+import { STI } from '@/lib/brand'
 
 export type RequestEmailEvent =
   | 'submitted'          // student pressed Submit → Teacher approves
   | 'reverified'         // parent verified again after a Program Head return → Program Head
   | 'teacher_approved'   // → Program Head (first approval), and Student (progress update)
   | 'rejected'           // any reviewer → Student
+  | 'auto_declined'      // declined by the system at a deadline (lib/autoDecide.ts) → Student; `reason` says which
   | 'returned'           // Program Head returned it for re-verification → Student
   | 'accepted_paid'      // → Student (fee assessment next) and Registrar (assess fees)
   | 'fees_assessed'      // Registrar assessed the fees → Student (pay, then upload the receipt). One per student; `reason` carries the total
@@ -78,8 +80,9 @@ interface Content {
 }
 
 const COLOR = {
-  navy: '#002F6C',
-  gold: '#FDB913',
+  navy: STI.navy,
+  blue: STI.blue,
+  yellow: STI.yellow,
   page: '#F5F7FA',
   card: '#FFFFFF',
   text: '#1F2937',
@@ -88,7 +91,7 @@ const COLOR = {
 }
 
 const TONES: Record<Tone, { bg: string; fg: string; bar: string }> = {
-  action: { bg: '#FEF3C7', fg: '#92400E', bar: '#FDB913' },
+  action: { bg: '#FEF3C7', fg: '#92400E', bar: '#D97706' },
   info: { bg: '#DBEAFE', fg: '#1E40AF', bar: '#2563EB' },
   success: { bg: '#DCFCE7', fg: '#166534', bar: '#16A34A' },
   danger: { bg: '#FEE2E2', fg: '#991B1B', bar: '#DC2626' },
@@ -194,6 +197,20 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
         next: 'You can fix it and resubmit — your details are kept.',
       }
 
+    // No "resubmit" line: the deadline has passed, so there is nothing to fix.
+    case 'auto_declined':
+      return {
+        tone: 'danger',
+        badge: 'Not accepted',
+        subject: `Your special exam request for ${r.code} was not accepted`,
+        heading: 'Your request was not accepted',
+        greeting: hiStudent,
+        paragraphs: [`Your special exam request for ${title} was not accepted.`],
+        callout: { label: 'Reason', value: reason },
+        button: { label: 'View request', url: studentLink },
+        next: 'If you think this is a mistake, talk to your Program Head.',
+      }
+
     case 'returned':
       return {
         tone: 'warning',
@@ -208,6 +225,8 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
         next: 'Nothing on the form needs changing. Once they pass, press Submit and it goes straight back to the Program Head.',
       }
 
+    // A `reason` here means the system accepted it at the window's close
+    // (lib/autoDecide.ts), not the Program Head — the email says so.
     case 'accepted_paid':
       if (audience === 'registrar') {
         return {
@@ -216,7 +235,9 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
           heading: 'Fee assessment needed',
           greeting: 'Hello,',
           paragraphs: [
-            `The Program Head accepted ${r.studentName}'s paid special exam for ${title}.`,
+            reason
+              ? `${r.studentName}'s paid special exam for ${title} was accepted automatically when the submission window closed.`
+              : `The Program Head accepted ${r.studentName}'s paid special exam for ${title}.`,
             'Please assess the student’s fees.',
           ],
           stage: 'fee_assessment',
@@ -229,7 +250,8 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
         subject: `Your special exam request for ${r.code} was accepted`,
         heading: 'Your request was accepted',
         greeting: hiStudent,
-        paragraphs: [`Your special exam request for ${title} was accepted by the Program Head.`],
+        paragraphs: [`Your special exam request for ${title} was accepted${reason ? '' : ' by the Program Head'}.`],
+        callout: reason ? { label: 'Note', value: reason } : undefined,
         stage: 'fee_assessment',
         button: { label: 'View request', url: studentLink },
         next: 'Go to the Registrar for your fee assessment, pay at the Cashier, then upload your receipt in EXAMFLOW.',
@@ -260,6 +282,7 @@ function content(event: RequestEmailEvent, audience: Audience, r: RequestEmailIn
           `Your special exam for ${title} is scheduled.`,
           ...(schedule.length ? [] : ['Open EXAMFLOW for the date, the venue and what to bring.']),
         ],
+        callout: reason ? { label: 'Note', value: reason } : undefined,
         schedule: schedule.length ? schedule : undefined,
         stage: 'exam',
         button: { label: 'View request', url: studentLink },
@@ -406,7 +429,7 @@ function renderHtml(c: Content, r: RequestEmailInfo): string {
 <tr><td align="center" style="padding:28px 12px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;border:1px solid ${COLOR.line};border-radius:6px;border-collapse:separate;">
 
-<tr><td style="background:${COLOR.navy};border-radius:6px 6px 0 0;padding:18px 32px;font-family:${FONT};font-size:18px;font-weight:800;line-height:1;color:#FFFFFF;">EXAM<span style="color:${COLOR.gold};">FLOW</span></td></tr>
+<tr><td style="background:${COLOR.blue};border-radius:6px 6px 0 0;padding:18px 32px;font-family:${FONT};font-size:18px;font-weight:800;line-height:1;color:#FFFFFF;">EXAM<span style="color:${COLOR.yellow};">FLOW</span></td></tr>
 
 <tr><td style="background:${COLOR.card};padding:32px 32px 0;font-family:${FONT};color:${COLOR.text};">
 <p style="margin:0;font-size:13px;line-height:1.4;font-weight:600;color:${tone.fg};">${e(c.badge)}</p>
@@ -445,12 +468,13 @@ function calloutHtml(c: Row): string {
 </td></tr></table>`
 }
 
-/** "Step 4 of 6 · Program Head" over a thin segmented bar: done navy, current gold. */
+/** "Step 4 of 6 · Program Head" over a thin segmented bar: done blue, current
+ *  navy. (Yellow would vanish as a thin bar on white.) */
 function stepsHtml(s: { labels: string[]; current: number }, tone: Tone): string {
-  const currentColor = tone === 'danger' || tone === 'warning' ? TONES[tone].bar : COLOR.gold
+  const currentColor = tone === 'danger' || tone === 'warning' ? TONES[tone].bar : COLOR.navy
   const cells = s.labels
     .map((_, i) => {
-      const bg = i < s.current ? COLOR.navy : i === s.current ? currentColor : COLOR.line
+      const bg = i < s.current ? COLOR.blue : i === s.current ? currentColor : COLOR.line
       // An explicit width on every bar: with none, the table gives the spare width
       // out by content size, and the last bar (no right padding, empty) got none.
       return `<td width="${(100 / s.labels.length).toFixed(2)}%" style="width:${(100 / s.labels.length).toFixed(2)}%;padding:0 ${i === s.labels.length - 1 ? 0 : 3}px 0 0;"><div style="height:4px;line-height:4px;font-size:0;background:${bg};border-radius:2px;">&nbsp;</div></td>`
@@ -479,7 +503,7 @@ ${body}
 
 function buttonHtml(label: string, url: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td align="center" bgcolor="${COLOR.navy}" style="background:${COLOR.navy};border-radius:4px;">
+<td align="center" bgcolor="${COLOR.blue}" style="background:${COLOR.blue};border-radius:4px;">
 <a href="${e(url)}" target="_blank" style="display:inline-block;padding:14px 24px;font-family:${FONT};font-size:15px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:4px;">${e(label)}</a>
 </td>
 </tr></table>`

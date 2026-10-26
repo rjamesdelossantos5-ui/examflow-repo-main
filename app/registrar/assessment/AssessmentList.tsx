@@ -123,11 +123,11 @@ export default function AssessmentList({
                   {t.label}
                   <span
                     className={`tabular-nums text-xs px-1.5 py-0.5 rounded-full ${t.count === 0 && !active ? 'opacity-60' : ''}`}
-                    style={{ background: active ? 'color-mix(in srgb, var(--sti-gold) 25%, transparent)' : 'color-mix(in srgb, var(--muted) 12%, transparent)' }}
+                    style={{ background: active ? 'color-mix(in srgb, var(--sti-yellow) 25%, transparent)' : 'color-mix(in srgb, var(--muted) 12%, transparent)' }}
                   >
                     {t.count}
                   </span>
-                  {active && <span aria-hidden className="absolute left-3 right-3 bottom-0 h-0.5 rounded-full" style={{ background: 'var(--sti-gold)' }} />}
+                  {active && <span aria-hidden className="absolute left-3 right-3 bottom-0 h-0.5 rounded-full" style={{ background: 'var(--sti-yellow)' }} />}
                 </button>
               )
             })}
@@ -140,7 +140,7 @@ export default function AssessmentList({
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search students"
               placeholder="Search name, student no., section, subject"
-              className="w-full rounded-lg pl-9 pr-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent"
+              className="w-full rounded-lg pl-9 pr-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)] focus:border-transparent"
             />
           </div>
         </div>
@@ -190,7 +190,7 @@ export default function AssessmentList({
                         onClick={() => assess(s)}
                         disabled={!migrated || isPending}
                         className="ef-press px-3.5 py-2 rounded-lg font-semibold text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                        style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                       >
                         {busyKey === s.key ? 'Recording…' : 'Mark assessed'}
                       </button>

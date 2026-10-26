@@ -8,7 +8,7 @@ export default function CheckEmailPage() {
       <div className="w-full max-w-md text-center">
         <div
           className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
-          style={{ backgroundColor: 'var(--sti-gold)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)' }}
         >
           <span className="text-2xl font-black" style={{ color: 'var(--sti-navy)' }}>EF</span>
         </div>

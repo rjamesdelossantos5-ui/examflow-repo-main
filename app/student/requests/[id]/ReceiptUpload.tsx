@@ -120,7 +120,7 @@ export default function ReceiptUpload({
   }
 
   return (
-    <div className="ef-card rounded-xl border-2 border-dashed p-6" style={{ borderColor: 'var(--sti-gold)' }}>
+    <div className="ef-card rounded-xl border-2 border-dashed p-6" style={{ borderColor: 'var(--sti-blue)' }}>
       {/* Header */}
       <div className="flex items-start gap-3 mb-4">
         <div className="shrink-0 w-9 h-9 rounded-full bg-amber-500 text-white text-base font-bold grid place-items-center animate-pulse">
@@ -174,7 +174,7 @@ export default function ReceiptUpload({
             accept=".jpg,.jpeg,.png,.pdf"
             required
             onChange={handleFileChange}
-            className="w-full rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[var(--sti-gold)]/20 file:text-[var(--card-foreground)] file:cursor-pointer"
+            className="w-full rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)] file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[var(--sti-yellow)]/20 file:text-[var(--card-foreground)] file:cursor-pointer"
             style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
           />
           {busy && <p className="mt-1 text-xs ef-muted">Optimizing photo…</p>}
@@ -191,7 +191,7 @@ export default function ReceiptUpload({
           type="submit"
           disabled={isPending || busy || !!fileError || !fileName}
           className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           {isPending ? 'Uploading…' : 'Upload Receipt'}
         </button>

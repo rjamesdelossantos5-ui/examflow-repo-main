@@ -164,7 +164,7 @@ export default function Select({
                 className="w-full text-left px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                 style={
                   o.value === current
-                    ? { backgroundColor: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: 'var(--card-foreground)' }
+                    ? { backgroundColor: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)', color: 'var(--card-foreground)' }
                     : { color: 'var(--card-foreground)' }
                 }
               >

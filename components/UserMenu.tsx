@@ -62,15 +62,15 @@ export default function UserMenu({
       >
         <span
           className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           {initials(userName)}
         </span>
         <span className="hidden sm:flex flex-col items-start leading-tight max-w-[12rem]">
           <span className="text-white text-sm font-medium truncate max-w-[12rem]">{shownName}</span>
-          <span className="text-white/55 text-xs truncate max-w-[12rem]">{ROLE_LABELS[role]}</span>
+          <span className="text-white/90 text-xs truncate max-w-[12rem]">{ROLE_LABELS[role]}</span>
         </span>
-        <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-white/85" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -87,7 +87,7 @@ export default function UserMenu({
             {email && <p className="text-xs ef-muted truncate">{email}</p>}
             <span
               className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-3xs font-semibold"
-              style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+              style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
             >
               {ROLE_LABELS[role]}
             </span>
@@ -146,7 +146,7 @@ export default function UserMenu({
                 <button
                   type="submit"
                   className="px-3.5 py-2 rounded-md text-sm font-medium transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] hover:opacity-90"
-                  style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                  style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                 >
                   Sign out
                 </button>

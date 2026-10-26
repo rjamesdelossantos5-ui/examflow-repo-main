@@ -145,8 +145,8 @@ export async function resetRequests() {
 
   // Every surface that lists requests, for all five roles.
   for (const p of [
-    '/admin', '/admin/analytics', '/student', '/student/history',
-    '/registrar/assessment', '/registrar/parents',
+    '/admin', '/admin/analytics', '/program-head/analytics', '/teacher/analytics', '/student', '/student/history',
+    '/registrar/assessment',
     '/teacher', '/teacher/history',
     '/program-head', '/program-head/receipts', '/program-head/overview', '/program-head/students',
   ]) revalidatePath(p)
@@ -276,6 +276,6 @@ export async function clearSchoolStructure() {
     }
   }
 
-  for (const p of ['/admin', '/admin/analytics', '/admin/users', '/admin/subjects', '/admin/school-data', '/student/submit']) revalidatePath(p)
+  for (const p of ['/admin', '/admin/analytics', '/program-head/analytics', '/teacher/analytics', '/admin/users', '/admin/subjects', '/admin/school-data', '/student/submit']) revalidatePath(p)
   return { error: null }
 }

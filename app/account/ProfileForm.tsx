@@ -19,7 +19,7 @@ const ROLE_LABELS: Record<string, string> = {
 const YEARS = [1, 2, 3, 4]
 
 const inputClass =
-  'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent'
+  'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)] focus:border-transparent'
 
 function Banner({ kind, text }: { kind: 'ok' | 'err'; text: string }) {
   return (
@@ -73,14 +73,14 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
       <div className="px-5 sm:px-6 py-4 flex items-center gap-3.5 border-b ef-border">
         <div
           className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-black shrink-0"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           {initials(profile.full_name)}
         </div>
         <div className="min-w-0">
           <p className="font-semibold truncate flex items-center gap-2" style={{ color: 'var(--card-foreground)' }}>
             <span className="truncate">{profile.full_name}</span>
-            <span className="shrink-0 px-2 py-0.5 rounded-full text-2xs font-semibold" style={{ background: 'color-mix(in srgb, var(--sti-gold) 22%, transparent)', color: 'var(--card-foreground)' }}>
+            <span className="shrink-0 px-2 py-0.5 rounded-full text-2xs font-semibold" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 22%, transparent)', color: 'var(--card-foreground)' }}>
               {ROLE_LABELS[profile.role] ?? profile.role}
             </span>
           </p>
@@ -181,7 +181,7 @@ export default function ProfileForm({ profile, assignment, studentNumberLocked =
             type="submit"
             disabled={isPending}
             className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+            style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
           >
             {isPending ? 'Saving…' : 'Save Changes'}
           </button>

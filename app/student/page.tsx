@@ -12,6 +12,7 @@ import SubmissionStatusBanner from './SubmissionStatusBanner'
 import StudentAnnouncements from './StudentAnnouncements'
 import RequestsPanel, { type StudentRequest } from './RequestsPanel'
 import type { RequestStatus } from '@/lib/supabase/types'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export const metadata = { title: 'EXAMFLOW — My Requests' }
 
@@ -20,6 +21,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   // Cached — the layout already resolved this, so it costs no round-trip here.
   // It also used to be awaited on its own line, which blocked the queries below
@@ -178,7 +180,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
           <Link
             href="/student/submit"
             className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity shrink-0"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+            style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
           >
             + New Request
           </Link>
@@ -189,7 +191,7 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
             aria-disabled="true"
             title="Submissions are closed"
             className="px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm shrink-0 opacity-50 cursor-not-allowed select-none"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+            style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
           >
             + New Request
           </span>

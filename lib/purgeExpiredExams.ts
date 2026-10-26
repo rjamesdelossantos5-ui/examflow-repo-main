@@ -13,6 +13,7 @@ interface PurgeCandidate {
   id: string
   status: string
   subject_id: string | null
+  teacher_id: string | null
   exam_type: string | null
   period_id: string | null
   final_schedule: string | null
@@ -68,7 +69,7 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
     // plus any with an explicit past final_schedule (override-scheduled ones).
     // Full rows (not just ids) so the ones reaching 'scheduled' can be logged.
     const candidates = new Map<string, PurgeCandidate>()
-    const SELECT = 'id, status, subject_id, exam_type, period_id, final_schedule, didit_session_id'
+    const SELECT = 'id, status, subject_id, teacher_id, exam_type, period_id, final_schedule, didit_session_id'
 
     if (expiredPeriodIds.length) {
       const { data } = await supabase
@@ -141,6 +142,8 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
           exam_date: dateSource ? new Date(dateSource).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
           department_id: r.subject_id ? (deptBySubject.get(r.subject_id) ?? null) : null,
           subject_id: r.subject_id,
+          // Who the request was routed to, for Teacher Analytics.
+          teacher_id: r.teacher_id,
           exam_type: r.exam_type,
           term: period?.term ?? null,
           semester: period?.semester ?? null,
@@ -149,7 +152,12 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
       })
       // Best-effort: if exam_history isn't migrated yet, the count is lost but
       // the purge itself has already happened.
-      const { error: historyErr } = await supabase.from('exam_history').insert(historyRows)
+      let { error: historyErr } = await supabase.from('exam_history').insert(historyRows)
+      if (historyErr) {
+        // migration_exam_history_teacher.sql not run yet (no teacher_id
+        // column) — keep the count; only the Teacher's own view of it is lost.
+        ;({ error: historyErr } = await supabase.from('exam_history').insert(historyRows.map(({ teacher_id: _omit, ...row }) => row)))
+      }
       if (historyErr) console.error('purgeExpiredExams: history insert failed', historyErr.message)
     }
 

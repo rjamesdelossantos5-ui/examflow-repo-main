@@ -2,11 +2,13 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { signIn, signInWithMicrosoft } from '@/app/login/actions'
+import { STI } from '@/lib/brand'
 
 // Same paper-and-ink palette as the landing page. Colours are inline (not
 // bg-white / border / text-gray-* classes) because the dashboard dark-mode
 // overrides in globals.css retarget those classes; this popup always renders light.
-const NAVY = '#002F6C'
+const NAVY = STI.navy
+const BLUE = STI.blue
 const RULE = '#D5DCE6'
 
 // choose: Microsoft or staff · staff: email + password
@@ -89,7 +91,7 @@ export default function LoginModal() {
   if (!open) return null
 
   const inputClass =
-    'w-full rounded-[4px] px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#002F6C] focus:ring-offset-1 transition-shadow'
+    'w-full rounded-[4px] px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#0072BC] focus:ring-offset-1 transition-shadow'
   const inputStyle = { background: '#FFFFFF', color: NAVY, border: `1px solid ${RULE}` }
   const labelClass = 'block text-sm font-semibold mb-1.5'
   const primaryClass =
@@ -111,7 +113,7 @@ export default function LoginModal() {
         aria-labelledby="login-title"
       >
         <div className="flex items-center justify-between px-6 pt-5 pb-4" style={{ borderBottom: `1px solid ${RULE}` }}>
-          <h2 id="login-title" className="text-xl font-extrabold" style={{ fontStretch: '115%' }}>
+          <h2 id="login-title" className="text-xl font-extrabold">
             {view === 'staff' ? 'Staff log in' : 'Log in'}
           </h2>
           <button
@@ -156,7 +158,7 @@ export default function LoginModal() {
                 type="button"
                 onClick={() => switchView('staff')}
                 className={primaryClass}
-                style={{ background: NAVY, color: '#FFFFFF' }}
+                style={{ background: BLUE, color: '#FFFFFF' }}
               >
                 Staff log in
               </button>
@@ -176,7 +178,7 @@ export default function LoginModal() {
               </div>
 
               <div className="pt-2 space-y-3">
-                <button type="submit" disabled={isPending || cooldown > 0} className={primaryClass} style={{ background: NAVY, color: '#FFFFFF' }}>
+                <button type="submit" disabled={isPending || cooldown > 0} className={primaryClass} style={{ background: BLUE, color: '#FFFFFF' }}>
                   {isPending ? 'Logging in…' : cooldown > 0 ? `Try again in ${cooldown}s` : 'Log in'}
                 </button>
                 <button

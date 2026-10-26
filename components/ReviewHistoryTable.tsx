@@ -64,7 +64,7 @@ export default function ReviewHistoryTable({ title, rows }: { title: string; row
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search student name…"
-            className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm border shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent"
+            className="w-full rounded-lg pl-9 pr-3 py-2.5 text-sm border shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)] focus:border-transparent"
             style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--card-foreground)' }}
           />
         </div>
@@ -146,7 +146,7 @@ export default function ReviewHistoryTable({ title, rows }: { title: string; row
                 type="button"
                 onClick={close}
                 className="px-5 py-2.5 md:px-7 md:py-3 rounded-lg text-sm md:text-base font-semibold"
-                style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
               >
                 Close
               </button>

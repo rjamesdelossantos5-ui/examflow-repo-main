@@ -110,7 +110,7 @@ function RequestInfoModal({ r, onClose }: { r: StudentRow; onClose: () => void }
             type="button"
             onClick={onClose}
             className="px-5 py-2.5 rounded-lg font-semibold text-sm"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+            style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
           >
             Close
           </button>
@@ -224,14 +224,14 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search name, subject or section…"
               aria-label="Search accepted students"
-              className="w-full rounded-lg px-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
+              className="w-full rounded-lg px-3 py-2 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)]"
               style={{ color: 'var(--card-foreground)' }}
             />
           </div>
           <button
             onClick={exportExcel}
             className="px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:opacity-90 transition-opacity shrink-0"
-            style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+            style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
           >
             ⬇ Export to Excel
           </button>
@@ -259,7 +259,7 @@ export default function StudentsList({ initial, exportHeader }: { initial: Stude
                       {g.student.student_number ?? '—'} · {g.student.course ?? '—'} · {ordinalYear(g.student.year_level)} · {g.student.section ?? '—'}
                     </p>
                   </div>
-                  <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full shrink-0" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 20%, transparent)', color: 'var(--card-foreground)' }}>
                     {g.forms.length} form{g.forms.length === 1 ? '' : 's'}
                   </span>
                   <Icon name="chevron-right" className={`w-4 h-4 ef-muted shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />

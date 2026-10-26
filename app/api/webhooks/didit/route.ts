@@ -152,7 +152,7 @@ export async function POST(request: Request) {
 
   // A student who verified with their own ID is no longer declined here: the
   // Program Head sees "Same name as the student" next to the request and decides
-  // (checkParentName in lib/didit.ts, shown on app/program-head).
+  // (isStudentsOwnId in lib/didit.ts, shown on app/program-head).
   const summary = summarizeDecision(payload.decision ?? null)
 
   const { error: updErr } = await supabase

@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 // Lightweight inline icon set (Lucide geometry) so the whole app shares one
 // monochrome, stroke-based icon language instead of OS-dependent emoji. Icons
 // inherit `currentColor`, so they automatically match the surrounding text in
-// both light and dark mode and on active (navy-on-gold) nav pills.
+// both light and dark mode and on active (navy-on-yellow) nav pills.
 const PATHS: Record<string, React.ReactNode> = {
   inbox: (
     <>

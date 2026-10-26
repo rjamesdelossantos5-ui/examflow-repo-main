@@ -170,9 +170,9 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
           {/* The whole area is the file picker: a bigger target than the bare
               "Choose File" button, and it shows which file is loaded. */}
           <label
-            className={`flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed ef-border px-6 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-[var(--sti-gold)] ${isPending ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'}`}
+            className={`flex-1 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed ef-border px-6 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-[var(--sti-blue)] ${isPending ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'}`}
           >
-            <Icon name="upload" className="w-7 h-7" style={{ color: 'var(--sti-gold)' }} />
+            <Icon name="upload" className="w-7 h-7" style={{ color: 'var(--sti-blue)' }} />
             <span className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>
               {fileName ? fileName : 'Choose the Excel file'}
             </span>
@@ -200,7 +200,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
                 <span
                   aria-hidden
                   className="w-8 h-8 shrink-0 rounded-lg grid place-items-center"
-                  style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)' }}
+                  style={{ background: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)' }}
                 >
                   <Icon name={icon} className="w-4 h-4" style={{ color: 'var(--card-foreground)' }} />
                 </span>
@@ -234,7 +234,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
                 onClick={uploadForReview}
                 disabled={!canUpload}
                 className="px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
               >
                 {isPending ? 'Uploading…' : 'Upload for review'}
               </button>
@@ -253,7 +253,7 @@ export default function SchoolDataImport({ current, migrationMissing, review }: 
             {progress.step}{progress.total > 1 ? ` — ${progress.done} of ${progress.total}` : '…'}
           </p>
           <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-            <div className="h-full transition-[width] duration-300 ease-[var(--ease-out)]" style={{ width: `${progress.total > 1 ? pct : 100}%`, background: 'var(--sti-gold)' }} />
+            <div className="h-full transition-[width] duration-300 ease-[var(--ease-out)]" style={{ width: `${progress.total > 1 ? pct : 100}%`, background: 'var(--sti-yellow)' }} />
           </div>
         </section>
       )}
@@ -297,7 +297,7 @@ function ReviewPanel({ review, busy, onAccept, onCancel }: { review: ImportRevie
   ] as const
 
   return (
-    <section className={`${card} border-2`} style={{ borderColor: 'var(--sti-gold)' }} aria-labelledby="review-title">
+    <section className={`${card} border-2`} style={{ borderColor: 'var(--sti-blue)' }} aria-labelledby="review-title">
       <div>
         <h3 id="review-title" className="font-semibold" style={{ color: 'var(--card-foreground)' }}>Review before importing</h3>
         <p className="text-xs ef-muted mt-0.5">
@@ -344,7 +344,7 @@ function ReviewPanel({ review, busy, onAccept, onCancel }: { review: ImportRevie
           onClick={onAccept}
           disabled={busy}
           className="px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           {busy ? 'Working…' : 'Accept and import'}
         </button>

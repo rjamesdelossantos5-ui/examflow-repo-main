@@ -58,7 +58,7 @@ export default function DeptManager({ departments }: { departments: Department[]
         <input name="name" required placeholder="Department name" className="flex-1 border rounded-lg px-3 py-2 text-sm" />
         <button type="submit" disabled={isPending}
           className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
           Add
         </button>
       </form>
@@ -70,7 +70,7 @@ export default function DeptManager({ departments }: { departments: Department[]
               <form onSubmit={(e) => handleUpdate(d.id, e)} className="flex gap-2 flex-1">
                 <input name="name" defaultValue={d.name} required className="flex-1 border rounded px-2 py-1 text-sm" />
                 <button type="submit" disabled={isPending} className="text-xs px-3 py-1 rounded font-semibold"
-                  style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>Save</button>
+                  style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>Save</button>
                 <button type="button" onClick={() => setEditing(null)} className="text-xs px-3 py-1 border rounded">Cancel</button>
               </form>
             ) : (

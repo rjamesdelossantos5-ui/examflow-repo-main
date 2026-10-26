@@ -8,8 +8,9 @@ import { getMyProfileMeta } from '@/lib/myProfile'
 import { keepMyDepartment } from '@/lib/deptFilter'
 import { withSubmissionGate } from '@/lib/submissionGate'
 import { REVERIFY_LOG_PREFIX } from '@/lib/rejectReasons'
-import { parentChecks } from '@/lib/parentList'
+import { isStudentsOwnId } from '@/lib/didit'
 import PHQueue from './PHQueue'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export const metadata = { title: 'EXAMFLOW — Program Head Queue' }
 
@@ -26,6 +27,7 @@ export default async function ProgramHeadPage() {
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   // Gated like the Teacher's queue (lib/submissionGate.ts). Every request that
   // reaches first approval passed that gate once — but one the Program Head
@@ -57,17 +59,6 @@ export default async function ProgramHeadPage() {
   const [activePeriod, meta] = await Promise.all([getActivePeriodCached(), getMyProfileMeta()])
   const activeId = activePeriod?.id ?? null
   const mine = keepMyDepartment(keepActive(raw ?? [], activeId), meta?.department_id ?? null)
-
-  // The name on the parent's ID against the Registrar's parent list.
-  const checks = await parentChecks(supabase, mine.map((r) => {
-    const p = r.student as unknown as { full_name: string; student_number: string | null } | null
-    return {
-      id: r.id as string,
-      idName: (r.didit_id_name as string | null) ?? null,
-      studentNumber: p?.student_number ?? (r.snap_student_number as string | null) ?? null,
-      studentNames: [r.snap_name as string | null, p?.full_name],
-    }
-  }))
 
   const requests = mine.map((r) => {
     const subj = r.subjects as unknown as {
@@ -107,7 +98,9 @@ export default async function ProgramHeadPage() {
             faceMatchScore: (r.didit_face_match_score as number | null) ?? null,
             livenessScore: (r.didit_liveness_score as number | null) ?? null,
             idName: (r.didit_id_name as string | null) ?? null,
-            parentCheck: checks[r.id as string] ?? null,
+            // The Program Head checks the parent by eye; the one thing flagged
+            // for them is an ID in the student's own name.
+            ownId: isStudentsOwnId((r.didit_id_name as string | null) ?? null, [s.snap_name, p?.full_name]),
           }
         : null,
     }

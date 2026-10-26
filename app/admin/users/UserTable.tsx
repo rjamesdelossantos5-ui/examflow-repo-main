@@ -29,7 +29,7 @@ const ROLE_ORDER: string[] = ['admin', 'registrar', 'program_head', 'subject_tea
  * colour is a second cue; the role is always written out too.
  */
 const ROLE_HUE: Record<string, string> = {
-  admin: '#FDB913',
+  admin: '#FFF200', // STI yellow
   registrar: '#3B82F6',
   program_head: '#8B5CF6',
   subject_teacher: '#10B981',
@@ -124,7 +124,7 @@ function RoleFilterMenu({
                   className="w-full text-left px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                   style={
                     o.value === value
-                      ? { backgroundColor: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: 'var(--card-foreground)' }
+                      ? { backgroundColor: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)', color: 'var(--card-foreground)' }
                       : { color: 'var(--card-foreground)' }
                   }
                 >
@@ -663,7 +663,7 @@ export default function UserTable({
         <button
           onClick={() => setShowCreate(true)}
           className="px-4 py-2 rounded-lg text-sm font-semibold"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           + Add User
         </button>
@@ -692,7 +692,7 @@ export default function UserTable({
                   className="px-4 py-2 text-sm rounded border">Cancel</button>
                 <button type="submit" disabled={isPending}
                   className="px-4 py-2 text-sm rounded font-semibold disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                  style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
                   {isPending ? 'Creating…' : 'Create'}
                 </button>
               </div>
@@ -742,7 +742,7 @@ export default function UserTable({
                   className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded border disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={isPending}
                   className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded font-semibold disabled:opacity-50"
-                  style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                  style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
                   {isPending ? 'Saving…' : 'Save changes'}
                 </button>
               </div>
@@ -858,7 +858,7 @@ export default function UserTable({
           onClick={() => setShowArchived((v) => !v)}
           aria-label={showArchived ? 'Back to users' : `Show archived accounts (${archivedCount})`}
           className="px-3 py-2 rounded-lg text-sm font-semibold border ef-border transition-colors hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
-          style={{ color: 'var(--card-foreground)', ...(showArchived ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)', borderColor: 'transparent' } : {}) }}
+          style={{ color: 'var(--card-foreground)', ...(showArchived ? { backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)', borderColor: 'transparent' } : {}) }}
         >
           {/* While the archive is open the same button takes you back to the users. */}
           {showArchived ? '← Back to users' : `Archived (${archivedCount})`}

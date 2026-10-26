@@ -10,7 +10,7 @@
 function Section({ as: H, title, children }: { as: 'h2' | 'h3'; title: string; children: React.ReactNode }) {
   return (
     <section className="grid @3xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-16 gap-y-3 py-8 @3xl:py-12" style={{ borderTop: '1px solid var(--pn-rule)' }}>
-      <H className="text-lg @3xl:text-2xl font-extrabold leading-tight text-balance" style={{ fontStretch: '115%', letterSpacing: '-0.01em' }}>
+      <H className="text-lg @3xl:text-2xl font-extrabold leading-tight text-balance" style={{ letterSpacing: '-0.01em' }}>
         {title}
       </H>
       <div className="text-base leading-relaxed space-y-4 max-w-[68ch]" style={{ color: 'var(--pn-soft)' }}>{children}</div>
@@ -38,7 +38,7 @@ const ACCESS = [
   { who: 'You', what: <>only your own requests.</> },
   { who: 'Registrar', what: <>your name and student details and the subjects you are paying for, to work out your fees for a paid exam. Not your form, your documents or the parent or guardian check.</> },
   { who: 'Subject teacher', what: <>only requests for subjects they teach. Teachers <em>cannot</em> see your documents or the parent or guardian check.</> },
-  { who: 'Program head', what: <>requests for their department&apos;s subjects at their approval stage, including your supporting document, your receipt, the parent or guardian&apos;s ID and face photos, and how the name on the ID compares with the parent list.</> },
+  { who: 'Program head', what: <>requests for their department&apos;s subjects at their approval stage, including your supporting document, your receipt, the parent or guardian&apos;s ID and face photos.</> },
   { who: 'Administrator', what: <>every request, with the same view as any of the roles above, plus account management, statistics and sign-in records.</> },
 ]
 
@@ -100,10 +100,6 @@ export default function PrivacyNoticeContent({ heading = 'h2' }: { heading?: 'h2
             through Didit, an identity verification service. EXAMFLOW keeps the result: the name read from the ID,
             the type of ID, the face match and liveness scores, and any warnings. The photos stay with Didit;
             EXAMFLOW does not store them.
-          </Item>
-          <Item term="The parent list">
-            the Registrar&apos;s list of each student&apos;s father, mother or guardian (names and relationship),
-            used to compare with the name on the ID.
           </Item>
           <Item term="Sign-in records">
             each time you sign in, your name, email address, role, how you signed in, and the date and time. Nothing

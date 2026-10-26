@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/currentUser'
 import { getMyProfileMeta } from '@/lib/myProfile'
 import { withSubmissionGate } from '@/lib/submissionGate'
 import TeacherQueue from './TeacherQueue'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export const metadata = { title: 'EXAMFLOW — Teacher Queue' }
 
@@ -13,6 +14,7 @@ export default async function TeacherPage() {
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   // Only requests the teacher may see: parent verified AND the student pressed
   // Submit. The rule lives in lib/submissionGate.ts so this queue, the nav badge

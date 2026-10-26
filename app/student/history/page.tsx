@@ -45,8 +45,8 @@ export default async function StudentHistoryPage() {
 
       {list.length === 0 ? (
         <div className="ef-card rounded-xl shadow-sm px-4 py-14 text-center">
-          <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)' }}>
-            <Icon name="history" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
+          <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)' }}>
+            <Icon name="history" className="w-6 h-6" style={{ color: 'var(--sti-blue)' }} />
           </div>
           <p className="font-medium" style={{ color: 'var(--card-foreground)' }}>Nothing here yet</p>
           <p className="text-sm ef-muted mt-1">Requests from past terms will show up here once a new term starts.</p>

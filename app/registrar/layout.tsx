@@ -5,11 +5,13 @@ import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import AdminActingBanner from '@/components/AdminActingBanner'
 import { getNotifications, countAwaitingAssessment } from '@/lib/notifications'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export default async function RegistrarLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   // One parallel wave — nothing below depends on the profile row, so it must
   // not wait behind it (the header can't paint until this layout resolves).
@@ -29,9 +31,6 @@ export default async function RegistrarLayout({ children }: { children: React.Re
     // accepts, total the student's special-exam subjects and pass the amount to
     // the Cashier. See app/registrar/assessment/page.tsx.
     { label: 'Payment Assessment', href: '/registrar/assessment', icon: 'receipt' as const, badge: toAssess },
-    // Each student's father, mother and/or guardian — compared with the name
-    // on the parent's ID in the Program Head's first approval (lib/parentList.ts).
-    { label: 'Parent List', href: '/registrar/parents', icon: 'users' as const },
   ]
 
   return (

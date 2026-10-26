@@ -27,7 +27,7 @@ export default function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
-        className="w-full rounded-lg pl-9 pr-3 py-2 text-sm border shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]"
+        className="w-full rounded-lg pl-9 pr-3 py-2 text-sm border shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)]"
         style={{
           backgroundColor: 'var(--card)',
           color: 'var(--card-foreground)',

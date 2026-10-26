@@ -25,7 +25,7 @@ export default async function SignUpPage({
         <div className="text-center mb-8">
           <div
             className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4"
-            style={{ backgroundColor: 'var(--sti-gold)' }}
+            style={{ backgroundColor: 'var(--sti-yellow)' }}
           >
             <span className="text-2xl font-black" style={{ color: 'var(--sti-navy)' }}>EF</span>
           </div>
@@ -181,7 +181,7 @@ export default async function SignUpPage({
             <SubmitButton
               pendingText="Creating account…"
               className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+              style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
             >
               Sign Up
             </SubmitButton>

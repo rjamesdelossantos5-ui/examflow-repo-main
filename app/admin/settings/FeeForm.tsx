@@ -49,7 +49,7 @@ export default function FeeForm({ fee }: { fee: number }) {
           required
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="w-40 rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="w-40 rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           style={{ backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
         />
       </label>
@@ -70,7 +70,7 @@ export default function FeeForm({ fee }: { fee: number }) {
         type="submit"
         disabled={isPending || value === String(saved)}
         className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
-        style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+        style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
       >
         {isPending ? 'Saving…' : 'Save fee'}
       </button>

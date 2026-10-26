@@ -5,11 +5,13 @@ import { getMyProfileMeta } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import AdminActingBanner from '@/components/AdminActingBanner'
 import { getNotifications, countByStatus } from '@/lib/notifications'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   // One parallel wave — nothing below depends on the profile row, so it must
   // not wait behind it (the header can't paint until this layout resolves).
@@ -27,6 +29,8 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   const nav = [
     ...(isAdmin ? [{ label: 'All Requests', href: '/admin/requests', icon: 'layers' as const }] : []),
     { label: 'Dashboard', href: '/teacher/dashboard', icon: 'chart' as const },
+    // Own subjects and routed requests only (see the page).
+    { label: 'Analytics', href: '/teacher/analytics', icon: 'layers' as const },
     { label: 'Pending Queue', href: '/teacher', icon: 'inbox' as const, badge: pending },
     { label: 'Reviewed History', href: '/teacher/history', icon: 'history' as const },
   ]

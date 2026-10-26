@@ -6,8 +6,6 @@ import { useSearchParams } from 'next/navigation'
 import DocumentViewer from '@/components/DocumentViewer'
 import MarkViewed from '@/components/MarkViewed'
 import type { RequestStatus } from '@/lib/supabase/types'
-import type { ParentCheck } from '@/lib/didit'
-import ParentNameCheck from '@/components/ParentNameCheck'
 import { acceptRequest, rejectPHRequest, confirmReceipt, rejectReceipt, acceptAll, returnForReverification, getVerificationPhotos } from './actions'
 import { Icon } from '@/components/Icon'
 import { getSignedUrl } from '@/app/media-actions'
@@ -52,8 +50,9 @@ interface RequestRow {
     faceMatchScore: number | null
     livenessScore: number | null
     idName: string | null
-    /** The name on the ID against the Registrar's parent list. */
-    parentCheck?: ParentCheck | null
+    /** The name on the ID is the student's own — they may have verified as
+     *  their own parent. */
+    ownId?: boolean
   } | null
   final_schedule: string | null
   student: { full_name: string; student_number: string | null; course: string | null; year_level: number | null; section: string | null }
@@ -163,7 +162,7 @@ export default function PHQueue({
                 onClick={() => setSelectedKey(g.key === selectedKey ? null : g.key)}
                 aria-current={selected ? 'true' : undefined}
                 className="w-full text-left px-4 py-3.5 transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
-                style={selected ? { background: 'color-mix(in srgb, var(--sti-gold) 14%, transparent)' } : undefined}
+                style={selected ? { background: 'color-mix(in srgb, var(--sti-yellow) 14%, transparent)' } : undefined}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -174,7 +173,7 @@ export default function PHQueue({
                     </p>
                     <p className="text-sm ef-muted truncate">{g.forms.map((f) => f.subject.subject_name).join(', ')}</p>
                   </div>
-                  <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-gold) 20%, transparent)', color: 'var(--card-foreground)' }}>
+                  <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 20%, transparent)', color: 'var(--card-foreground)' }}>
                     {g.forms.length} form{g.forms.length === 1 ? '' : 's'}
                   </span>
                 </div>
@@ -193,7 +192,7 @@ export default function PHQueue({
                     onClick={() => acceptGroup(active)}
                     disabled={isPending}
                     className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50"
-                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                    style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                   >
                     {isPending ? 'Accepting…' : `Accept all ${active.forms.filter((f) => f.status === 'approved_by_teacher').length} forms`}
                   </button>
@@ -341,7 +340,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
                     </button>
                   )}
                   <button onClick={handleAccept} disabled={isPending} className={primaryBtn}
-                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                    style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
                     <Icon name="check" className="w-4 h-4" />
                     {isPending ? 'Processing…' : isExcused ? 'Mark scheduled' : 'Accept'}
                   </button>
@@ -351,7 +350,7 @@ function PHDetail({ request: r, onDone }: { request: RequestRow; onDone: () => v
                 <>
                   <button onClick={() => setRejectMode('receipt')} className={outlineBtn} style={dangerBorder}>Reject receipt</button>
                   <button onClick={handleConfirmReceipt} disabled={isPending} className={primaryBtn}
-                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                    style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
                     <Icon name="check" className="w-4 h-4" />
                     {isPending ? 'Confirming…' : 'Confirm receipt and schedule'}
                   </button>
@@ -523,13 +522,14 @@ function ParentPhotos({ requestId, verification }: { requestId: string; verifica
         <>
           <p className="mb-3" style={{ color: 'var(--card-foreground)' }}>
             Compare the face on the ID with the live selfie, and the name with the student&apos;s records.
-            {!verification.parentCheck && verification.idName && <> Name on the ID: <strong>{verification.idName}</strong>.</>}
+            {verification.idName && <> Name on the ID: <strong>{verification.idName}</strong>.</>}
             {scores && <span className="ef-muted"> Didit: {scores}.</span>}
           </p>
-          {verification.parentCheck && (
-            <div className="mb-4">
-              <ParentNameCheck check={verification.parentCheck} />
-            </div>
+          {verification.ownId && (
+            <p className="mb-4 flex gap-2.5 text-sm font-semibold" style={{ color: 'var(--status-danger)' }}>
+              <Icon name="x-circle" className="w-4 h-4 mt-0.5 shrink-0" />
+              Same name as the student. They may have verified as their own parent.
+            </p>
           )}
           {error ? (
             <p className="text-xs text-red-600 dark:text-red-400">{error}</p>

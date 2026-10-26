@@ -1,4 +1,5 @@
 import type { createClient } from '@/lib/supabase/server'
+import { getActivePeriod, TERMS, type ExamPeriod } from '@/lib/examSettings'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
@@ -41,6 +42,28 @@ export async function getExamStatRows(supabase: SupabaseServerClient, department
     getHistoryRows(supabase, departmentId),
   ])
   return [...liveRows, ...historyRows]
+}
+
+/**
+ * What every Analytics page shows (Admin, Program Head, Teacher): the rows of
+ * the active semester only, so the counts restart when the semester changes
+ * (1st → 2nd). With no active period there is nothing to scope to, so every
+ * row is shown. Which rows a person can see at all is RLS's job — a Teacher
+ * gets only their own subjects' and routed requests, live and in history.
+ *
+ * Only the terms still offered (TERMS) are counted. Overall used to count every
+ * row while the term buttons counted only Prelim / Midterms / Pre-finals, so
+ * old Finals records (Finals is no longer offered — see
+ * supabase/remove_finals_term.sql) made Overall bigger than the terms added
+ * up to: 10 against 1 + 1 + 2.
+ */
+export async function getSemesterStatRows(
+  supabase: SupabaseServerClient,
+  departmentId: string | null = null,
+): Promise<{ rows: ExamStatRow[]; active: ExamPeriod | null }> {
+  const [all, active] = await Promise.all([getExamStatRows(supabase, departmentId), getActivePeriod(supabase)])
+  const offered = all.filter((r) => (TERMS as readonly string[]).includes(r.term ?? ''))
+  return { rows: active ? offered.filter((r) => r.semester === active.semester) : offered, active }
 }
 
 async function getLiveScheduledRows(supabase: SupabaseServerClient, departmentId: string | null): Promise<ExamStatRow[]> {

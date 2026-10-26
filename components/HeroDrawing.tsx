@@ -2,7 +2,7 @@
 
 // Decorative hero background: one printed form travels along the same steps as
 // the student dashboard's progress bar and arrives on a phone as "Scheduled".
-// Gold means "done": each stop fills gold as the route reaches it.
+// Yellow means "done": each stop fills STI yellow as the route reaches it.
 //
 // Two routes, picked with the "Paid exam / Waived exam" switch (desktop only;
 // on phones the drawing is a faded backdrop behind the text):
@@ -20,7 +20,7 @@
 import { useState } from 'react'
 
 const NAVY = 'var(--sti-navy)'
-const GOLD = 'var(--sti-gold)'
+const YELLOW = 'var(--sti-yellow)'
 
 type Glyph = 'check' | 'fee' | 'receipt' | 'search'
 type Stop = { x: number; y: number; label: string; delay: string; glyph: Glyph }
@@ -116,7 +116,7 @@ export default function HeroDrawing() {
         <style>{`
           .efh-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: efh-draw 3s linear .4s both; }
           .efh-fade { animation: efh-fade .4s ease-out both; }
-          /* After the route arrives, each gold stop gives a slow, quiet pulse */
+          /* After the route arrives, each yellow stop gives a slow, quiet pulse */
           .efh-ring { transform-box: fill-box; transform-origin: center; opacity: 0; animation: efh-ring 4.5s ease-out infinite; }
           @keyframes efh-ring { 0% { transform: scale(1); opacity: .45; } 70%, 100% { transform: scale(1.7); opacity: 0; } }
           @keyframes efh-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -150,12 +150,12 @@ export default function HeroDrawing() {
             <path d={path} stroke={NAVY} strokeWidth="2" strokeLinecap="round" strokeDasharray="1 7" opacity="0.35" />
             <path d={path} pathLength={1} className="efh-draw" stroke={NAVY} strokeWidth="2" strokeLinecap="round" />
 
-            {/* The stops between; each turns gold when the route reaches it */}
+            {/* The stops between; each turns STI yellow when the route reaches it */}
             {stops.map((s) => (
               <g key={s.label} transform={`translate(${s.x} ${s.y})`}>
                 <circle r="20" fill="#fff" />
-                <circle r="20" fill={GOLD} className="efh-fade" style={{ animationDelay: s.delay }} />
-                <circle r="20" stroke={GOLD} strokeWidth="2" className="efh-ring" style={{ animationDelay: `calc(${s.delay} + 1s)` }} />
+                <circle r="20" fill={YELLOW} className="efh-fade" style={{ animationDelay: s.delay }} />
+                <circle r="20" stroke={YELLOW} strokeWidth="2" className="efh-ring" style={{ animationDelay: `calc(${s.delay} + 1s)` }} />
                 <circle r="20" stroke={NAVY} strokeWidth="2" />
                 <Icon kind={s.glyph} />
                 <text x="0" y="41" textAnchor="middle" fill={NAVY} style={{ fontSize: 13, fontWeight: 600 }}>
@@ -169,7 +169,7 @@ export default function HeroDrawing() {
             <path d="M673 54h26" stroke={NAVY} strokeWidth="2" strokeLinecap="round" opacity="0.35" />
             {PHONE_ROWS.map((r) => (
               <g key={r.y}>
-                <circle cx="658" cy={r.y} r="5.5" fill={GOLD} className="efh-fade" style={{ animationDelay: r.delay }} />
+                <circle cx="658" cy={r.y} r="5.5" fill={YELLOW} className="efh-fade" style={{ animationDelay: r.delay }} />
                 <path
                   d={`M655.6 ${r.y}l1.8 1.8 3.2-3.6`}
                   stroke={NAVY}
@@ -182,7 +182,7 @@ export default function HeroDrawing() {
                 <path d={`M670 ${r.y}h46`} stroke={NAVY} strokeWidth="2.5" strokeLinecap="round" opacity="0.3" />
               </g>
             ))}
-            <rect x="652" y="140" width="68" height="22" rx="11" fill={GOLD} className="efh-fade" style={{ animationDelay: '3.9s' }} />
+            <rect x="652" y="140" width="68" height="22" rx="11" fill={YELLOW} className="efh-fade" style={{ animationDelay: '3.9s' }} />
             <text
               x="686"
               y="155"

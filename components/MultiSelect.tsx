@@ -84,10 +84,10 @@ export default function MultiSelect({ options, values, onToggle, max, placeholde
                   className="w-full flex items-start gap-3 text-left px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     color: 'var(--card-foreground)',
-                    ...(on ? { backgroundColor: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)' } : null),
+                    ...(on ? { backgroundColor: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)' } : null),
                   }}
                 >
-                  <input type="checkbox" checked={on} readOnly tabIndex={-1} className="mt-0.5 w-4 h-4 accent-[var(--sti-gold)] pointer-events-none" aria-hidden />
+                  <input type="checkbox" checked={on} readOnly tabIndex={-1} className="mt-0.5 w-4 h-4 accent-[var(--sti-blue)] pointer-events-none" aria-hidden />
                   <span>{o.label}</span>
                 </button>
               </li>

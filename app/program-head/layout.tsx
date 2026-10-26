@@ -5,11 +5,13 @@ import { getMyProfileMeta, getMyDeptSubjectIds } from '@/lib/myProfile'
 import DashboardLayout from '@/components/DashboardLayout'
 import AdminActingBanner from '@/components/AdminActingBanner'
 import { getNotifications, countByStatus } from '@/lib/notifications'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export default async function ProgramHeadLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   // The header (user name) is this page's LCP element, and it can't paint until
   // the layout finishes — so every SEQUENTIAL query here is directly visible as
@@ -30,6 +32,8 @@ export default async function ProgramHeadLayout({ children }: { children: React.
   const nav = [
     ...(isAdmin ? [{ label: 'All Requests', href: '/admin/requests', icon: 'layers' as const }] : []),
     { label: 'Dashboard', href: '/program-head/dashboard', icon: 'chart' as const },
+    // Own department only (see the page).
+    { label: 'Analytics', href: '/program-head/analytics', icon: 'layers' as const },
     { label: 'First Approval', href: '/program-head', icon: 'inbox' as const, badge: firstCount },
     { label: 'Second Approval', href: '/program-head/receipts', icon: 'receipt' as const, badge: secondCount },
     { label: 'Overview', href: '/program-head/overview', icon: 'list' as const },

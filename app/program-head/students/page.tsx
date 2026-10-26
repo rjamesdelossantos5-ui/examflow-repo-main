@@ -6,6 +6,7 @@ import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
 import { getCurrentUser } from '@/lib/currentUser'
 import StudentsList from './StudentsList'
 import type { RequestStatus } from '@/lib/supabase/types'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export const metadata = { title: 'EXAMFLOW — Accepted Students' }
 
@@ -17,6 +18,7 @@ export default async function StudentsPage() {
 
   // Drop forms whose exam date has already passed before listing (see helper).
   await purgeExpiredExams(supabase)
+  await runAutoDecisions()
 
   const { data } = await supabase
     .from('special_exam_requests')

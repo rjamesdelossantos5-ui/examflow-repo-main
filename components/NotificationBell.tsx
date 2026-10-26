@@ -158,12 +158,12 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
           className="fixed left-3 right-3 top-[4.25rem] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[22rem] max-w-none sm:max-w-[calc(100vw-1.5rem)] rounded-2xl shadow-2xl overflow-hidden z-50 ef-card"
           style={{ border: '1px solid var(--border)' }}
         >
-          {/* Header with gold accent bar */}
+          {/* Header with blue accent bar (a yellow one would vanish on the white card) */}
           <div className="relative px-4 py-3.5 border-b ef-border">
-            <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: 'var(--sti-gold)' }} aria-hidden />
+            <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: 'var(--sti-blue)' }} aria-hidden />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Icon name="bell" className="w-4 h-4" style={{ color: 'var(--sti-gold)' }} />
+                <Icon name="bell" className="w-4 h-4" style={{ color: 'var(--sti-blue)' }} />
                 <p className="font-bold text-sm" style={{ color: 'var(--card-foreground)' }}>Notifications</p>
               </div>
               {newInList > 0 && (
@@ -176,8 +176,8 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
 
           {items.length === 0 ? (
             <div className="px-4 py-10 text-center">
-              <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ backgroundColor: 'color-mix(in srgb, var(--sti-gold) 18%, transparent)' }}>
-                <Icon name="bell" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
+              <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ backgroundColor: 'color-mix(in srgb, var(--sti-yellow) 18%, transparent)' }}>
+                <Icon name="bell" className="w-6 h-6" style={{ color: 'var(--sti-blue)' }} />
               </div>
               <p className="text-sm font-medium" style={{ color: 'var(--card-foreground)' }}>You&apos;re all caught up</p>
               <p className="text-xs ef-muted mt-0.5">New activity will show up here.</p>
@@ -193,7 +193,7 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
                       href={n.href}
                       onClick={close}
                       className="group flex items-center gap-3 px-3.5 py-3 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
-                      style={isNew ? { backgroundColor: 'color-mix(in srgb, var(--sti-gold) 9%, transparent)' } : undefined}
+                      style={isNew ? { backgroundColor: 'color-mix(in srgb, var(--sti-yellow) 9%, transparent)' } : undefined}
                     >
                       <span
                         className="shrink-0 w-9 h-9 rounded-full grid place-items-center"
@@ -205,7 +205,7 @@ export default function NotificationBell({ items = [] }: { items?: NotificationI
                         {n.text}
                       </span>
                       {isNew && (
-                        <span className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--sti-gold)' }} aria-label="New" />
+                        <span className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--sti-yellow)' }} aria-label="New" />
                       )}
                       <Icon
                         name="chevron-right"

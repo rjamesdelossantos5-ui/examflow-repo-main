@@ -243,7 +243,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
 
   const docLabel = REASONS.find((r) => r.value === reason)?.doc ?? 'Supporting Document'
   const inputClass =
-    'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent'
+    'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)] focus:border-transparent'
   const selectClass = `${inputClass} cursor-pointer`
   const selectStyle = { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' } as React.CSSProperties
 
@@ -267,7 +267,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
       )}
 
       {prefill && (
-        <div className="mb-4 rounded-lg border px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', borderColor: 'rgba(253,185,19,0.4)', color: 'var(--card-foreground)' }}>
+        <div className="mb-4 rounded-lg border px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 12%, transparent)', borderColor: 'rgba(253,185,19,0.4)', color: 'var(--card-foreground)' }}>
           Resubmitting a rejected request — your details and files are kept. Just fix what was wrong; you only need to re-upload a file if you want to replace it.
         </div>
       )}
@@ -283,7 +283,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               <label
                 key={t}
                 className={`cursor-pointer rounded-xl border-2 p-4 transition-colors duration-200 ease-[var(--ease-out)] ${
-                  examType === t ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
+                  examType === t ? 'border-[var(--sti-blue)] bg-[var(--sti-blue)]/10' : 'ef-border hover:border-[var(--sti-blue)]/50'
                 }`}
               >
                 <input type="radio" name="exam_type" value={t} checked={examType === t} onChange={() => setExamType(t)} className="sr-only" />
@@ -306,7 +306,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 <label
                   key={r.value}
                   className={`cursor-pointer rounded-xl border-2 p-3 text-center transition-colors duration-200 ease-[var(--ease-out)] ${
-                    reason === r.value ? 'border-[var(--sti-gold)] bg-[var(--sti-gold)]/10' : 'ef-border hover:border-[var(--sti-gold)]/50'
+                    reason === r.value ? 'border-[var(--sti-blue)] bg-[var(--sti-blue)]/10' : 'ef-border hover:border-[var(--sti-blue)]/50'
                   }`}
                 >
                   <input type="radio" name="excused_reason" value={r.value} required checked={reason === r.value} onChange={() => setReason(r.value)} className="sr-only" />
@@ -338,7 +338,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
         <div className="space-y-4 pb-2 border-b ef-border">
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Your Information</h2>
           {termLabel && (
-            <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
+            <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 12%, transparent)', color: 'var(--card-foreground)' }}>
               <span className="ef-muted">Term / SY: </span><strong>{termLabel}</strong>
             </div>
           )}
@@ -459,9 +459,9 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 type="button"
                 onClick={toggleOverride}
                 aria-pressed={override}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-colors hover:border-[var(--sti-gold)]/70"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-colors hover:border-[var(--sti-blue)]/70"
                 style={override
-                  ? { borderColor: 'var(--sti-gold)', background: 'color-mix(in srgb, var(--sti-gold) 15%, transparent)', color: 'var(--card-foreground)' }
+                  ? { borderColor: 'var(--sti-blue)', background: 'color-mix(in srgb, var(--sti-blue) 10%, transparent)', color: 'var(--card-foreground)' }
                   : { borderColor: 'var(--border)', color: 'var(--card-foreground)' }}
               >
                 {override ? 'Use my own section' : 'My subject is in a different section'}
@@ -642,7 +642,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 name="privacy_consent"
                 value="yes"
                 required
-                className="peer block w-6 h-6 m-0 appearance-none cursor-pointer rounded-md border-2 bg-[var(--card)] border-[color-mix(in_srgb,var(--muted)_65%,transparent)] transition-[background-color,border-color,transform] duration-200 ease-[var(--ease-out)] active:scale-90 checked:bg-[var(--sti-gold)] checked:border-[var(--sti-gold)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sti-gold)] motion-reduce:transition-none"
+                className="peer block w-6 h-6 m-0 appearance-none cursor-pointer rounded-md border-2 bg-[var(--card)] border-[color-mix(in_srgb,var(--muted)_65%,transparent)] transition-[background-color,border-color,transform] duration-200 ease-[var(--ease-out)] active:scale-90 checked:bg-[var(--sti-yellow)] checked:border-[var(--sti-yellow)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sti-yellow)] motion-reduce:transition-none"
               />
               <svg
                 viewBox="0 0 24 24"
@@ -704,7 +704,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           onClick={openConfirm}
           disabled={!submissionOpen}
           className="w-full py-3 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           {/* Not "Submit Request": this button does not submit anything. It saves
               the form and sends the parent to identity verification — the actual
@@ -744,7 +744,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 <SubmitButton
                   pendingText="Saving…"
                   className="px-5 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                  style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                 >
                   Continue
                 </SubmitButton>
@@ -807,7 +807,7 @@ function FileField({ name, label, hint, inputClass, kept = false }: { name: stri
         accept={ALLOWED}
         required={!kept}
         onChange={handleChange}
-        className={`${inputClass} file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[var(--sti-gold)]/20 file:text-[var(--card-foreground)] file:cursor-pointer`}
+        className={`${inputClass} file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[var(--sti-yellow)]/20 file:text-[var(--card-foreground)] file:cursor-pointer`}
       />
       {busy && <p className="mt-1 text-xs ef-muted">Optimizing photo…</p>}
       {fileError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fileError}</p>}

@@ -64,7 +64,7 @@ function timeAgo(iso: string): string {
 }
 
 // One summary tile. Doubles as a filter toggle — clicking sets the filter, and
-// the active one gets a gold ring (same affordance as the PH Overview cards).
+// the active one gets a blue ring (same affordance as the PH Overview cards).
 export function StatCard({ label, value, accent, icon, active, onClick }: {
   label: string; value: number; accent: string; icon: IconName; active: boolean; onClick: () => void
 }) {
@@ -72,7 +72,7 @@ export function StatCard({ label, value, accent, icon, active, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`ef-card rounded-xl shadow-sm p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0 text-left w-full transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${active ? 'ring-2 ring-[var(--sti-gold)]' : ''}`}
+      className={`ef-card rounded-xl shadow-sm p-2.5 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0 text-left w-full transition-shadow duration-200 ease-[var(--ease-out)] hover:shadow-md ${active ? 'ring-2 ring-[var(--sti-blue)]' : ''}`}
     >
       {/* color-mix (not hex + '22') because `accent` is now a CSS variable */}
       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `color-mix(in srgb, ${accent} 16%, transparent)` }}>
@@ -134,15 +134,15 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
 
         {requests.length === 0 ? (
           <div className="ef-card rounded-xl shadow-sm px-4 py-14 text-center">
-            <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)' }}>
-              <Icon name="file" className="w-6 h-6" style={{ color: 'var(--sti-gold)' }} />
+            <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)' }}>
+              <Icon name="file" className="w-6 h-6" style={{ color: 'var(--sti-blue)' }} />
             </div>
             <p className="font-medium" style={{ color: 'var(--card-foreground)' }}>No requests yet {termLabel ? `for ${termLabel}` : ''}</p>
             <p className="text-sm ef-muted mt-1">Start by submitting your first special exam request.</p>
             <Link
               href="/student/submit"
               className="inline-block mt-4 px-4 py-2 rounded-lg text-sm font-semibold"
-              style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+              style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
             >
               + Submit a Request
             </Link>
@@ -238,7 +238,7 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                       <Link
                         href={`/student/requests/${r.id}`}
                         className="ef-press shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                        style={{ background: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                        style={{ background: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                       >
                         <Icon name="upload" className="w-4 h-4" /> Upload receipt
                       </Link>
@@ -260,7 +260,7 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                       <Link
                         href={`/student/requests/${r.id}`}
                         className="ef-press shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                        style={{ background: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                        style={{ background: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                       >
                         <Icon name="user" className="w-4 h-4" /> See why
                       </Link>
@@ -276,7 +276,7 @@ export default function RequestsPanel({ requests, termLabel, hasHistory }: {
                       <Link
                         href={`/student/submit?from=${r.id}`}
                         className="ef-press shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                        style={{ background: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                        style={{ background: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                       >
                         <Icon name="pencil" className="w-4 h-4" /> Edit &amp; Resubmit
                       </Link>

@@ -28,12 +28,12 @@ export interface TeacherOption {
 const ALL_DEPTS = '__all__'
 const NO_DEPT = '__none__'
 
-const fieldClass = 'w-full rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]'
+const fieldClass = 'w-full rounded-lg px-3 py-2 text-sm border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)]'
 const fieldStyle = { backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }
 // The teacher dropdown looks exactly like the dropdowns on the student's submit
-// form (the same size, border, gold focus ring and pointer).
+// form (the same size, border, blue focus ring and pointer).
 const teacherSelectClass =
-  'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)] focus:border-transparent cursor-pointer'
+  'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)] focus:border-transparent cursor-pointer'
 
 /**
  * The subjects from the School Data import. Clicking one shows its sections and
@@ -126,7 +126,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 active ? 'shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'
               }`}
-              style={active ? { backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' } : { color: 'var(--muted)' }}
+              style={active ? { backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' } : { color: 'var(--muted)' }}
             >
               {p.label}
             </button>
@@ -278,7 +278,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
                   </button>
                   <button type="button" onClick={save} disabled={isPending}
                     className="px-4 py-2 md:px-6 md:py-2.5 text-sm md:text-base rounded-lg font-semibold disabled:opacity-50"
-                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                    style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
                     {isPending ? 'Saving…' : 'Save changes'}
                   </button>
                 </>
@@ -290,7 +290,7 @@ export default function SubjectList({ subjects, teachers }: { subjects: SubjectR
                   </button>
                   <button type="button" onClick={() => show(open, true)}
                     className="px-4 py-2 text-sm rounded-lg font-semibold"
-                    style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+                    style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
                     Edit
                   </button>
                 </>

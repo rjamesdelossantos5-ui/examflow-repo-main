@@ -30,7 +30,7 @@ export default function NotFoundState({
     <div className="ef-card rounded-2xl shadow-sm px-6 py-12 text-center max-w-lg mx-auto">
       <div
         className="mx-auto mb-4 w-14 h-14 rounded-full grid place-items-center"
-        style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: 'var(--sti-gold)' }}
+        style={{ background: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)', color: 'var(--sti-yellow)' }}
       >
         <Icon name="file" className="w-7 h-7" />
       </div>
@@ -42,7 +42,7 @@ export default function NotFoundState({
         <Link
           href={homeHref}
           className="ef-press px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm hover:opacity-90 transition-opacity duration-200 ease-[var(--ease-out)]"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           {homeLabel}
         </Link>

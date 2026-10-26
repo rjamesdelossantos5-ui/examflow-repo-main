@@ -7,7 +7,7 @@ import { savePeriod, saveExamSchedule } from '../actions'
 import { computeWindow, TERMS, TERM_LABEL, SEMESTERS, SEMESTER_LABEL, type ExamPeriod, type Term, type Semester } from '@/lib/examSettings'
 import Select from '@/components/Select'
 
-const input = 'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-gold)]'
+const input = 'w-full rounded-lg px-3 py-2.5 text-sm bg-transparent border ef-border focus:outline-none focus:ring-2 focus:ring-[var(--sti-blue)]'
 const label = 'block text-sm font-medium ef-muted mb-1'
 
 function fmt(iso: string | null) {
@@ -229,7 +229,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
           type="checkbox"
           checked={withWindow}
           onChange={(e) => setWithWindow(e.target.checked)}
-          className="mt-0.5 w-4 h-4 shrink-0 accent-[var(--sti-gold)] cursor-pointer"
+          className="mt-0.5 w-4 h-4 shrink-0 accent-[var(--sti-blue)] cursor-pointer"
         />
         <span className="text-sm" style={{ color: 'var(--card-foreground)' }}>
           Open the submission window now
@@ -250,7 +250,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
             </div>
           </div>
 
-          <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
+          <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 12%, transparent)', color: 'var(--card-foreground)' }}>
             {start ? <>Submissions close on <strong>{endLabel}</strong> ({days} day{days !== 1 ? 's' : ''}).</> : <>Set a start date to compute the closing date.</>}
           </div>
         </>
@@ -260,7 +260,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
         </div>
       )}
 
-      <button type="submit" disabled={isPending} className="mt-auto px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 self-start" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+      <button type="submit" disabled={isPending} className="mt-auto px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 self-start" style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
         {isPending ? 'Saving…' : effectiveStart ? (alreadySet ? 'Change window' : 'Save & set active') : 'Set as current term'}
       </button>
 
@@ -289,7 +289,7 @@ function WindowForm({ active, periods, onError, isPending, startTransition }: Fo
             </div>
             <div className="flex gap-3 mt-5">
               <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
-              <button type="button" onClick={doSave} className="flex-1 py-2.5 rounded-lg font-semibold text-sm" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+              <button type="button" onClick={doSave} className="flex-1 py-2.5 rounded-lg font-semibold text-sm" style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
                 {!effectiveStart ? 'Yes, set the term' : alreadySet ? 'Yes, change it' : 'Yes, set it'}
               </button>
             </div>
@@ -389,7 +389,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
       {saved && <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-sm text-green-700 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">Schedule saved. Students can now see it.</div>}
       {info && <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-2.5 text-sm text-blue-700 dark:bg-blue-500/10 dark:border-blue-500/30 dark:text-blue-300">{info}</div>}
       {alreadySet && !saved && (
-        <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-gold) 12%, transparent)', color: 'var(--card-foreground)' }}>
+        <div className="rounded-lg px-4 py-2.5 text-sm" style={{ background: 'color-mix(in srgb, var(--sti-yellow) 12%, transparent)', color: 'var(--card-foreground)' }}>
           Current: <strong>{fmtWhen(active!.examDay)}</strong>{active!.examEndDay ? <> → <strong>{fmtWhen(active!.examEndDay)}</strong></> : null}
         </div>
       )}
@@ -428,7 +428,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
         <textarea value={bring} onChange={(e) => setBring(e.target.value)} disabled={!active} rows={3} placeholder="e.g. Valid ID, blue pen, official receipt…" className={`${input} resize-none`} />
       </div>
 
-      <button type="submit" disabled={isPending || !active} className="mt-auto px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 self-start" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+      <button type="submit" disabled={isPending || !active} className="mt-auto px-6 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 self-start" style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
         {isPending ? 'Saving…' : alreadySet ? 'Change schedule' : 'Set schedule'}
       </button>
 
@@ -455,7 +455,7 @@ function ScheduleForm({ active, onError, isPending, startTransition }: FormProps
             </div>
             <div className="flex gap-3 mt-5">
               <button type="button" onClick={() => setConfirmOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-sm border ef-border" style={{ color: 'var(--card-foreground)' }}>Cancel</button>
-              <button type="button" onClick={doSave} className="flex-1 py-2.5 rounded-lg font-semibold text-sm" style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}>
+              <button type="button" onClick={doSave} className="flex-1 py-2.5 rounded-lg font-semibold text-sm" style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}>
                 {alreadySet ? 'Yes, change it' : 'Yes, set it'}
               </button>
             </div>

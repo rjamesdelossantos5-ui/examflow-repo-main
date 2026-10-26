@@ -75,7 +75,7 @@ export default function SubmissionStatusModal(props: Props) {
         <button
           onClick={handleOk}
           className="w-full mt-5 py-2.5 rounded-lg font-semibold text-sm hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           Okay
         </button>

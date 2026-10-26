@@ -8,8 +8,6 @@ import RejectReasonPicker from '@/components/RejectReasonPicker'
 import { Icon, type IconName } from '@/components/Icon'
 import { ordinalYear } from '@/lib/ordinal'
 import type { RequestStatus } from '@/lib/supabase/types'
-import type { ParentCheck } from '@/lib/didit'
-import ParentNameCheck from '@/components/ParentNameCheck'
 import { shownInHistory } from '@/lib/historyFilter'
 
 interface MediaItem {
@@ -57,8 +55,6 @@ interface Props {
   /** Didit parent identity result. Omit to hide the section entirely — a request
    *  submitted before this feature existed simply has nothing to show. */
   verification?: VerificationProps
-  /** The name on the parent's ID against the Registrar's parent list (Program Head only). */
-  parentCheck?: ParentCheck | null
 }
 
 interface VerificationProps {
@@ -141,7 +137,6 @@ export default function RequestReviewPanel({
   rejectPresets,
   onDone,
   verification,
-  parentCheck,
 }: Props) {
   const isActionable = status === actionableStatus
   const [rejectMode, setRejectMode] = useState(false)
@@ -239,7 +234,7 @@ export default function RequestReviewPanel({
               onClick={handleVerify}
               disabled={isPending}
               className="ef-press px-4 py-2.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-2"
-              style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+              style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
             >
               <Icon name="check" className="w-4 h-4" />
               {isPending ? 'Processing…' : verifyLabel}
@@ -316,14 +311,11 @@ export default function RequestReviewPanel({
       {/* ── Parent identity check ──
           Replaces reading the parent's ID by eye. The outcome and scores are
           shown; the ID image and selfie are never stored here (see
-          supabase/migration_didit.sql). The name read off the ID is shown only
-          beside the Registrar's parent list (parentCheck), because comparing
-          the two is the Program Head's check. */}
+          supabase/migration_didit.sql). */}
       {verification && (
         <Section title="Parent check">
           <div className="space-y-4">
             <VerificationLine {...verification} />
-            {parentCheck && <ParentNameCheck check={parentCheck} />}
           </div>
         </Section>
       )}

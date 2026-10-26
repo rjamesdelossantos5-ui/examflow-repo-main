@@ -163,7 +163,7 @@ export default function VerifyParent({
               onClick={handleConfirm}
               disabled={isPending}
               className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+              style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
             >
               {isPending ? 'Submitting…' : 'Submit Request'}
             </button>
@@ -201,7 +201,7 @@ export default function VerifyParent({
           onClick={handleStart}
           disabled={isPending || leaving}
           className="mt-4 w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
         >
           {leaving ? 'Opening verification…' : isPending ? 'Starting…' : 'Try verification again'}
         </button>
@@ -259,7 +259,7 @@ export default function VerifyParent({
 
   // ── Not started ────────────────────────────────────────────────────────────
   return (
-    <div className="ef-card rounded-xl border-2 border-dashed p-6" style={{ borderColor: 'var(--sti-gold)' }}>
+    <div className="ef-card rounded-xl border-2 border-dashed p-6" style={{ borderColor: 'var(--sti-blue)' }}>
       <div className="flex items-start gap-3 mb-4">
         <div className="shrink-0 w-9 h-9 rounded-full bg-amber-500 text-white text-base font-bold grid place-items-center animate-pulse">
           !
@@ -301,7 +301,7 @@ export default function VerifyParent({
         onClick={handleStart}
         disabled={isPending || leaving}
         className="w-full py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-        style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+        style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
       >
         {leaving ? 'Opening verification…' : isPending ? 'Starting…' : 'Start parent verification'}
       </button>

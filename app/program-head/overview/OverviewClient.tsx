@@ -110,11 +110,11 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
                 {s.label}
                 <span
                   className={`tabular-nums text-xs px-1.5 py-0.5 rounded-full ${s.count === 0 && !active ? 'opacity-60' : ''}`}
-                  style={{ background: active ? 'color-mix(in srgb, var(--sti-gold) 25%, transparent)' : 'color-mix(in srgb, var(--muted) 12%, transparent)' }}
+                  style={{ background: active ? 'color-mix(in srgb, var(--sti-yellow) 25%, transparent)' : 'color-mix(in srgb, var(--muted) 12%, transparent)' }}
                 >
                   {s.count}
                 </span>
-                {active && <span aria-hidden className="absolute left-3 right-3 bottom-0 h-0.5 rounded-full" style={{ background: 'var(--sti-gold)' }} />}
+                {active && <span aria-hidden className="absolute left-3 right-3 bottom-0 h-0.5 rounded-full" style={{ background: 'var(--sti-yellow)' }} />}
               </button>
             )
           })}
@@ -162,7 +162,7 @@ export default function OverviewClient({ rows, viewer }: { rows: OverviewRow[]; 
                         <Link
                           href={open.href(r.id)}
                           className="inline-block text-xs px-2.5 py-1 rounded-lg font-semibold"
-                          style={{ backgroundColor: 'var(--sti-gold)', color: 'var(--sti-navy)' }}
+                          style={{ backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }}
                         >
                           {open.label}
                         </Link>

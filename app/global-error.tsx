@@ -9,6 +9,8 @@
  * root layout failed, the stylesheet or font may not have loaded either, and a
  * fallback that depends on them could render as unreadable plain text.
  */
+import { STI } from '@/lib/brand'
+
 export default function GlobalError({
   error,
   unstable_retry,
@@ -22,8 +24,8 @@ export default function GlobalError({
         <title>EXAMFLOW — Something went wrong</title>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: '3rem 1.5rem', textAlign: 'center', maxWidth: 480, width: '100%' }}>
-            <div style={{ fontWeight: 800, letterSpacing: '-0.02em', color: '#002F6C', marginBottom: 20 }}>
-              EXAM<span style={{ color: '#FDB913' }}>FLOW</span>
+            <div style={{ fontWeight: 800, letterSpacing: '-0.02em', color: STI.navy, marginBottom: 20 }}>
+              EXAM<span style={{ color: STI.blue }}>FLOW</span>
             </div>
             <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1f2937', margin: 0 }}>
               EXAMFLOW didn&apos;t load
@@ -34,7 +36,7 @@ export default function GlobalError({
             <button
               type="button"
               onClick={() => unstable_retry()}
-              style={{ background: '#FDB913', color: '#002F6C', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+              style={{ background: STI.yellow, color: STI.navy, border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
             >
               Try again
             </button>

@@ -5,22 +5,23 @@
  *   notice a student reads in under a minute. The one picture is a quiet navy
  *   line drawing behind the first screen (HeroDrawing): a form travelling to
  *   the three signatures and arriving on a phone.
- * OWN-WORLD: Navy nav bar (the same bar the dashboards use) over cool
- *   off-white and white paper, navy ink, hairline rules; gold only on the
- *   nav's Log in (and, in the drawing, on what is done). Archivo: wide for
- *   headings, normal width for reading.
+ * OWN-WORLD: STI blue nav bar (the same bar the dashboards use) over cool
+ *   off-white and white paper, navy ink, hairline rules; STI yellow only on
+ *   the nav's Log in (and, in the drawing, on what is done). Poppins, STI's
+ *   own font (elms.sti.edu), set app-wide by app/layout.tsx.
  * STORY: A student who missed an exam learns what to prepare (parent with ID,
  *   document, paper form) and the order of the steps, then logs in.
- * FIRST VIEWPORT: Navy nav bar; on cool off-white the headline, one sentence
- *   and the navy Log in button, left-aligned, revealed once on load.
+ * FIRST VIEWPORT: Blue nav bar; on cool off-white the headline, one sentence
+ *   and the blue Log in button, left-aligned, revealed once on load.
  */
-import { archivo } from './fonts'
+import { STI } from '@/lib/brand'
 import LoginModal from './LoginModal'
 import HeroDrawing from '@/components/HeroDrawing'
 
-const NAVY = '#002F6C'
-const GOLD = '#FDB913'
-const ON_NAVY_SOFT = '#C9D6EA' // secondary text on navy, tinted from the hue
+// STI's colors (lib/brand.ts). Yellow is a fill only: unreadable on white.
+const NAVY = STI.navy
+const BLUE = STI.blue
+const YELLOW = STI.yellow
 const INK_SOFT = '#3D4F6E' // secondary text on paper
 const RULE = '#D5DCE6'
 // Cool off-white (blue-grey, never cream) for the first screen and the steps;
@@ -44,23 +45,23 @@ const STEPS = [
   { title: 'Collect the printed form', body: 'Get it at the Registrar’s office and fill it in. If your exam is paid, the Cashier marks it when you pay.' },
 ]
 
-const H2_STYLE = { fontStretch: '125%', fontSize: 'clamp(1.9rem, 3.6vw, 2.75rem)', letterSpacing: '-0.02em' } as const
+const H2_STYLE = { fontSize: 'clamp(1.9rem, 3.6vw, 2.75rem)', letterSpacing: '-0.02em' } as const
 
 export default function LandingPage() {
   // Inline colours (not bg-white / border / text-gray-* classes) so the app's
   // dark-mode overrides never touch this public page; it always renders light.
   return (
-    <div className={`${archivo.variable} ef-landing min-h-screen flex flex-col pb-12`} style={{ background: '#FFFFFF', color: NAVY, fontFamily: 'var(--font-archivo), Arial, sans-serif' }}>
+    <div className="ef-landing min-h-screen flex flex-col pb-12" style={{ background: '#FFFFFF', color: NAVY }}>
       {/* ───────── Nav: the dashboards' navy bar ───────── */}
-      <header className="sticky top-0 z-50" style={{ background: NAVY, color: '#FFFFFF' }}>
+      <header className="ef-on-brand sticky top-0 z-50" style={{ background: BLUE, color: '#FFFFFF' }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-between gap-4`}>
-          <span className="font-black text-lg leading-none" style={{ fontStretch: '115%' }}>
-            EXAM<span style={{ color: GOLD }}>FLOW</span>
+          <span className="font-black text-lg leading-none">
+            EXAM<span style={{ color: YELLOW }}>FLOW</span>
           </span>
           <nav className="flex items-center gap-8 lg:gap-10 text-sm font-medium">
-            <a href="#prepare" className="hidden md:inline ef-landing-link" style={{ color: ON_NAVY_SOFT }}>Before you start</a>
-            <a href="#steps" className="hidden md:inline ef-landing-link" style={{ color: ON_NAVY_SOFT }}>How it works</a>
-            <a href="#login" className="ef-press px-4 py-2 rounded-[4px] font-semibold" style={{ background: GOLD, color: NAVY }}>
+            <a href="#prepare" className="hidden md:inline ef-landing-link" style={{ color: STI.onBlueSoft }}>Before you start</a>
+            <a href="#steps" className="hidden md:inline ef-landing-link" style={{ color: STI.onBlueSoft }}>How it works</a>
+            <a href="#login" className="ef-press px-4 py-2 rounded-[4px] font-semibold" style={{ background: YELLOW, color: NAVY }}>
               Log in
             </a>
           </nav>
@@ -78,7 +79,7 @@ export default function LandingPage() {
             className="ef-reveal font-extrabold leading-[0.98] text-balance"
             // marginLeft: optical alignment. At this size the M's built-in side
             // space pushes it visibly right of the text below; pull it back.
-            style={{ fontStretch: '125%', fontSize: 'clamp(2.4rem, 5.2vw, 4.25rem)', letterSpacing: '-0.03em', marginLeft: '-0.04em' }}
+            style={{ fontSize: 'clamp(2.4rem, 5.2vw, 4.25rem)', letterSpacing: '-0.03em', marginLeft: '-0.04em' }}
           >
             Missed an exam?
           </h1>
@@ -87,7 +88,7 @@ export default function LandingPage() {
             and you can follow every step from your phone.
           </p>
           <div className="ef-reveal mt-8 sm:mt-10 flex flex-wrap items-center gap-x-6 gap-y-4" style={{ animationDelay: '180ms' }}>
-            <a href="#login" className="ef-press px-6 py-3.5 rounded-[4px] text-base font-bold" style={{ background: NAVY, color: '#FFFFFF' }}>
+            <a href="#login" className="ef-press px-6 py-3.5 rounded-[4px] text-base font-bold" style={{ background: BLUE, color: '#FFFFFF' }}>
               Log in to start a request
             </a>
             <a href="#prepare" className="ef-landing-link text-base font-semibold" style={{ color: NAVY }}>
@@ -114,9 +115,9 @@ export default function LandingPage() {
           <ul style={{ borderTop: `2px solid ${NAVY}` }}>
             {PREPARE.map((p) => (
               <li key={p.title} className="ef-prep ef-in flex gap-4 py-5" style={{ borderBottom: `1px solid ${RULE}` }}>
-                {/* An empty form checkbox: drawn, not a glyph. Ticks gold on hover. */}
+                {/* An empty form checkbox: drawn, not a glyph. Ticks yellow on hover. */}
                 <span aria-hidden className="relative mt-1 w-5 h-5 shrink-0 rounded-[2px]" style={{ border: `2px solid ${NAVY}` }}>
-                  <span className="ef-prep-tick absolute -inset-[2px] grid place-items-center rounded-[2px]" style={{ background: GOLD }}>
+                  <span className="ef-prep-tick absolute -inset-[2px] grid place-items-center rounded-[2px]" style={{ background: YELLOW }}>
                     <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                       <path d="M2.5 7.5l3 3 6-7" stroke={NAVY} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -143,8 +144,8 @@ export default function LandingPage() {
           <ol className="mt-12 grid gap-x-10 lg:grid-cols-5" style={{ borderTop: `2px solid ${NAVY}` }}>
             {STEPS.map((s, i) => (
               <li key={s.title} className="ef-step ef-in relative py-6 lg:pr-2" style={{ borderBottom: `1px solid ${RULE}` }}>
-                <span aria-hidden className="ef-step-bar absolute left-0 -top-[2px] h-[2px] w-full" style={{ background: GOLD }} />
-                <span className="font-extrabold text-3xl tabular-nums" style={{ fontStretch: '125%', color: NAVY }}>{i + 1}</span>
+                <span aria-hidden className="ef-step-bar absolute left-0 -top-[2px] h-[2px] w-full" style={{ background: BLUE }} />
+                <span className="font-extrabold text-3xl tabular-nums" style={{ color: NAVY }}>{i + 1}</span>
                 <p className="mt-3 font-bold text-lg leading-snug">{s.title}</p>
                 <p className="mt-2 text-base leading-relaxed" style={{ color: INK_SOFT }}>{s.body}</p>
               </li>
@@ -161,8 +162,9 @@ export default function LandingPage() {
         style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}`, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className={`${CONTAINER} h-12 flex items-center justify-center gap-3 text-xs sm:text-sm`}>
-          <span className="font-black leading-none" style={{ fontStretch: '115%' }}>
-            EXAM<span style={{ color: GOLD }}>FLOW</span>
+          {/* On white the yellow would vanish, so FLOW is blue here. */}
+          <span className="font-black leading-none">
+            EXAM<span style={{ color: BLUE }}>FLOW</span>
           </span>
           <span aria-hidden style={{ color: RULE }}>|</span>
           <span style={{ color: INK_SOFT }}>© {new Date().getFullYear()} STI College Sta. Maria</span>

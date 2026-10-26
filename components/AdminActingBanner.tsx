@@ -9,7 +9,7 @@ export default function AdminActingBanner({ asRole }: { asRole: string }) {
   return (
     <div
       className="mb-4 rounded-lg px-4 py-2.5 text-sm flex flex-wrap items-center justify-between gap-2"
-      style={{ background: 'color-mix(in srgb, var(--sti-gold) 16%, transparent)', color: 'var(--card-foreground)' }}
+      style={{ background: 'color-mix(in srgb, var(--sti-yellow) 16%, transparent)', color: 'var(--card-foreground)' }}
     >
       <p>
         <strong>Admin view</strong> — you can do everything the {asRole} does on this page. What you do is recorded as

@@ -6,6 +6,7 @@ import { getMyProfileMeta } from '@/lib/myProfile'
 import { keepMyDepartment } from '@/lib/deptFilter'
 import { getCurrentUser } from '@/lib/currentUser'
 import PHQueue from '../PHQueue'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 export const metadata = { title: 'EXAMFLOW — Second Approval (Receipts)' }
 
@@ -17,6 +18,7 @@ export default async function ProgramHeadReceiptsPage() {
   // Cached — reuses the layout's auth lookup instead of a second round-trip.
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  await runAutoDecisions()
 
   const { data: raw } = await supabase
     .from('special_exam_requests')

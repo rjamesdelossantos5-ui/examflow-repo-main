@@ -5,6 +5,7 @@ import { keepMyDepartment } from '@/lib/deptFilter'
 import { purgeExpiredExams } from '@/lib/purgeExpiredExams'
 import { withSubmissionGate } from '@/lib/submissionGate'
 import type { OverviewRow } from './OverviewClient'
+import { runAutoDecisions } from '@/lib/autoDecide'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -17,6 +18,7 @@ type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 export async function loadOverviewRows(supabase: SupabaseServer, departmentId: string | null): Promise<OverviewRow[]> {
   // Drop forms whose exam date has already passed before listing (see helper).
   await purgeExpiredExams(supabase)
+  await runAutoDecisions()
 
   // Same gate as the Teacher's queue (lib/submissionGate.ts). Without it this
   // listed forms the parent had not verified and the student had not submitted
