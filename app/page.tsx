@@ -51,8 +51,8 @@ export default function LandingPage() {
   // Inline colours (not bg-white / border / text-gray-* classes) so the app's
   // dark-mode overrides never touch this public page; it always renders light.
   return (
-    <div className="ef-landing min-h-screen flex flex-col pb-12" style={{ background: '#FFFFFF', color: NAVY }}>
-      {/* ───────── Nav: the dashboards' navy bar ───────── */}
+    <div className="ef-landing min-h-screen flex flex-col" style={{ background: '#FFFFFF', color: NAVY }}>
+      {/* ───────── Nav: the dashboards' blue bar ───────── */}
       <header className="ef-on-brand sticky top-0 z-50" style={{ background: BLUE, color: '#FFFFFF' }}>
         <div className={`${CONTAINER} h-16 flex items-center justify-between gap-4`}>
           <span className="font-black text-lg leading-none">
@@ -154,11 +154,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── Footer: pinned to the bottom of the window, always in view.
-          The page has bottom padding (see the wrapper) so the last section is
-          never hidden behind it. Below the login pop-up's layer (z-[100]). ───────── */}
+      {/* ───────── Footer: after the last section, seen only once you scroll to
+          the end (the user asked for it not to stay pinned). mt-auto keeps it
+          at the bottom of the window when the page is shorter than the screen. ───────── */}
       <footer
-        className="fixed bottom-0 inset-x-0 z-40"
+        className="mt-auto"
         style={{ background: '#FFFFFF', color: NAVY, borderTop: `1px solid ${RULE}`, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className={`${CONTAINER} h-12 flex items-center justify-center gap-3 text-xs sm:text-sm`}>
