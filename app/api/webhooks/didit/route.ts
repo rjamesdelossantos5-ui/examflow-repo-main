@@ -62,7 +62,8 @@ export async function POST(request: Request) {
     // mode of a mistyped DIDIT_WEBHOOK_SECRET, and without the body you are
     // guessing. 401 is deliberate: Didit retries 5xx and 404, and a bad
     // signature will not fix itself on a retry.
-    console.error('[didit:webhook] rejected —', check.reason, '| body:', rawBody.slice(0, 1000))
+    // Size only, never the body: it is unverified (anyone can post here) and a real one carries the parent's ID name.
+    console.error('[didit:webhook] rejected —', check.reason, '| body bytes:', rawBody.length)
     return new Response('invalid signature', { status: 401 })
   }
 

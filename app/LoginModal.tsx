@@ -91,7 +91,7 @@ export default function LoginModal() {
   if (!open) return null
 
   const inputClass =
-    'w-full rounded-[4px] px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#0072BC] focus:ring-offset-1 transition-shadow'
+    'w-full rounded-[4px] px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#047EAF] focus:ring-offset-1 transition-shadow'
   const inputStyle = { background: '#FFFFFF', color: NAVY, border: `1px solid ${RULE}` }
   const labelClass = 'block text-sm font-semibold mb-1.5'
   const primaryClass =

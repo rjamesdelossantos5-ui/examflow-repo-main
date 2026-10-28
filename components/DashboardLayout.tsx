@@ -172,7 +172,7 @@ export default function DashboardLayout({
             className={`ef-on-brand fixed lg:sticky top-16 left-0 z-40 lg:z-30 w-64 shrink-0 h-[calc(100vh-4rem)] overflow-y-auto transition-transform duration-200 lg:translate-x-0 ${
               drawerOpen ? 'translate-x-0' : '-translate-x-full'
             } ${collapsed ? 'lg:hidden' : ''}`}
-            style={{ backgroundColor: 'var(--header)', borderRight: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ backgroundColor: 'var(--sidebar)', borderRight: '1px solid rgba(255,255,255,0.08)' }}
           >
             <nav className="flex flex-col gap-1 p-3">
               {navItems.map((item) => {
@@ -187,7 +187,7 @@ export default function DashboardLayout({
                     style={
                       active
                         ? { backgroundColor: 'var(--sti-yellow)', color: 'var(--sti-navy)' }
-                        : { color: 'rgba(255,255,255,0.92)' } // 4.6:1 on the blue
+                        : { color: 'var(--sidebar-text)' } // eLMS's sidebar text, 7.6:1 on its navy
                     }
                   >
                     {item.icon && <Icon name={item.icon} className="w-4 h-4 shrink-0" />}

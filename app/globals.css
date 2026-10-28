@@ -14,20 +14,24 @@
      It is a FILL only — buttons, the active tab, tints — always with navy text
      on it (16:1). Lines, icons and focus rings use blue instead. */
   --sti-yellow: #FFF200;   /* logo yellow */
-  --sti-blue: #0072BC;     /* logo blue · 5.1:1 — header, accents, focus rings */
+  --sti-blue: #047EAF;     /* elms.sti.edu's blue · 4.6:1 with white text — header, accents, focus rings */
   --sti-navy: #050D36;     /* sti.edu navy · 18.8:1 — ink, text on yellow */
 
   /* Semantic surface tokens (light) */
-  --background: #f3f4f6;   /* app canvas */
-  --foreground: #171717;   /* primary text */
+  --background: #F3F5F9;   /* app canvas — eLMS */
+  --foreground: #0F0F0F;   /* primary text — eLMS (17.6:1 on the canvas) */
   --card: #ffffff;         /* panels / cards */
-  --card-foreground: #1f2937;
+  --card-foreground: #0F0F0F;
   /* Secondary text. Was #6b7280, which measured 4.34:1 against the page
      canvas — under the 4.5:1 WCAG AA minimum. This is 6.6:1 there and
      7.3:1 on cards, so muted copy stays readable on a phone outdoors. */
   --muted: #4b5563;
   --border: #e5e7eb;       /* hairlines */
-  --header: var(--sti-blue); /* top nav — white text on it is 5.1:1 */
+  --header: var(--sti-blue); /* top nav — white text on it is 4.6:1 */
+  /* Side menu: eLMS's dark navy with its light blue-grey text (7.6:1). The text
+     is only for this dark surface — on the light canvas it would be 1.8:1. */
+  --sidebar: #132A3F;
+  --sidebar-text: #B0B9DD;
 
   /* Status colors used as TEXT (pills, banners, headlines). The raw palette
      hues (#3b82f6 / #16a34a / #f59e0b) only reach 2.1–3.7:1 on a light
@@ -52,12 +56,13 @@
 }
 
 .dark {
-  --background: #0b1120;
-  --foreground: #e5e7eb;
-  --card: #111a2e;
-  --card-foreground: #e5e7eb;
+  --background: #14151B;   /* eLMS dark */
+  --foreground: #FFFFFF;   /* 18.2:1 */
+  --card: #1C1D25;         /* a step lighter than the canvas (derived) */
+  --card-foreground: #E4E6F0; /* eLMS dark-mode text, 14.6:1 */
+  --sidebar-text: #E4E6F0;
   --muted: #94a3b8;        /* 6.8:1 on the dark card — already compliant */
-  --border: #1f2b45;
+  --border: #2B2D38;
   --header: var(--sti-navy);
   /* The logo blue is 3.4:1 on the dark card — too dim for a focus ring or an
      icon there — so dark mode lifts it to a lighter tint of the same hue. */
