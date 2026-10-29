@@ -28,28 +28,14 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
   // from even starting until it came back.
   const profile = await getMyProfileMeta()
 
-  const [{ data: requests }, activePeriod, { data:details }] = await Promise.all([
+  const [{ data: requests }, activePeriod] = await Promise.all([
     supabase
       .from('special_exam_requests')
       .select('*, subjects(subject_code, subject_name)')
       .eq('student_id', user.id)
       .order('submitted_at', { ascending: false }),
     getActivePeriodCached(),
-    supabase
-    .from('profiles')
-    .select('student_number, department_id, course, year_level, section')
-    .eq('id', user.id)
-    .maybeSingle(),
   ])
-
-    // Only what a student can fill in on My Account. Department and section are
-    // set by the School Data import and have no field there, so counting them
-    // left this banner up for ever for anyone the import hadn't covered.
-    const profileIncomplete =
-    !!details &&
-    (!details.student_number ||
-    !details.course ||
-    !details.year_level)
 
   const win = computeWindow(activePeriod?.submissionStart ?? null, activePeriod?.windowDays ?? 7)
   const cookieStore = await cookies()
@@ -197,15 +183,6 @@ export default async function StudentPage({ searchParams }: { searchParams: Prom
           </span>
         )}
       </div>
-      {profileIncomplete && (
-       <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-         Visit your profile settings to save your information. Open{' '}
-       <Link href="/account" className="font-semibold underline">
-          My Account
-       </Link>{' '}
-          and fill in your student number, course and year level.
-    </div>
-)}
 
       {/* Stat cards + request list — the cards double as status filters */}
       <RequestsPanel
