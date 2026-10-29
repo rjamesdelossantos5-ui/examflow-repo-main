@@ -71,12 +71,19 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
     const candidates = new Map<string, PurgeCandidate>()
     const SELECT = 'id, status, subject_id, teacher_id, exam_type, period_id, final_schedule, didit_session_id'
 
+    // Only forms nobody has touched for the grace period. A form is removed after
+    // its exam is over AND it has sat unchanged for a day. Without the updated_at
+    // check, a form accepted (or assessed, or paid) TODAY into a term whose exam
+    // date had already passed was deleted on the very next page load — the student
+    // saw "no longer available" and it vanished from the Admin and Program Head
+    // lists while the Registrar still had it on screen.
     if (expiredPeriodIds.length) {
       const { data } = await supabase
         .from('special_exam_requests')
         .select(SELECT)
         .in('status', ['accepted', 'scheduled'])
         .in('period_id', expiredPeriodIds)
+        .lt('updated_at', cutoffIso)
       for (const r of (data ?? []) as PurgeCandidate[]) candidates.set(r.id, r)
     }
 
@@ -86,6 +93,7 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
       .in('status', ['accepted', 'scheduled'])
       .not('final_schedule', 'is', null)
       .lt('final_schedule', cutoffIso)
+      .lt('updated_at', cutoffIso)
     for (const r of (byFinal ?? []) as PurgeCandidate[]) candidates.set(r.id, r)
 
     if (!candidates.size) return
@@ -113,6 +121,9 @@ export async function purgeExpiredExams(supabase: SupabaseServerClient): Promise
       .delete()
       .in('id', idList)
       .in('status', ['accepted', 'scheduled'])
+      // Repeated on the delete: a form that changed after it was selected above
+      // (someone just acted on it) is left alone.
+      .lt('updated_at', cutoffIso)
       .select('id')
     if (deleteErr) console.error('purgeExpiredExams: delete failed', deleteErr.message)
     const deletedIds = new Set((deletedRows ?? []).map((r) => r.id as string))
