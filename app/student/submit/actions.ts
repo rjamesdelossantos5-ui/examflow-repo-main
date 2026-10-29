@@ -514,6 +514,23 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     if (updErr) return redirect(`/student/submit?from=${oldId}&error=${encodeURIComponent(updErr.message)}`)
   }
 
+  // A resubmitted paid request starts again, so any fee assessment from before is
+  // cleared. Left in place, the Registrar saw it as already assessed and never
+  // assessed it again, and lib/autoDecide.ts then declined it for "no receipt"
+  // (it only declines assessed forms). Written with the service-role client because
+  // students may not change these columns; ownership was checked above, and the
+  // student_id filter repeats it. Best-effort: columns missing on an unmigrated
+  // database, or no service key, just leave things as they were.
+  const clearAssessment = createAdminClient()
+  if (clearAssessment) {
+    const { error: clearErr } = await clearAssessment
+      .from('special_exam_requests')
+      .update({ payment_assessed_at: null, assessed_fee: null })
+      .eq('id', oldId)
+      .eq('student_id', userId)
+    if (clearErr) console.error('[resubmit] could not clear the old fee assessment', clearErr.message)
+  }
+
   // Replace only the slots that got a new upload.
   // parent_id / parent_id_back / parent_signature are intentionally not listed.
   // Rows submitted before those uploads were removed may still HAVE those media
