@@ -16,6 +16,8 @@ export interface ActivityRow {
   subject: string | null
   /** The student the request belongs to. */
   student: string | null
+  /** Reference number of the request (EF-2026-000123); null before the tracking migration is run. */
+  trackingNo: string | null
   /** Already formatted in Manila time by the page. */
   when: string
 }
@@ -37,7 +39,7 @@ export default function ActivityTable({ rows, capped }: { rows: ActivityRow[]; c
     const q = query.trim().toLowerCase()
     return rows.filter((r) =>
       (!role || r.role === role) &&
-      (!q || [r.name, r.email, r.action, r.subject, r.student].some((v) => v && v.toLowerCase().includes(q))),
+      (!q || [r.name, r.email, r.action, r.subject, r.student, r.trackingNo].some((v) => v && v.toLowerCase().includes(q))),
     )
   }, [rows, query, role])
   const { items: pageRows, pagerProps } = usePagination(visible, `${query}|${role}`)
@@ -48,7 +50,7 @@ export default function ActivityTable({ rows, capped }: { rows: ActivityRow[]; c
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <SearchInput value={query} onChange={setQuery} placeholder="Search name, action, subject…" label="Search user activity" />
+        <SearchInput value={query} onChange={setQuery} placeholder="Search name, action, reference no…" label="Search user activity" />
         <Select
           value={role}
           onChange={setRole}
@@ -89,6 +91,7 @@ export default function ActivityTable({ rows, capped }: { rows: ActivityRow[]; c
                   {r.notes && <div className="text-xs ef-muted">{r.notes}</div>}
                 </td>
                 <td className="px-4 py-2.5 ef-muted">
+                  {r.trackingNo && <div className="font-mono text-xs whitespace-nowrap" style={{ color: 'var(--card-foreground)' }}>{r.trackingNo}</div>}
                   {r.subject ?? '—'}
                   {r.student && <div className="text-xs">{r.student}</div>}
                 </td>

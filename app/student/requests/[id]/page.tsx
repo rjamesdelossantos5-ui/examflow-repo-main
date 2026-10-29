@@ -258,6 +258,12 @@ export default async function RequestDetailPage({
               {req.exam_type === 'paid' ? 'Paid (Unexcused)' : 'Waived'}
             </span>
           </div>
+          {req.tracking_no && (
+            <div>
+              <span className="ef-muted">Reference no.: </span>
+              <span className="font-mono font-medium" style={{ color: 'var(--card-foreground)' }}>{req.tracking_no}</span>
+            </div>
+          )}
           <div>
             <span className="ef-muted">{pendingSubmission ? 'Started: ' : 'Submitted: '}</span>
             <span className="font-medium" style={{ color: 'var(--card-foreground)' }}>

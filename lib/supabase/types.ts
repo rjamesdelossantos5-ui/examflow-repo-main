@@ -44,6 +44,9 @@ export interface Subject {
 
 export interface SpecialExamRequest {
   id: string
+  /** Permanent reference number (EF-2026-000123); added by supabase/migration_tracking_no.sql. */
+  tracking_no?: string
+
   student_id: string
   subject_id: string
   exam_type: ExamType

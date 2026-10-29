@@ -16,23 +16,28 @@ const LIMIT = 1000
 // with it. Sign-ins are not here — they are in Login History.
 export default async function UserActivityPage() {
   const supabase = await createClient()
-  let query = supabase
-    .from('progress_logs')
-    .select(`
-      id, actor_role, action, notes, created_at,
-      actor:profiles!actor_id(full_name, email),
-      request:special_exam_requests(
-        student:profiles!student_id(full_name),
-        subjects(subject_code)
-      )
-    `)
   // The consent record stays in the database but is not listed here (the same
   // lines every request's own history leaves out). Filtered in the query so the
   // hidden rows don't use up the LIMIT below.
-  for (const prefix of HIDDEN_PREFIXES) query = query.not('action', 'like', `${prefix}%`)
-  const { data, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(LIMIT)
+  // tracking_no comes from supabase/migration_tracking_no.sql; until that is run
+  // the query fails, so it is retried without the number.
+  const load = (withTracking: boolean) => {
+    let query = supabase
+      .from('progress_logs')
+      .select(`
+        id, actor_role, action, notes, created_at,
+        actor:profiles!actor_id(full_name, email),
+        request:special_exam_requests(
+          ${withTracking ? 'tracking_no,' : ''}
+          student:profiles!student_id(full_name),
+          subjects(subject_code)
+        )
+      `)
+    for (const prefix of HIDDEN_PREFIXES) query = query.not('action', 'like', `${prefix}%`)
+    return query.order('created_at', { ascending: false }).limit(LIMIT)
+  }
+  let { data, error } = await load(true)
+  if (error) ({ data, error } = await load(false))
 
   // Formatted here, in the school's time zone, so the server and the browser
   // can't disagree about the time shown.
@@ -45,6 +50,7 @@ export default async function UserActivityPage() {
   const rows: ActivityRow[] = (data ?? []).map((r) => {
     const actor = r.actor as unknown as { full_name: string; email: string } | null
     const req = r.request as unknown as {
+      tracking_no?: string | null
       student: { full_name: string } | null
       subjects: { subject_code: string } | null
     } | null
@@ -55,6 +61,7 @@ export default async function UserActivityPage() {
       role: r.actor_role as string,
       action: r.action as string,
       notes: (r.notes as string | null) ?? null,
+      trackingNo: req?.tracking_no ?? null,
       subject: req?.subjects?.subject_code ?? null,
       student: req?.student?.full_name ?? null,
       when: fmt.format(new Date(r.created_at as string)),
