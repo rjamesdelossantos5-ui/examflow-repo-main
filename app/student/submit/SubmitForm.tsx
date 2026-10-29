@@ -163,7 +163,8 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // Only offerings whose section matches the chosen course (and, with a mock
   // enrollment, only the student's own section). Nothing shows until a course
   // is picked, so a subject never leaks in from another program.
-  const sectionLocked = !prefill && !!enrolled && !override
+  // The account's section, locked like course and year (new request and resubmit alike).
+  const sectionLocked = !!enrolled && !override
   const courseOfferings = course
     ? offerings.filter((o) =>
         coursePrefix(o.section) === normalizeCourse(course) &&
@@ -568,7 +569,7 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
               name="subject_id"
               required
               value={subjectId}
-              onChange={(v) => { setSubjectId(v); setSection('') }}
+              onChange={(v) => { setSubjectId(v); setSection(sectionLocked ? enrolled ?? '' : '') }}
               disabled={!course}
               placeholder={course ? '— Select a subject —' : 'Select a course first'}
               options={subjectOptions.map((s) => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
@@ -577,27 +578,45 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium ef-muted mb-1">Section *</label>
-            <Select
-              name="section"
-              required
-              value={section}
-              onChange={setSection}
-              disabled={!subjectId}
-              placeholder={!subjectId ? 'Select a subject first' : sectionOptions.length ? '— Select section —' : 'No sections for that subject/year'}
-              options={sectionOptions.map((o) => ({ value: o.section, label: o.section }))}
-              className={selectClass}
-              style={selectStyle}
-            />
-          </div>
+          {sectionLocked ? (
+            // The account's section is locked above, so there is nothing to choose: the
+            // subject shows as a card with its section and teacher, like a new request.
+            // The section is still sent, as a hidden field.
+            subjectId && (
+              <div className="rounded-lg border ef-border p-3 space-y-2">
+                <input type="hidden" name="section" value={enrolled ?? ''} />
+                <div className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>
+                  {(() => { const s = subjectOptions.find((o) => o.id === subjectId); return s ? `${s.code} — ${s.name}` : '' })()}
+                </div>
+                <p className="text-xs ef-muted">Section: <strong style={{ color: 'var(--card-foreground)' }}>{enrolled}</strong></p>
+                <p className="text-xs ef-muted">Teacher: <strong style={{ color: 'var(--card-foreground)' }}>{teacherName ?? 'Not assigned yet'}</strong></p>
+              </div>
+            )
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium ef-muted mb-1">Section *</label>
+                <Select
+                  name="section"
+                  required
+                  value={section}
+                  onChange={setSection}
+                  disabled={!subjectId}
+                  placeholder={!subjectId ? 'Select a subject first' : sectionOptions.length ? '— Select section —' : 'No sections for that subject/year'}
+                  options={sectionOptions.map((o) => ({ value: o.section, label: o.section }))}
+                  className={selectClass}
+                  style={selectStyle}
+                />
+              </div>
 
-          {subjectId && section && (
-            <div className="rounded-lg px-3 py-2 text-sm border ef-border">
-              <span className="ef-muted">Teacher: </span>
-              <strong style={{ color: 'var(--card-foreground)' }}>{teacherName ?? 'Not assigned yet'}</strong>
-              <p className="text-xs ef-muted mt-0.5">Your request will be sent to this section&apos;s teacher for approval.</p>
-            </div>
+              {subjectId && section && (
+                <div className="rounded-lg px-3 py-2 text-sm border ef-border">
+                  <span className="ef-muted">Teacher: </span>
+                  <strong style={{ color: 'var(--card-foreground)' }}>{teacherName ?? 'Not assigned yet'}</strong>
+                  <p className="text-xs ef-muted mt-0.5">Your request will be sent to this section&apos;s teacher for approval.</p>
+                </div>
+              )}
+            </>
           )}
             </>
           )}
