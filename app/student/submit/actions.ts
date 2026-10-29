@@ -445,9 +445,10 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
     }
   }
 
-  // A resubmit must actually differ from the rejected request — either a new
-  // document is uploaded OR some field is edited. Re-submitting the exact same
-  // thing is blocked, since the reviewer rejected it for a reason.
+  // A WAIVED resubmit must actually differ from the rejected request — either a
+  // new document is uploaded OR some field is edited. Re-submitting the exact same
+  // thing is blocked, since the reviewer rejected it for a reason. (Paid requests
+  // are exempt: see nothingToFix below.)
   const norm = (v: unknown) => (v == null ? '' : String(v).trim())
   const snap = fields.snapshot as {
     snap_name?: string | null; snap_student_number?: string | null; snap_course?: string | null
@@ -471,7 +472,12 @@ async function resubmitRequest(supabase: DB, userId: string, oldId: string, fiel
       norm(snap.snap_section) !== norm(oldRow.snap_section) ||
       norm(snap.snap_contact_number) !== norm(oldRow.snap_contact_number)
   }
-  if (!fileChanged && !fieldsChanged) {
+  // A paid request has no document on this form (the receipt is uploaded from the
+  // request page), so a rejection such as "no receipt before the exam day" cannot
+  // be fixed by editing anything here. Paid requests may be resubmitted as they are.
+  // A waived request still has to change something or replace its document.
+  const nothingToFix = fields.examType === 'paid'
+  if (!nothingToFix && !fileChanged && !fieldsChanged) {
     return redirect(`/student/submit?from=${oldId}&error=${encodeURIComponent('Nothing changed — edit a detail or re-upload a document before resubmitting.')}`)
   }
 
