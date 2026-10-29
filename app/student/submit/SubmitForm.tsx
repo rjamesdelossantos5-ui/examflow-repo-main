@@ -163,14 +163,11 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
   // Only offerings whose section matches the chosen course (and, with a mock
   // enrollment, only the student's own section). Nothing shows until a course
   // is picked, so a subject never leaks in from another program.
-  const pickOwnSection = !prefill && !enrolled && !override
   const sectionLocked = !prefill && !!enrolled && !override
   const courseOfferings = course
     ? offerings.filter((o) =>
         coursePrefix(o.section) === normalizeCourse(course) &&
-        (!enrolled || override || o.section === enrolled) &&
-        // No section on the account: nothing is offered until the student picks theirs.
-        (!pickOwnSection || (ownSection !== '' && o.section === ownSection)),
+        (!enrolled || override || o.section === enrolled),
       )
     : []
 
@@ -482,22 +479,21 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
           <h2 className="font-semibold text-sm" style={{ color: 'var(--card-foreground)' }}>Exam Details</h2>
           {!prefill ? (
             <div className="space-y-4">
-              {/* The account has no section, so the student says which one is theirs;
-                  the subjects below are then only that section's. */}
-              {(pickOwnSection || override) && course && (
+              {/* Irregular mode only: an optional section to narrow the subject list.
+                  Picks are kept when it changes, since one request can mix subjects
+                  from several sections. In normal mode the section comes from My
+                  Account (locked above) and each subject has its own section field. */}
+              {override && course && (
                 <div>
                   <label className="block text-sm font-medium ef-muted mb-1">
-                    {override ? 'Section' : 'Your section *'}
-                    {override && <span className="font-normal"> (optional — pick one to see only its subjects)</span>}
+                    Section <span className="font-normal">(optional — pick one to see only its subjects)</span>
                   </label>
                   <Select
                     value={ownSection}
-                    // Normal mode: a new section means a new subject list, so picks are cleared.
-                    // Irregular mode keeps them: one request can mix subjects from several sections.
-                    onChange={(v) => { setOwnSection(v); if (!override) { setPicked([]); setPickedSection({}) } }}
-                    placeholder={override ? 'All sections' : ownSectionOptions.length ? '— Select your section —' : 'No sections for that course and year'}
+                    onChange={setOwnSection}
+                    placeholder="All sections"
                     options={[
-                      ...(override ? [{ value: '', label: 'All sections' }] : []),
+                      { value: '', label: 'All sections' },
                       ...ownSectionOptions.map((s) => ({ value: s, label: s })),
                     ]}
                     className={selectClass}
@@ -511,8 +507,6 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                 </label>
                 {!course ? (
                   <p className="text-sm ef-muted">Select a course first.</p>
-                ) : pickOwnSection && !ownSection ? (
-                  <p className="text-sm ef-muted">Select your section first.</p>
                 ) : subjectOptions.length === 0 ? (
                   <p className="text-sm ef-muted">{yearNum ? `No subjects for Year ${yearNum} yet.` : 'No subjects for that course yet.'}</p>
                 ) : (
@@ -539,16 +533,26 @@ export default function SubmitForm({ offerings, termLabel, profile, error, submi
                   <div key={id} className="rounded-lg border ef-border p-3 space-y-2">
                     <input type="hidden" name="subject_id" value={id} />
                     <div className="text-sm font-semibold" style={{ color: 'var(--card-foreground)' }}>{subj ? `${subj.code} — ${subj.name}` : id}</div>
-                    <Select
-                      name={`section_${id}`}
-                      required
-                      value={chosen}
-                      onChange={(v) => setPickedSection((cur) => ({ ...cur, [id]: v }))}
-                      placeholder={opts.length ? '— Select section —' : 'No sections for that subject/year'}
-                      options={opts.map((o) => ({ value: o.section, label: o.section }))}
-                      className={selectClass}
-                      style={selectStyle}
-                    />
+                    {sectionLocked && chosen ? (
+                      // Regular mode with a section saved on the account: the section is
+                      // the locked one above, so there is nothing to choose. It is still
+                      // sent with the subject, as a hidden field.
+                      <>
+                        <input type="hidden" name={`section_${id}`} value={chosen} />
+                        <p className="text-xs ef-muted">Section: <strong style={{ color: 'var(--card-foreground)' }}>{chosen}</strong></p>
+                      </>
+                    ) : (
+                      <Select
+                        name={`section_${id}`}
+                        required
+                        value={chosen}
+                        onChange={(v) => setPickedSection((cur) => ({ ...cur, [id]: v }))}
+                        placeholder={opts.length ? '— Select section —' : 'No sections for that subject/year'}
+                        options={opts.map((o) => ({ value: o.section, label: o.section }))}
+                        className={selectClass}
+                        style={selectStyle}
+                      />
+                    )}
                     {chosen && (
                       <p className="text-xs ef-muted">Teacher: <strong style={{ color: 'var(--card-foreground)' }}>{teacher ?? 'Not assigned yet'}</strong></p>
                     )}
