@@ -6,6 +6,8 @@ import DashboardLayout from '@/components/DashboardLayout'
 import { getNotifications, countWaitingForAnyone } from '@/lib/notifications'
 import { isSettingOn, TOGGLE_SETTINGS } from '@/lib/settings'
 import { runAutoDecisions } from '@/lib/autoDecide'
+import { purgeOldActivity } from '@/lib/purgeOldActivity'
+import { after } from 'next/server'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -23,6 +25,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ])
 
   if (!profile || profile.role !== 'admin') redirect('/login')
+  // Old User Activity entries are removed after the page has been sent.
+  after(() => purgeOldActivity())
   // Ordered by how often the admin uses each tab, most used first.
   const nav = [
     // Every form at every step; each opens on the Teacher, Program Head or

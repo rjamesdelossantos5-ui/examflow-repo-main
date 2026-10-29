@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { HIDDEN_PREFIXES } from '@/lib/historyFilter'
 import ActivityTable, { type ActivityRow } from './ActivityTable'
 import LiveActivity from './LiveActivity'
+import { ACTIVITY_KEEP_DAYS } from '@/lib/purgeOldActivity'
 
 export const metadata = { title: 'EXAMFLOW Admin — User Activity' }
 
@@ -69,7 +70,7 @@ export default async function UserActivityPage() {
         </div>
         <p className="text-sm ef-muted">
           What students, teachers, the registrar, program heads and admins did on special exam requests, newest first.
-          A request&apos;s activity is removed when the request is deleted. Sign-ins are in Login History.
+          Entries are deleted automatically after {ACTIVITY_KEEP_DAYS} days, or sooner when their request is deleted. Sign-ins are in Login History.
         </p>
       </div>
       {error ? (
