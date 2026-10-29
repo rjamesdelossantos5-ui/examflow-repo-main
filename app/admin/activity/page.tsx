@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { HIDDEN_PREFIXES } from '@/lib/historyFilter'
 import ActivityTable, { type ActivityRow } from './ActivityTable'
+import LiveActivity from './LiveActivity'
 
 export const metadata = { title: 'EXAMFLOW Admin — User Activity' }
 
@@ -62,7 +63,10 @@ export default async function UserActivityPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>User Activity</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>User Activity</h2>
+          <LiveActivity />
+        </div>
         <p className="text-sm ef-muted">
           What students, teachers, the registrar, program heads and admins did on special exam requests, newest first.
           A request&apos;s activity is removed when the request is deleted. Sign-ins are in Login History.

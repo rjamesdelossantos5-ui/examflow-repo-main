@@ -41,6 +41,9 @@ export default function ActivityTable({ rows, capped }: { rows: ActivityRow[]; c
     )
   }, [rows, query, role])
   const { items: pageRows, pagerProps } = usePagination(visible, `${query}|${role}`)
+  // The rows that were on the page when it opened. Anything that arrives later
+  // (the page reloads its data as new activity happens) is highlighted.
+  const [openedWith] = useState(() => new Set(rows.map((r) => r.id)))
 
   return (
     <div className="space-y-3">
@@ -70,7 +73,11 @@ export default function ActivityTable({ rows, capped }: { rows: ActivityRow[]; c
           </thead>
           <tbody className="divide-y ef-border">
             {pageRows.map((r) => (
-              <tr key={r.id} className="align-top">
+              <tr
+                key={r.id}
+                className="align-top"
+                style={openedWith.has(r.id) ? undefined : { background: 'color-mix(in srgb, var(--sti-gold) 14%, transparent)' }}
+              >
                 <td className="px-4 py-2.5 whitespace-nowrap tabular-nums" style={{ color: 'var(--card-foreground)' }}>{r.when}</td>
                 <td className="px-4 py-2.5">
                   <div style={{ color: 'var(--card-foreground)' }}>{r.name}</div>
